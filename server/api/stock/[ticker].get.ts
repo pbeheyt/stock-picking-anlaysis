@@ -75,57 +75,60 @@ export default defineEventHandler(async (event) => {
     // -------------------------------------------------------------
     // CASCADE 1 : CROISSANCE (g)
     // -------------------------------------------------------------
-    const trend1y = earningsTrend.find((t: any) => t.period === '+1y')
     const trend5y = earningsTrend.find((t: any) => t.period === '+5y')
-    const analystGrowth = trend1y?.revenueEstimate?.growth ?? trend1y?.growth ?? trend5y?.growth
-    const analystGrowthEstimate = typeof analystGrowth === 'number' && isFinite(analystGrowth) ? analystGrowth : null
-    const rawRevenueGrowth = financialData.revenueGrowth ?? null
+    const trend1y = earningsTrend.find((t: any) => t.period === '+1y')
+
+    const growth5Y = trend5y?.growth ?? trend5y?.earningsEstimate?.growth
+    const growth1Y = trend1y?.revenueEstimate?.growth ?? trend1y?.growth
+
+    const valid5Y = typeof growth5Y === 'number' && isFinite(growth5Y) && growth5Y !== 0 ? growth5Y : null
+    const valid1Y = typeof growth1Y === 'number' && isFinite(growth1Y) && growth1Y !== 0 ? growth1Y : null
 
     let selectedGrowth = 0.10
-    let growthSource = 'Fallback Modèle Standard'
+    let growthSource = 'Fallback Modèle Standard (10%)'
     let growthMode: 'cagr' | 'explicit' = 'cagr'
     let g1 = 0.10, g2 = 0.10, g3 = 0.10, g4 = 0.10, g5 = 0.10
 
     const growthCandidates: any[] = []
 
-    if (typeof analystGrowthEstimate === 'number' && analystGrowthEstimate !== 0) {
-      selectedGrowth = analystGrowthEstimate
-      growthSource = 'Consensus Analystes (+1Y)'
+    if (valid5Y !== null) {
+      selectedGrowth = valid5Y
+      growthSource = 'Consensus Analystes 5-Year CAGR'
       growthCandidates.push({
-        name: 'Consensus Analystes (+1Y)',
-        value: parseFloat(analystGrowthEstimate.toFixed(4)),
+        name: 'Consensus 5Y CAGR',
+        value: parseFloat(valid5Y.toFixed(4)),
         status: 'selected',
-        note: 'Consensus prioritaire retenu',
+        note: 'Consensus Analystes 5-Year CAGR',
       })
       growthCandidates.push({
-        name: 'Historique TTM',
-        value: rawRevenueGrowth !== null ? parseFloat(rawRevenueGrowth.toFixed(4)) : null,
+        name: 'Consensus 1Y (NTM)',
+        value: valid1Y !== null ? parseFloat(valid1Y.toFixed(4)) : null,
         status: 'ignored',
-        note: 'Ignoré : Consensus disponible',
+        note: 'Non requis',
       })
       growthCandidates.push({
-        name: 'Fallback Standard',
+        name: 'Fallback Standard (10%)',
         value: 0.10,
         status: 'ignored',
         note: 'Non requis',
       })
-    } else if (typeof rawRevenueGrowth === 'number' && isFinite(rawRevenueGrowth)) {
-      selectedGrowth = clamp(rawRevenueGrowth, -0.5, 0.8)
-      growthSource = 'Historique TTM'
+    } else if (valid1Y !== null) {
+      selectedGrowth = valid1Y
+      growthSource = 'Consensus Analystes +1Y (NTM)'
       growthCandidates.push({
-        name: 'Consensus Analystes (+1Y)',
+        name: 'Consensus 5Y CAGR',
         value: null,
         status: 'rejected',
         note: 'Non disponible',
       })
       growthCandidates.push({
-        name: 'Historique TTM',
-        value: parseFloat(rawRevenueGrowth.toFixed(4)),
+        name: 'Consensus 1Y (NTM)',
+        value: parseFloat(valid1Y.toFixed(4)),
         status: 'selected',
-        note: 'Retenu (Historique TTM)',
+        note: 'Consensus Analystes +1Y (NTM)',
       })
       growthCandidates.push({
-        name: 'Fallback Standard',
+        name: 'Fallback Standard (10%)',
         value: 0.10,
         status: 'ignored',
         note: 'Non requis',
@@ -134,13 +137,13 @@ export default defineEventHandler(async (event) => {
       selectedGrowth = 0.10
       growthSource = 'Fallback Modèle Standard (10%)'
       growthCandidates.push({
-        name: 'Consensus Analystes (+1Y)',
+        name: 'Consensus 5Y CAGR',
         value: null,
         status: 'rejected',
         note: 'Non disponible',
       })
       growthCandidates.push({
-        name: 'Historique TTM',
+        name: 'Consensus 1Y (NTM)',
         value: null,
         status: 'rejected',
         note: 'Non disponible',
@@ -149,18 +152,18 @@ export default defineEventHandler(async (event) => {
         name: 'Fallback Standard (10%)',
         value: 0.10,
         status: 'fallback',
-        note: '⚠️ Croissance non disponible : Fallback 10% appliqué',
+        note: '⚠️ Valeur par défaut : 10.0%',
       })
     }
 
     g1 = selectedGrowth
-    if (selectedGrowth > 0.30) {
+    if (selectedGrowth > 0.20) {
       growthMode = 'explicit'
       g2 = parseFloat((0.50 * selectedGrowth).toFixed(4))
       g3 = 0.30
       g4 = 0.20
       g5 = 0.15
-      growthSource = `Consensus NTM > 30% (${(selectedGrowth * 100).toFixed(0)}%) -> Mode Sur-Mesure`
+      growthSource = `Consensus > 20% (${(selectedGrowth * 100).toFixed(0)}%) -> Mode Sur-Mesure`
     } else {
       growthMode = 'cagr'
       g2 = selectedGrowth
@@ -173,7 +176,7 @@ export default defineEventHandler(async (event) => {
     // CASCADE 2 : MARGE NETTE (m)
     // -------------------------------------------------------------
     let selectedMargin = 0.15
-    let marginSource = 'Fallback Modèle Standard'
+    let marginSource = 'Fallback Modèle Standard (15%)'
     const marginCandidates: any[] = []
 
     if (typeof marginNetRaw === 'number' && isFinite(marginNetRaw) && marginNetRaw > 0) {
@@ -183,44 +186,17 @@ export default defineEventHandler(async (event) => {
         name: 'Marge Nette TTM Réelle',
         value: parseFloat(marginNetRaw.toFixed(4)),
         status: 'selected',
-        note: 'Retenu (Marge Nette TTM positive)',
+        note: 'Marge Nette TTM Réelle',
       })
       marginCandidates.push({
-        name: 'Cible 45% Marge Brute',
-        value: marginGrossRaw !== null ? parseFloat((marginGrossRaw * 0.45).toFixed(4)) : null,
-        status: 'ignored',
-        note: 'Non requis',
-      })
-      marginCandidates.push({
-        name: 'Fallback Standard',
-        value: 0.15,
-        status: 'ignored',
-        note: 'Non requis',
-      })
-    } else if (typeof marginGrossRaw === 'number' && isFinite(marginGrossRaw) && marginGrossRaw > 0) {
-      selectedMargin = clamp(marginGrossRaw * 0.45, 0.05, 0.50)
-      marginSource = `Cible 45% Marge Brute (${(marginGrossRaw * 100).toFixed(1)}%)`
-      marginCandidates.push({
-        name: 'Marge Nette TTM Réelle',
-        value: marginNetRaw !== null ? parseFloat(marginNetRaw.toFixed(4)) : null,
-        status: 'rejected',
-        note: 'Rejeté : Marge Nette négative ou nulle',
-      })
-      marginCandidates.push({
-        name: 'Cible 45% Marge Brute',
-        value: parseFloat((marginGrossRaw * 0.45).toFixed(4)),
-        status: 'selected',
-        note: `Retenu (45% de Marge Brute à ${(marginGrossRaw * 100).toFixed(1)}%)`,
-      })
-      marginCandidates.push({
-        name: 'Fallback Standard',
+        name: 'Fallback Standard (15%)',
         value: 0.15,
         status: 'ignored',
         note: 'Non requis',
       })
     } else {
       selectedMargin = 0.15
-      marginSource = 'Fallback Secteur Mature (15%)'
+      marginSource = 'Fallback Modèle Standard (15%)'
       marginCandidates.push({
         name: 'Marge Nette TTM Réelle',
         value: marginNetRaw !== null ? parseFloat(marginNetRaw.toFixed(4)) : null,
@@ -228,21 +204,15 @@ export default defineEventHandler(async (event) => {
         note: 'Rejeté : Non disponible ou négatif',
       })
       marginCandidates.push({
-        name: 'Cible 45% Marge Brute',
-        value: null,
-        status: 'rejected',
-        note: 'Non disponible',
-      })
-      marginCandidates.push({
         name: 'Fallback Standard (15%)',
         value: 0.15,
         status: 'fallback',
-        note: '⚠️ Marge nette non disponible : Fallback 15% appliqué',
+        note: '⚠️ Boîte déficitaire : Marge cible par défaut à 15.0%',
       })
     }
 
     // -------------------------------------------------------------
-    // CASCADE 3 : MULTIPLE EXIT (P/E) - NOUVELLE CASCADE SIMPLE
+    // CASCADE 3 : MULTIPLE EXIT (P/E)
     // -------------------------------------------------------------
     let selectedPE = 20.0
     let peSource = 'Multiple par Défaut (20.0x)'
@@ -255,7 +225,7 @@ export default defineEventHandler(async (event) => {
         name: 'Forward P/E',
         value: parseFloat(peForwardRaw.toFixed(2)),
         status: 'selected',
-        note: 'Consensus Forward P/E retenu',
+        note: 'Consensus Forward P/E',
       })
       peCandidates.push({
         name: 'Trailing P/E',
@@ -282,7 +252,7 @@ export default defineEventHandler(async (event) => {
         name: 'Trailing P/E',
         value: parseFloat(peTrailingRaw.toFixed(2)),
         status: 'selected',
-        note: 'P/E Trailing TTM retenu',
+        note: 'P/E Trailing TTM',
       })
       peCandidates.push({
         name: 'Multiple par Défaut (20.0x)',
@@ -309,7 +279,7 @@ export default defineEventHandler(async (event) => {
         name: 'Multiple par Défaut (20.0x)',
         value: 20.0,
         status: 'fallback',
-        note: '⚠️ Boîte non rentable ou P/E absent : Multiple par défaut appliqué (Ajuster manuellement)',
+        note: '⚠️ Boîte non rentable / P/E absent : Multiple par défaut à 20.0x',
       })
     }
 
@@ -365,7 +335,7 @@ export default defineEventHandler(async (event) => {
       total_debt: totalDebt,
       free_cash_flow_raw: freeCashFlowRaw,
       analyst_target_price: analystTargetPrice,
-      analyst_growth_estimate: analystGrowthEstimate,
+      analyst_growth_estimate: valid1Y ?? valid5Y,
       audit_data: auditData,
     }
   } catch (error: any) {

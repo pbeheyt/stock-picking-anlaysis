@@ -63,6 +63,18 @@ const hasFallback = computed(() => {
   return categories.some(cat => cat?.candidates?.some(c => c.status === 'fallback'))
 })
 
+const isGrowthFallback = computed(() => {
+  return parsedAuditData.value?.growth?.candidates?.some(c => c.status === 'fallback') ?? false
+})
+
+const isMarginFallback = computed(() => {
+  return parsedAuditData.value?.margin?.candidates?.some(c => c.status === 'fallback') ?? false
+})
+
+const isPEFallback = computed(() => {
+  return parsedAuditData.value?.pe?.candidates?.some(c => c.status === 'fallback') ?? false
+})
+
 const valuationInputs = computed<ValuationInputs>(() => ({
   currentPrice: props.stock.current_price ?? 0,
   revenueTTM: props.stock.revenue_ttm ?? 0,
@@ -235,17 +247,6 @@ function formatMOS(num: number): string {
 
 <template>
   <div class="valuation-card group space-y-4">
-    <!-- Bannière d'avertissement fallback -->
-    <div
-      v-if="hasFallback"
-      class="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-950/40 px-3 py-2 text-xs font-medium text-amber-300 shadow-sm"
-    >
-      <svg class="h-4 w-4 shrink-0 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-      <span>⚠️ Certaines données de marché n'ont pas pu être extraites. Des valeurs par défaut ont été appliquées.</span>
-    </div>
-
     <!-- Navigation par Onglets -->
     <div class="flex items-center justify-between border-b border-gray-800 pb-3">
       <div class="flex items-center gap-1 rounded-lg bg-gray-950 p-1 border border-gray-800">
@@ -307,6 +308,17 @@ function formatMOS(num: number): string {
       >
         {{ badgeConfig.label }}
       </span>
+    </div>
+
+    <!-- Bannière d'avertissement fallback sous le header -->
+    <div
+      v-if="hasFallback"
+      class="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-950/40 px-3 py-2 text-xs font-medium text-amber-300 shadow-sm"
+    >
+      <svg class="h-4 w-4 shrink-0 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      <span>⚠️ Certaines données de marché sont absentes chez Yahoo. Des valeurs par défaut ont été appliquées.</span>
     </div>
 
     <!-- VUE 1 : VALORISATION & SIMULATION -->
@@ -504,6 +516,9 @@ function formatMOS(num: number): string {
               <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
                 {{ stock.growth_source }}
               </span>
+              <span v-if="isGrowthFallback" class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                [⚠️ DEFAULT]
+              </span>
             </div>
             <span class="slider-value text-emerald-400">{{ formatPercent(growth) }}</span>
           </div>
@@ -527,9 +542,14 @@ function formatMOS(num: number): string {
             <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
               Trajectoire Sur-Mesure sur 5 Ans (Liaison % / CA Scalé)
             </span>
-            <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-              {{ stock.growth_source }}
-            </span>
+            <div class="flex items-center gap-2">
+              <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                {{ stock.growth_source }}
+              </span>
+              <span v-if="isGrowthFallback" class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                [⚠️ DEFAULT]
+              </span>
+            </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
@@ -631,6 +651,9 @@ function formatMOS(num: number): string {
               <span v-if="stock.margin_source" class="source-pill bg-sky-500/10 text-sky-400 border-sky-500/20">
                 {{ stock.margin_source }}
               </span>
+              <span v-if="isMarginFallback" class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                [⚠️ DEFAULT]
+              </span>
             </div>
             <span class="slider-value text-sky-400">{{ formatPercent(margin) }}</span>
           </div>
@@ -655,6 +678,9 @@ function formatMOS(num: number): string {
               <label class="slider-label">Multiple de Sortie (P/E)</label>
               <span v-if="stock.pe_source" class="source-pill bg-violet-500/10 text-violet-400 border-violet-500/20">
                 {{ stock.pe_source }}
+              </span>
+              <span v-if="isPEFallback" class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                [⚠️ DEFAULT]
               </span>
             </div>
             <span class="slider-value text-violet-400">{{ targetMultiple.toFixed(1) }}x</span>
@@ -813,16 +839,17 @@ function formatMOS(num: number): string {
                   <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : c.status === 'fallback' ? 'text-amber-300 font-bold' : 'text-gray-500 line-through'">{{ c.name }}</td>
                   <td class="px-3 py-2 font-mono">{{ c.value !== null ? formatPercent(c.value) : 'N/A' }}</td>
                   <td class="px-3 py-2">
-                    <span
-                      class="rounded px-2 py-0.5 text-[10px] font-bold uppercase"
-                      :class="{
-                        'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30': c.status === 'selected',
-                        'bg-amber-500/20 text-amber-400 border border-amber-500/30': c.status === 'fallback',
-                        'bg-red-500/20 text-red-400': c.status === 'rejected',
-                        'bg-gray-800 text-gray-500': c.status === 'ignored',
-                      }"
-                    >
-                      {{ c.status === 'selected' ? '[✓] Selected' : c.status === 'fallback' ? '[⚠️ FALLBACK / DÉFAUT]' : c.status === 'rejected' ? '[✗] Rejected' : '[x] Ignored' }}
+                    <span v-if="c.status === 'fallback'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                      [⚠️ DEFAULT]
+                    </span>
+                    <span v-else-if="c.status === 'selected'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      [✓] Selected
+                    </span>
+                    <span v-else-if="c.status === 'rejected'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-red-500/20 text-red-400">
+                      [✗] Rejected
+                    </span>
+                    <span v-else class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-gray-800 text-gray-500">
+                      [x] Ignored
                     </span>
                   </td>
                   <td class="px-3 py-2 text-gray-400">{{ c.note }}</td>
@@ -851,16 +878,17 @@ function formatMOS(num: number): string {
                   <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : c.status === 'fallback' ? 'text-amber-300 font-bold' : 'text-gray-500 line-through'">{{ c.name }}</td>
                   <td class="px-3 py-2 font-mono">{{ c.value !== null ? formatPercent(c.value) : 'N/A' }}</td>
                   <td class="px-3 py-2">
-                    <span
-                      class="rounded px-2 py-0.5 text-[10px] font-bold uppercase"
-                      :class="{
-                        'bg-sky-500/20 text-sky-400 border border-sky-500/30': c.status === 'selected',
-                        'bg-amber-500/20 text-amber-400 border border-amber-500/30': c.status === 'fallback',
-                        'bg-red-500/20 text-red-400': c.status === 'rejected',
-                        'bg-gray-800 text-gray-500': c.status === 'ignored',
-                      }"
-                    >
-                      {{ c.status === 'selected' ? '[✓] Selected' : c.status === 'fallback' ? '[⚠️ FALLBACK / DÉFAUT]' : c.status === 'rejected' ? '[✗] Rejected' : '[x] Ignored' }}
+                    <span v-if="c.status === 'fallback'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                      [⚠️ DEFAULT]
+                    </span>
+                    <span v-else-if="c.status === 'selected'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                      [✓] Selected
+                    </span>
+                    <span v-else-if="c.status === 'rejected'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-red-500/20 text-red-400">
+                      [✗] Rejected
+                    </span>
+                    <span v-else class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-gray-800 text-gray-500">
+                      [x] Ignored
                     </span>
                   </td>
                   <td class="px-3 py-2 text-gray-400">{{ c.note }}</td>
@@ -889,16 +917,17 @@ function formatMOS(num: number): string {
                   <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : c.status === 'fallback' ? 'text-amber-300 font-bold' : 'text-gray-500 line-through'">{{ c.name }}</td>
                   <td class="px-3 py-2 font-mono">{{ c.value !== null ? `${c.value.toFixed(1)}x` : 'N/A' }}</td>
                   <td class="px-3 py-2">
-                    <span
-                      class="rounded px-2 py-0.5 text-[10px] font-bold uppercase"
-                      :class="{
-                        'bg-violet-500/20 text-violet-400 border border-violet-500/30': c.status === 'selected',
-                        'bg-amber-500/20 text-amber-400 border border-amber-500/30': c.status === 'fallback',
-                        'bg-red-500/20 text-red-400': c.status === 'rejected',
-                        'bg-gray-800 text-gray-500': c.status === 'ignored',
-                      }"
-                    >
-                      {{ c.status === 'selected' ? '[✓] Selected' : c.status === 'fallback' ? '[⚠️ FALLBACK / DÉFAUT]' : c.status === 'rejected' ? '[✗] Rejected' : '[x] Ignored' }}
+                    <span v-if="c.status === 'fallback'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                      [⚠️ DEFAULT]
+                    </span>
+                    <span v-else-if="c.status === 'selected'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-violet-500/20 text-violet-400 border border-violet-500/30">
+                      [✓] Selected
+                    </span>
+                    <span v-else-if="c.status === 'rejected'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-red-500/20 text-red-400">
+                      [✗] Rejected
+                    </span>
+                    <span v-else class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-gray-800 text-gray-500">
+                      [x] Ignored
                     </span>
                   </td>
                   <td class="px-3 py-2 text-gray-400">{{ c.note }}</td>
