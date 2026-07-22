@@ -55,6 +55,7 @@ export function getDb(): Database.Database {
         total_debt REAL,
         free_cash_flow_raw REAL,
         analyst_target_price REAL,
+        analyst_target_median REAL,
         analyst_growth_estimate REAL,
         analyst_count INTEGER,
         audit_data TEXT,
@@ -98,6 +99,7 @@ export function getDb(): Database.Database {
     safeAddColumn('total_debt', 'REAL')
     safeAddColumn('free_cash_flow_raw', 'REAL')
     safeAddColumn('analyst_target_price', 'REAL')
+    safeAddColumn('analyst_target_median', 'REAL')
     safeAddColumn('analyst_growth_estimate', 'REAL')
     safeAddColumn('analyst_count', 'INTEGER')
     safeAddColumn('audit_data', 'TEXT')

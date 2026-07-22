@@ -75,6 +75,16 @@ const isPEFallback = computed(() => {
   return parsedAuditData.value?.pe?.candidates?.some(c => c.status === 'fallback') ?? false
 })
 
+const meanPotential = computed(() => {
+  if (!props.stock.analyst_target_price || !props.stock.current_price) return null
+  return ((props.stock.analyst_target_price - props.stock.current_price) / props.stock.current_price) * 100
+})
+
+const medianPotential = computed(() => {
+  if (!props.stock.analyst_target_median || !props.stock.current_price) return null
+  return ((props.stock.analyst_target_median - props.stock.current_price) / props.stock.current_price) * 100
+})
+
 const valuationInputs = computed<ValuationInputs>(() => ({
   currentPrice: props.stock.current_price ?? 0,
   revenueTTM: props.stock.revenue_ttm ?? 0,
@@ -239,9 +249,10 @@ function formatPercent(num: number | null): string {
   return `${(num * 100).toFixed(1)}%`
 }
 
-function formatMOS(num: number): string {
+function formatMOS(num: number | null): string {
+  if (num === null || num === undefined) return ''
   const sign = num >= 0 ? '+' : ''
-  return `${sign}${num.toFixed(1)}%`
+  return `(${sign}${num.toFixed(1)}%)`
 }
 </script>
 
@@ -785,25 +796,43 @@ function formatMOS(num: number): string {
             🎯 Consensus Wall Street (Analystes)
           </h4>
           <div class="space-y-2 text-xs">
+            <!-- Prix Cible Moyen -->
             <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Prix Cible Médian (12M Analystes) :</span>
-              <span class="font-mono font-bold text-white">{{ formatMoney(stock.analyst_target_price) }}</span>
+              <span class="text-gray-400">Prix Cible Moyen (12M) :</span>
+              <div class="flex items-center gap-1.5 font-mono">
+                <span class="font-bold text-white">{{ formatMoney(stock.analyst_target_price) }}</span>
+                <span
+                  v-if="meanPotential !== null"
+                  class="font-semibold"
+                  :class="meanPotential >= 0 ? 'text-emerald-400' : 'text-red-400'"
+                >
+                  {{ formatMOS(meanPotential) }}
+                </span>
+              </div>
             </div>
+
+            <!-- Prix Cible Médian -->
             <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Potentiel Médian vs Cours Actuel :</span>
-              <span
-                v-if="stock.analyst_target_price && stock.current_price"
-                class="font-mono font-semibold"
-                :class="stock.analyst_target_price > stock.current_price ? 'text-emerald-400' : 'text-red-400'"
-              >
-                {{ formatMOS(((stock.analyst_target_price - stock.current_price) / stock.current_price) * 100) }}
-              </span>
-              <span v-else class="text-gray-500">N/A</span>
+              <span class="text-gray-400">Prix Cible Médian (12M) :</span>
+              <div class="flex items-center gap-1.5 font-mono">
+                <span class="font-bold text-white">{{ formatMoney(stock.analyst_target_median) }}</span>
+                <span
+                  v-if="medianPotential !== null"
+                  class="font-semibold"
+                  :class="medianPotential >= 0 ? 'text-emerald-400' : 'text-red-400'"
+                >
+                  {{ formatMOS(medianPotential) }}
+                </span>
+              </div>
             </div>
+
+            <!-- Consensus Croissance CA NTM -->
             <div class="flex justify-between py-1 border-b border-gray-850">
               <span class="text-gray-400">Consensus Croissance CA NTM :</span>
               <span class="font-mono font-semibold text-amber-400">{{ formatPercent(stock.analyst_growth_estimate) }}</span>
             </div>
+
+            <!-- Nombre d'Analystes -->
             <div class="flex justify-between py-1">
               <span class="text-gray-400">Nombre d'Analystes :</span>
               <span class="font-mono font-semibold text-gray-200">{{ stock.analyst_count ?? 'N/A' }}</span>

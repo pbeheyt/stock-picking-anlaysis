@@ -59,6 +59,7 @@ export interface Stock {
   total_debt: number | null
   free_cash_flow_raw: number | null
   analyst_target_price: number | null
+  analyst_target_median?: number | null
   analyst_growth_estimate: number | null
   analyst_count?: number | null
   audit_data?: AuditData | string | null

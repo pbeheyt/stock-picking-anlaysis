@@ -70,8 +70,14 @@ export default defineEventHandler(async (event) => {
     const marginFcfRaw = (revenueTTM && freeCashFlowRaw && revenueTTM > 0) ? (freeCashFlowRaw / revenueTTM) : null
     const totalCash = financialData.totalCash ?? null
     const totalDebt = financialData.totalDebt ?? null
-    const analystTargetPrice = financialData.targetMeanPrice ?? summaryDetail.targetMeanPrice ?? null
+
+    // Target Prices (Mean & Median)
+    const targetMeanPrice = financialData.targetMeanPrice ?? summaryDetail.targetMeanPrice ?? null
+    const targetMedianPrice = financialData.targetMedianPrice ?? summaryDetail.targetMedianPrice ?? null
     const analystCount = financialData.numberOfAnalystOpinions ?? keyStats.numberOfAnalystOpinions ?? null
+
+    const targetMeanPotential = (currentPrice && targetMeanPrice) ? (targetMeanPrice / currentPrice) - 1 : null
+    const targetMedianPotential = (currentPrice && targetMedianPrice) ? (targetMedianPrice / currentPrice) - 1 : null
 
     // -------------------------------------------------------------
     // CASCADE 1 : CROISSANCE (g) - PARSING CA EXPLICITE
@@ -333,7 +339,10 @@ export default defineEventHandler(async (event) => {
       total_cash: totalCash,
       total_debt: totalDebt,
       free_cash_flow_raw: freeCashFlowRaw,
-      analyst_target_price: analystTargetPrice,
+      analyst_target_price: targetMeanPrice,
+      analyst_target_median: targetMedianPrice,
+      analyst_target_mean_potential: targetMeanPotential,
+      analyst_target_median_potential: targetMedianPotential,
       analyst_growth_estimate: validNTM ?? validTTM,
       analyst_count: analystCount,
       audit_data: auditData,

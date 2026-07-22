@@ -56,6 +56,7 @@ export default defineEventHandler(async (event) => {
         total_debt = ?,
         free_cash_flow_raw = ?,
         analyst_target_price = ?,
+        analyst_target_median = ?,
         analyst_growth_estimate = ?,
         analyst_count = ?,
         audit_data = ?,
@@ -99,6 +100,7 @@ export default defineEventHandler(async (event) => {
       body.total_debt ?? existing.total_debt,
       body.free_cash_flow_raw ?? existing.free_cash_flow_raw,
       body.analyst_target_price ?? existing.analyst_target_price,
+      body.analyst_target_median ?? existing.analyst_target_median,
       body.analyst_growth_estimate ?? existing.analyst_growth_estimate,
       body.analyst_count ?? existing.analyst_count,
       auditDataStr ?? existing.audit_data,
@@ -122,7 +124,7 @@ export default defineEventHandler(async (event) => {
         projected_margin, target_multiple, discount_rate, risk_spread,
         market_cap, pe_trailing_raw, pe_forward_raw, margin_gross_raw, margin_operating_raw,
         margin_net_raw, margin_fcf_raw, total_cash, total_debt, free_cash_flow_raw,
-        analyst_target_price, analyst_growth_estimate, analyst_count, audit_data, thesis, created_at, updated_at
+        analyst_target_price, analyst_target_median, analyst_growth_estimate, analyst_count, audit_data, thesis, created_at, updated_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?, ?,
@@ -131,7 +133,7 @@ export default defineEventHandler(async (event) => {
         ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?
       )
     `)
 
@@ -174,6 +176,7 @@ export default defineEventHandler(async (event) => {
       body.total_debt ?? null,
       body.free_cash_flow_raw ?? null,
       body.analyst_target_price ?? null,
+      body.analyst_target_median ?? null,
       body.analyst_growth_estimate ?? null,
       body.analyst_count ?? null,
       auditDataStr ?? null,
