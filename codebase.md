@@ -31,6 +31,13 @@ codebase_*.md
 
 ```
 
+# .node-version
+
+```
+22.19.0
+
+```
+
 # app/app.vue
 
 ```vue
@@ -204,6 +211,23 @@ const signInWithGoogle = async () => {
 
 ```
 
+# app/types/database.types.ts
+
+```ts
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export interface Database {
+  [key: string]: unknown
+}
+
+```
+
 # codebase_tree.md
 
 ```md
@@ -215,10 +239,13 @@ const signInWithGoogle = async () => {
 │   │       └── main.css
 │   ├── layouts
 │   │   └── default.vue
-│   └── pages
-│       ├── confirm.vue
-│       ├── index.vue
-│       └── login.vue
+│   ├── pages
+│   │   ├── confirm.vue
+│   │   ├── index.vue
+│   │   └── login.vue
+│   └── types
+│       └── database.types.ts
+├── codebase.md
 ├── codebase_tree.md
 ├── nuxt.config.ts
 ├── package.json
@@ -229,7 +256,7 @@ const signInWithGoogle = async () => {
 ├── README.md
 └── tsconfig.json
 
-7 directories, 14 files
+8 directories, 16 files
 
 ```
 

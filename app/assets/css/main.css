@@ -1,1 +1,214 @@
 @import "tailwindcss";
+
+/* ═══════════════════════════════════════════
+   Valuation Card
+   ═══════════════════════════════════════════ */
+
+.valuation-card {
+  @apply rounded-2xl border border-gray-800 bg-gray-900/40 p-6 space-y-6 shadow-lg backdrop-blur-sm;
+  @apply transition-all duration-300 hover:border-gray-700/80 hover:shadow-xl;
+}
+
+.ticker-badge {
+  @apply rounded-md bg-emerald-500/10 px-2.5 py-1 font-mono text-sm font-bold text-emerald-400 border border-emerald-500/20;
+}
+
+/* ═══════════════════════════════════════════
+   Metrics Grid
+   ═══════════════════════════════════════════ */
+
+.metrics-grid {
+  @apply grid grid-cols-3 gap-4 rounded-xl bg-gray-950/80 p-4 text-center border border-gray-800/80;
+}
+
+.metric-cell {
+  @apply flex flex-col gap-1;
+}
+
+.metric-label {
+  @apply text-[11px] font-medium uppercase tracking-wider text-gray-500;
+}
+
+.metric-value {
+  @apply font-mono text-sm font-bold text-gray-200;
+}
+
+/* ═══════════════════════════════════════════
+   Fair Value Section
+   ═══════════════════════════════════════════ */
+
+.fair-value-section {
+  @apply rounded-xl border border-gray-800/60 bg-gradient-to-br from-gray-900/80 to-gray-950/80 p-5;
+}
+
+/* ═══════════════════════════════════════════
+   Gauge
+   ═══════════════════════════════════════════ */
+
+.gauge-track {
+  @apply relative h-2.5 w-full rounded-full bg-gray-800/80 overflow-visible;
+}
+
+.gauge-fill {
+  @apply absolute top-0 h-full rounded-full;
+  background: linear-gradient(90deg, #f87171 0%, #fbbf24 50%, #34d399 100%);
+  opacity: 0.35;
+}
+
+.gauge-marker {
+  @apply absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10;
+}
+
+.gauge-marker-dot {
+  @apply h-3.5 w-3.5 rounded-full border-2 border-gray-900 shadow-md;
+}
+
+.gauge-price {
+  @apply absolute top-1/2 -translate-x-1/2 z-20;
+  transform: translateX(-50%) translateY(-50%);
+}
+
+.gauge-price-line {
+  @apply w-0.5 h-6 bg-white/90 rounded-full mx-auto shadow-sm;
+  margin-top: -6px;
+}
+
+.gauge-price-label {
+  @apply text-[9px] font-bold text-white/80 text-center mt-0.5 select-none;
+}
+
+/* ═══════════════════════════════════════════
+   Scenario Cells
+   ═══════════════════════════════════════════ */
+
+.scenario-cell {
+  @apply flex flex-col items-center gap-0.5 rounded-xl border border-gray-800/60 bg-gray-950/60 p-3;
+}
+
+.scenario-label {
+  @apply text-[10px] font-semibold uppercase tracking-wider;
+}
+
+.scenario-value {
+  @apply font-mono text-sm font-bold text-gray-200;
+}
+
+.scenario-mos {
+  @apply text-[10px] font-semibold;
+}
+
+/* ═══════════════════════════════════════════
+   Reverse DCF Section
+   ═══════════════════════════════════════════ */
+
+.reverse-dcf-section {
+  @apply rounded-xl border border-indigo-500/15 bg-indigo-950/10 p-4;
+}
+
+/* ═══════════════════════════════════════════
+   Sliders
+   ═══════════════════════════════════════════ */
+
+.slider-group {
+  @apply space-y-1.5;
+}
+
+.slider-header {
+  @apply flex items-center justify-between;
+}
+
+.slider-label {
+  @apply text-xs font-medium text-gray-400;
+}
+
+.slider-value {
+  @apply font-mono text-sm font-bold tabular-nums;
+}
+
+.slider-bounds {
+  @apply flex justify-between text-[10px] text-gray-600;
+}
+
+/* Base slider reset & styling */
+.slider {
+  @apply w-full cursor-pointer appearance-none bg-transparent;
+  height: 6px;
+}
+
+.slider::-webkit-slider-runnable-track {
+  @apply h-1.5 rounded-full bg-gray-800;
+}
+
+.slider::-webkit-slider-thumb {
+  @apply appearance-none h-4 w-4 rounded-full border-2 border-gray-900 shadow-md cursor-grab;
+  margin-top: -5px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
+
+.slider::-moz-range-track {
+  @apply h-1.5 rounded-full bg-gray-800 border-none;
+}
+
+.slider::-moz-range-thumb {
+  @apply h-4 w-4 rounded-full border-2 border-gray-900 shadow-md cursor-grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Slider color variants */
+.slider--emerald::-webkit-slider-thumb {
+  @apply bg-emerald-400;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+}
+.slider--emerald::-moz-range-thumb {
+  @apply bg-emerald-400;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+}
+
+.slider--sky::-webkit-slider-thumb {
+  @apply bg-sky-400;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+.slider--sky::-moz-range-thumb {
+  @apply bg-sky-400;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+.slider--violet::-webkit-slider-thumb {
+  @apply bg-violet-400;
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.4);
+}
+.slider--violet::-moz-range-thumb {
+  @apply bg-violet-400;
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.4);
+}
+
+.slider--amber::-webkit-slider-thumb {
+  @apply bg-amber-400;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+.slider--amber::-moz-range-thumb {
+  @apply bg-amber-400;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+
+/* Focus ring for accessibility */
+.slider:focus-visible::-webkit-slider-thumb {
+  @apply outline-2 outline-offset-2 outline-white;
+}
+
+.slider:focus-visible::-moz-range-thumb {
+  @apply outline-2 outline-offset-2 outline-white;
+}

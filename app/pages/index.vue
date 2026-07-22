@@ -12,7 +12,6 @@ const successMessage = ref<string | null>(null)
 const stocks = ref<Stock[]>([])
 const isFetchingStocks = ref(true)
 
-// Charger les actions de l'utilisateur
 const fetchUserStocks = async () => {
   if (!user.value) return
   isFetchingStocks.value = true
@@ -35,7 +34,6 @@ onMounted(() => {
   fetchUserStocks()
 })
 
-// Analyser et enregistrer un ticker
 const analyzeAndAddStock = async () => {
   const ticker = searchTicker.value.trim().toUpperCase()
   if (!ticker || !user.value) return
@@ -45,7 +43,6 @@ const analyzeAndAddStock = async () => {
   successMessage.value = null
 
   try {
-    // 1. Fetch Nitro API
     const stockData = await $fetch<{
       ticker: string
       name: string
@@ -53,9 +50,14 @@ const analyzeAndAddStock = async () => {
       revenue_ttm: number | null
       shares_outstanding: number | null
       fetched_at: string
+      default_growth: number
+      default_margin: number
+      default_pe: number
+      default_discount_rate: number
     }>(`/api/stock/${encodeURIComponent(ticker)}`)
 
-    // 2. Upsert dans Supabase
+    const existing = stocks.value.find(s => s.ticker === stockData.ticker)
+
     const { data, error } = await supabase
       .from('stocks')
       .upsert(
@@ -67,6 +69,10 @@ const analyzeAndAddStock = async () => {
           revenue_ttm: stockData.revenue_ttm,
           shares_outstanding: stockData.shares_outstanding,
           fetched_at: stockData.fetched_at,
+          projected_growth: existing?.projected_growth ?? stockData.default_growth,
+          projected_margin: existing?.projected_margin ?? stockData.default_margin,
+          target_pe: existing?.target_pe ?? stockData.default_pe,
+          discount_rate: existing?.discount_rate ?? stockData.default_discount_rate,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,ticker' }
@@ -75,7 +81,7 @@ const analyzeAndAddStock = async () => {
 
     if (error) throw error
 
-    successMessage.value = `Action ${stockData.ticker} (${stockData.name}) enregistrée avec succès !`
+    successMessage.value = `${stockData.ticker} (${stockData.name}) — données mises à jour.`
     searchTicker.value = ''
     await fetchUserStocks()
   } catch (err: any) {
@@ -85,7 +91,6 @@ const analyzeAndAddStock = async () => {
   }
 }
 
-// Mettre à jour les paramètres de valorisation
 const updateStockHypotheses = async (stock: Stock) => {
   try {
     const { error } = await supabase
@@ -100,12 +105,16 @@ const updateStockHypotheses = async (stock: Stock) => {
       .eq('id', stock.id)
 
     if (error) throw error
+
+    const idx = stocks.value.findIndex(s => s.id === stock.id)
+    if (idx !== -1) {
+      stocks.value[idx] = { ...stocks.value[idx], ...stock }
+    }
   } catch (err: any) {
     console.error('Erreur mise à jour hypothèses:', err)
   }
 }
 
-// Supprimer une action
 const deleteStock = async (id: string, ticker: string) => {
   if (!confirm(`Supprimer ${ticker} de votre liste ?`)) return
   try {
@@ -117,16 +126,6 @@ const deleteStock = async (id: string, ticker: string) => {
   }
 }
 
-// Formatage des montants volumineux (Milliards / Millions)
-const formatLargeNumber = (num: number | null) => {
-  if (num === null || num === undefined) return 'N/A'
-  if (num >= 1e12) return `${(num / 1e12).toFixed(2)} T`
-  if (num >= 1e9) return `${(num / 1e9).toFixed(2)} B`
-  if (num >= 1e6) return `${(num / 1e6).toFixed(2)} M`
-  return num.toLocaleString()
-}
-
-// Déconnexion
 const signOut = async () => {
   await supabase.auth.signOut()
   await navigateTo('/login')
@@ -154,7 +153,7 @@ const signOut = async () => {
       </button>
     </div>
 
-    <!-- Barre de recherche & Ingestion -->
+    <!-- Barre de recherche -->
     <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-6 space-y-4 shadow-xl backdrop-blur">
       <h2 class="text-base font-semibold text-white">
         🔍 Rechercher & Analyser un Ticker
@@ -180,7 +179,6 @@ const signOut = async () => {
         </button>
       </form>
 
-      <!-- Feedback messages -->
       <div v-if="errorMessage" class="rounded-lg border border-red-500/30 bg-red-950/40 p-3 text-xs text-red-300">
         {{ errorMessage }}
       </div>
@@ -189,7 +187,7 @@ const signOut = async () => {
       </div>
     </div>
 
-    <!-- Liste des stocks analysés -->
+    <!-- Liste des stocks -->
     <div class="space-y-4">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold text-white">
@@ -202,120 +200,17 @@ const signOut = async () => {
       </div>
 
       <div v-else-if="stocks.length === 0" class="rounded-xl border border-dashed border-gray-800 p-12 text-center text-sm text-gray-500">
-        Aucune action enregistrée pour le moment. Utilisez la barre de recherche ci-dessus pour commencer.
+        Aucune action enregistrée. Utilisez la barre de recherche ci-dessus pour commencer.
       </div>
 
-      <div v-else class="grid gap-6 md:grid-cols-2 lg:grid-cols-1">
-        <div
+      <div v-else class="grid gap-6">
+        <ValuationCard
           v-for="stock in stocks"
           :key="stock.id"
-          class="rounded-xl border border-gray-800 bg-gray-900/40 p-6 space-y-6 shadow-lg transition hover:border-gray-700"
-        >
-          <!-- Entête Stock -->
-          <div class="flex items-start justify-between">
-            <div>
-              <div class="flex items-center gap-3">
-                <span class="rounded-md bg-emerald-500/10 px-2.5 py-1 font-mono text-sm font-bold text-emerald-400 border border-emerald-500/20">
-                  {{ stock.ticker }}
-                </span>
-                <h3 class="text-base font-semibold text-white">
-                  {{ stock.name || stock.ticker }}
-                </h3>
-              </div>
-              <p class="mt-1 text-xs text-gray-500">
-                Mis à jour le {{ new Date(stock.fetched_at).toLocaleString() }}
-              </p>
-            </div>
-            <button
-              type="button"
-              class="rounded-lg p-2 text-gray-500 transition hover:bg-red-950/50 hover:text-red-400"
-              title="Supprimer l'action"
-              @click="deleteStock(stock.id, stock.ticker)"
-            >
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
-
-          <!-- Métriques Brutes Extract -->
-          <div class="grid grid-cols-3 gap-4 rounded-lg bg-gray-950/80 p-4 text-center border border-gray-800/80">
-            <div>
-              <p class="text-xs text-gray-400">Prix Actuel</p>
-              <p class="mt-1 font-mono text-base font-bold text-white">
-                {{ stock.current_price ? `$${stock.current_price.toFixed(2)}` : 'N/A' }}
-              </p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-400">CA TTM</p>
-              <p class="mt-1 font-mono text-base font-bold text-gray-200">
-                {{ formatLargeNumber(stock.revenue_ttm) }}
-              </p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-400">Actions (Shares)</p>
-              <p class="mt-1 font-mono text-base font-bold text-gray-200">
-                {{ formatLargeNumber(stock.shares_outstanding) }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Modificateur d'Hypothèses de Valorisation -->
-          <div class="space-y-3 pt-2">
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Hypothèses de Valorisation
-            </h4>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <!-- Croissance CA -->
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Croissance CA (ex: 0.10)</label>
-                <input
-                  v-model.number="stock.projected_growth"
-                  type="number"
-                  step="0.01"
-                  class="w-full rounded-md border border-gray-800 bg-gray-950 px-3 py-1.5 font-mono text-xs text-white focus:border-emerald-500 focus:outline-none"
-                  @change="updateStockHypotheses(stock)"
-                >
-              </div>
-
-              <!-- Marge Op / Nette -->
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Marge (ex: 0.20)</label>
-                <input
-                  v-model.number="stock.projected_margin"
-                  type="number"
-                  step="0.01"
-                  class="w-full rounded-md border border-gray-800 bg-gray-950 px-3 py-1.5 font-mono text-xs text-white focus:border-emerald-500 focus:outline-none"
-                  @change="updateStockHypotheses(stock)"
-                >
-              </div>
-
-              <!-- PER Cible -->
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">PER Cible (ex: 20)</label>
-                <input
-                  v-model.number="stock.target_pe"
-                  type="number"
-                  step="1"
-                  class="w-full rounded-md border border-gray-800 bg-gray-950 px-3 py-1.5 font-mono text-xs text-white focus:border-emerald-500 focus:outline-none"
-                  @change="updateStockHypotheses(stock)"
-                >
-              </div>
-
-              <!-- Taux d'Actualisation -->
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Taux Actualisation</label>
-                <input
-                  v-model.number="stock.discount_rate"
-                  type="number"
-                  step="0.01"
-                  class="w-full rounded-md border border-gray-800 bg-gray-950 px-3 py-1.5 font-mono text-xs text-white focus:border-emerald-500 focus:outline-none"
-                  @change="updateStockHypotheses(stock)"
-                >
-              </div>
-            </div>
-          </div>
-        </div>
+          :stock="stock"
+          @update="updateStockHypotheses"
+          @delete="deleteStock"
+        />
       </div>
     </div>
   </div>
