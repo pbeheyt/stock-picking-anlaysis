@@ -800,6 +800,10 @@ function formatMOS(num: number): string {
               <span class="text-gray-400">Consensus Croissance CA NTM :</span>
               <span class="font-mono font-semibold text-amber-400">{{ formatPercent(stock.analyst_growth_estimate) }}</span>
             </div>
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Nombre d'Analystes :</span>
+              <span class="font-mono font-semibold text-gray-200">{{ stock.analyst_count ?? 'N/A' }}</span>
+            </div>
             <div class="flex justify-between py-1">
               <span class="text-gray-400">Bêta Yahoo (Spread Volatilité) :</span>
               <span class="font-mono font-semibold text-indigo-400">{{ stock.beta ?? 1.0 }} (±{{ formatPercent(stock.risk_spread) }})</span>

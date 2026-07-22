@@ -93,6 +93,7 @@ const analyzeAndAddStock = async () => {
       free_cash_flow_raw: number | null
       analyst_target_price: number | null
       analyst_growth_estimate: number | null
+      analyst_count: number | null
       audit_data: any
     }>(`/api/stock/${encodeURIComponent(ticker)}`)
 
@@ -140,6 +141,7 @@ const analyzeAndAddStock = async () => {
         free_cash_flow_raw: stockData.free_cash_flow_raw,
         analyst_target_price: stockData.analyst_target_price,
         analyst_growth_estimate: stockData.analyst_growth_estimate,
+        analyst_count: stockData.analyst_count,
         audit_data: stockData.audit_data,
       },
     })
@@ -227,7 +229,7 @@ const deleteStock = async (id: string, ticker: string) => {
     </div>
 
     <!-- Barre de recherche -->
-    <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-6 space-y-4 shadow-xl backdrop-blur">
+    <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-6 space-y-4 shadow-xl backdrop-blur">
       <h2 class="text-base font-semibold text-white">
         🔍 Rechercher & Analyser un Ticker
       </h2>

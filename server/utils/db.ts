@@ -56,6 +56,7 @@ export function getDb(): Database.Database {
         free_cash_flow_raw REAL,
         analyst_target_price REAL,
         analyst_growth_estimate REAL,
+        analyst_count INTEGER,
         audit_data TEXT,
         thesis TEXT,
         created_at TEXT,
@@ -98,6 +99,7 @@ export function getDb(): Database.Database {
     safeAddColumn('free_cash_flow_raw', 'REAL')
     safeAddColumn('analyst_target_price', 'REAL')
     safeAddColumn('analyst_growth_estimate', 'REAL')
+    safeAddColumn('analyst_count', 'INTEGER')
     safeAddColumn('audit_data', 'TEXT')
   }
 
