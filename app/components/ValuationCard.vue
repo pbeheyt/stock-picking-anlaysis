@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Stock, GrowthMode } from '~/types/database.types'
+import type { Stock, GrowthMode, MarginType } from '~/types/database.types'
 import {
   computeScenarios,
   computeReverseDCF,
@@ -24,6 +24,7 @@ const growthY2 = ref(props.stock.growth_y2 ?? 0.10)
 const growthY3 = ref(props.stock.growth_y3 ?? 0.10)
 const growthY4 = ref(props.stock.growth_y4 ?? 0.10)
 const growthY5 = ref(props.stock.growth_y5 ?? 0.10)
+const marginType = ref<MarginType>(props.stock.margin_type || 'net_margin')
 const margin = ref(props.stock.projected_margin ?? 0.20)
 const targetPE = ref(props.stock.target_pe ?? 20)
 const discountRate = ref(props.stock.discount_rate ?? 0.10)
@@ -36,6 +37,7 @@ watch(() => props.stock, (newStock) => {
   growthY3.value = newStock.growth_y3 ?? 0.10
   growthY4.value = newStock.growth_y4 ?? 0.10
   growthY5.value = newStock.growth_y5 ?? 0.10
+  marginType.value = newStock.margin_type || 'net_margin'
   margin.value = newStock.projected_margin ?? 0.20
   targetPE.value = newStock.target_pe ?? 20
   discountRate.value = newStock.discount_rate ?? 0.10
@@ -90,6 +92,39 @@ const gaugeData = computed(() => {
   }
 })
 
+// Calcul bidirectionnel des CA par année
+const yearRevenues = computed(() => {
+  const r0 = props.stock.revenue_ttm ?? 0
+  const r1 = r0 * (1 + growthY1.value)
+  const r2 = r1 * (1 + growthY2.value)
+  const r3 = r2 * (1 + growthY3.value)
+  const r4 = r3 * (1 + growthY4.value)
+  const r5 = r4 * (1 + growthY5.value)
+  return [r1, r2, r3, r4, r5]
+})
+
+function updateGrowthFromRevenue(yearIndex: number, newRevenueStr: string) {
+  const newRevenue = parseFloat(newRevenueStr)
+  if (isNaN(newRevenue) || newRevenue <= 0) return
+
+  const r0 = props.stock.revenue_ttm ?? 0
+  let prevRev = r0
+  if (yearIndex === 1) prevRev = r0
+  else if (yearIndex === 2) prevRev = yearRevenues.value[0]
+  else if (yearIndex === 3) prevRev = yearRevenues.value[1]
+  else if (yearIndex === 4) prevRev = yearRevenues.value[2]
+  else if (yearIndex === 5) prevRev = yearRevenues.value[3]
+
+  if (prevRev > 0) {
+    const calcGrowth = (newRevenue / prevRev) - 1
+    if (yearIndex === 1) growthY1.value = calcGrowth
+    else if (yearIndex === 2) growthY2.value = calcGrowth
+    else if (yearIndex === 3) growthY3.value = calcGrowth
+    else if (yearIndex === 4) growthY4.value = calcGrowth
+    else if (yearIndex === 5) growthY5.value = calcGrowth
+  }
+}
+
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 
 function debouncedSave() {
@@ -104,6 +139,7 @@ function debouncedSave() {
       growth_y3: growthY3.value,
       growth_y4: growthY4.value,
       growth_y5: growthY5.value,
+      margin_type: marginType.value,
       projected_margin: margin.value,
       target_pe: targetPE.value,
       discount_rate: discountRate.value,
@@ -112,20 +148,31 @@ function debouncedSave() {
   }, 800)
 }
 
-watch([growthMode, growth, growthY1, growthY2, growthY3, growthY4, growthY5, margin, targetPE, discountRate], () => {
+watch([growthMode, growth, growthY1, growthY2, growthY3, growthY4, growthY5, marginType, margin, targetPE, discountRate], () => {
   debouncedSave()
 })
+
+function formatMoney(num: number | null): string {
+  if (num === null || num === undefined) return 'N/A'
+  const currencyCode = props.stock.currency || 'USD'
+  try {
+    const code = currencyCode.toUpperCase() === 'GBP' || currencyCode === 'GBP' ? 'GBP' : currencyCode.toUpperCase()
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: code,
+      maximumFractionDigits: 2,
+    }).format(num)
+  } catch {
+    return `${num.toFixed(2)} ${currencyCode}`
+  }
+}
 
 function formatLargeNumber(num: number | null): string {
   if (num === null || num === undefined) return 'N/A'
   if (num >= 1e12) return `${(num / 1e12).toFixed(2)} T`
   if (num >= 1e9) return `${(num / 1e9).toFixed(2)} B`
   if (num >= 1e6) return `${(num / 1e6).toFixed(2)} M`
-  return num.toLocaleString()
-}
-
-function formatCurrency(num: number): string {
-  return num.toFixed(2)
+  return num.toLocaleString('fr-FR')
 }
 
 function formatPercent(num: number): string {
@@ -150,6 +197,9 @@ function formatMOS(num: number): string {
           <h3 class="truncate text-base font-semibold text-white">
             {{ stock.name || stock.ticker }}
           </h3>
+          <span class="rounded bg-gray-800 px-2 py-0.5 font-mono text-[10px] text-gray-300 border border-gray-700">
+            {{ stock.currency || 'USD' }}
+          </span>
           <span
             class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
             :class="badgeConfig.class"
@@ -177,7 +227,7 @@ function formatMOS(num: number): string {
     <div class="metrics-grid">
       <div class="metric-cell">
         <span class="metric-label">Prix Actuel</span>
-        <span class="metric-value text-white">${{ formatCurrency(stock.current_price ?? 0) }}</span>
+        <span class="metric-value text-white">{{ formatMoney(stock.current_price ?? 0) }}</span>
       </div>
       <div class="metric-cell">
         <span class="metric-label">CA TTM</span>
@@ -195,7 +245,7 @@ function formatMOS(num: number): string {
         <div>
           <span class="text-xs font-medium uppercase tracking-wider text-gray-500">Fair Value (Base Case)</span>
           <div class="mt-1 flex items-baseline gap-2">
-            <span class="text-3xl font-bold tracking-tight text-white">${{ formatCurrency(fairValue) }}</span>
+            <span class="text-3xl font-bold tracking-tight text-white">{{ formatMoney(fairValue) }}</span>
             <span
               class="text-sm font-bold"
               :class="{
@@ -210,7 +260,7 @@ function formatMOS(num: number): string {
         </div>
         <div class="text-right">
           <span class="text-xs font-medium uppercase tracking-wider text-gray-500">Prix Cible 5Y</span>
-          <p class="mt-1 font-mono text-lg font-semibold text-gray-300">${{ formatCurrency(scenarios.base.targetPrice5Y) }}</p>
+          <p class="mt-1 font-mono text-lg font-semibold text-gray-300">{{ formatMoney(scenarios.base.targetPrice5Y) }}</p>
         </div>
       </div>
 
@@ -247,13 +297,13 @@ function formatMOS(num: number): string {
         <!-- Labels -->
         <div class="relative h-5 text-[10px] font-medium">
           <span class="absolute -translate-x-1/2 text-red-400/80" :style="{ left: `${gaugeData.bearPos}%` }">
-            ${{ formatCurrency(scenarios.bear.fairValue) }}
+            {{ formatMoney(scenarios.bear.fairValue) }}
           </span>
           <span class="absolute -translate-x-1/2 text-amber-400/80" :style="{ left: `${gaugeData.basePos}%` }">
-            ${{ formatCurrency(scenarios.base.fairValue) }}
+            {{ formatMoney(scenarios.base.fairValue) }}
           </span>
           <span class="absolute -translate-x-1/2 text-emerald-400/80" :style="{ left: `${gaugeData.bullPos}%` }">
-            ${{ formatCurrency(scenarios.bull.fairValue) }}
+            {{ formatMoney(scenarios.bull.fairValue) }}
           </span>
         </div>
 
@@ -269,21 +319,21 @@ function formatMOS(num: number): string {
     <div class="grid grid-cols-3 gap-3">
       <div class="scenario-cell scenario-cell--bear">
         <span class="scenario-label text-red-400/70">Bear Case</span>
-        <span class="scenario-value">${{ formatCurrency(scenarios.bear.fairValue) }}</span>
+        <span class="scenario-value">{{ formatMoney(scenarios.bear.fairValue) }}</span>
         <span class="scenario-mos" :class="scenarios.bear.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
           {{ formatMOS(scenarios.bear.marginOfSafety) }}
         </span>
       </div>
       <div class="scenario-cell scenario-cell--base">
         <span class="scenario-label text-amber-400/70">Base Case</span>
-        <span class="scenario-value text-white">${{ formatCurrency(scenarios.base.fairValue) }}</span>
+        <span class="scenario-value text-white">{{ formatMoney(scenarios.base.fairValue) }}</span>
         <span class="scenario-mos" :class="scenarios.base.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
           {{ formatMOS(scenarios.base.marginOfSafety) }}
         </span>
       </div>
       <div class="scenario-cell scenario-cell--bull">
         <span class="scenario-label text-emerald-400/70">Bull Case</span>
-        <span class="scenario-value">${{ formatCurrency(scenarios.bull.fairValue) }}</span>
+        <span class="scenario-value">{{ formatMoney(scenarios.bull.fairValue) }}</span>
         <span class="scenario-mos" :class="scenarios.bull.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
           {{ formatMOS(scenarios.bull.marginOfSafety) }}
         </span>
@@ -308,7 +358,7 @@ function formatMOS(num: number): string {
           {{ formatPercent(reverseDCF.impliedGrowth) }}/an
         </span>
         sur 5 ans pour justifier le cours actuel de
-        <span class="font-semibold text-white">${{ formatCurrency(stock.current_price ?? 0) }}</span>.
+        <span class="font-semibold text-white">{{ formatMoney(stock.current_price ?? 0) }}</span>.
         <span v-if="reverseDCF.impliedGrowth > growth" class="text-amber-400/80 text-xs ml-1">
           ⚠ Supérieur à votre hypothèse ({{ formatPercent(growth) }})
         </span>
@@ -324,7 +374,7 @@ function formatMOS(num: number): string {
           {{ formatPercent(reverseDCF.impliedGrowthY2Y5 ?? 0) }}/an
         </span>
         sur les années 2 à 5 pour justifier le cours actuel de
-        <span class="font-semibold text-white">${{ formatCurrency(stock.current_price ?? 0) }}</span>.
+        <span class="font-semibold text-white">{{ formatMoney(stock.current_price ?? 0) }}</span>.
       </p>
 
       <div class="mt-3 grid grid-cols-3 gap-3 text-center">
@@ -338,7 +388,7 @@ function formatMOS(num: number): string {
         </div>
         <div>
           <span class="text-[10px] text-gray-500 uppercase">Prix Cible 5Y</span>
-          <p class="font-mono text-xs font-semibold text-gray-300 mt-0.5">${{ formatCurrency(reverseDCF.targetPrice5YMarket) }}</p>
+          <p class="font-mono text-xs font-semibold text-gray-300 mt-0.5">{{ formatMoney(reverseDCF.targetPrice5YMarket) }}</p>
         </div>
       </div>
     </div>
@@ -402,11 +452,11 @@ function formatMOS(num: number): string {
         </div>
       </div>
 
-      <!-- Mode Explicit : 5 Mini-Sliders -->
-      <div v-else class="space-y-3 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4">
+      <!-- Mode Explicit : 5 Mini-Sliders & CA en Dur Bidirectionnel -->
+      <div v-else class="space-y-4 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4">
         <div class="flex items-center justify-between">
           <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-            Trajectoire de Croissance sur 5 Ans
+            Trajectoire de Croissance sur 5 Ans (Liaison % / CA)
           </span>
           <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
             {{ stock.growth_source }}
@@ -415,8 +465,8 @@ function formatMOS(num: number): string {
 
         <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
           <!-- An 1 -->
-          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800">
-            <div class="flex items-center justify-between text-[11px] mb-1">
+          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
+            <div class="flex items-center justify-between text-[11px]">
               <span class="text-gray-400 font-semibold">An 1 (NTM)</span>
               <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY1) }}</span>
             </div>
@@ -428,11 +478,22 @@ function formatMOS(num: number): string {
               step="0.01"
               class="slider slider--emerald"
             >
+            <div class="pt-1">
+              <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An 1)</label>
+              <input
+                :value="yearRevenues[0]"
+                type="number"
+                step="1000000"
+                class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
+                @input="updateGrowthFromRevenue(1, ($event.target as HTMLInputElement).value)"
+              >
+              <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[0]) }}</span>
+            </div>
           </div>
 
           <!-- An 2 -->
-          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800">
-            <div class="flex items-center justify-between text-[11px] mb-1">
+          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
+            <div class="flex items-center justify-between text-[11px]">
               <span class="text-gray-400 font-semibold">An 2</span>
               <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY2) }}</span>
             </div>
@@ -444,11 +505,22 @@ function formatMOS(num: number): string {
               step="0.01"
               class="slider slider--emerald"
             >
+            <div class="pt-1">
+              <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An 2)</label>
+              <input
+                :value="yearRevenues[1]"
+                type="number"
+                step="1000000"
+                class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
+                @input="updateGrowthFromRevenue(2, ($event.target as HTMLInputElement).value)"
+              >
+              <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[1]) }}</span>
+            </div>
           </div>
 
           <!-- An 3 -->
-          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800">
-            <div class="flex items-center justify-between text-[11px] mb-1">
+          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
+            <div class="flex items-center justify-between text-[11px]">
               <span class="text-gray-400 font-semibold">An 3</span>
               <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY3) }}</span>
             </div>
@@ -460,11 +532,22 @@ function formatMOS(num: number): string {
               step="0.01"
               class="slider slider--emerald"
             >
+            <div class="pt-1">
+              <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An 3)</label>
+              <input
+                :value="yearRevenues[2]"
+                type="number"
+                step="1000000"
+                class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
+                @input="updateGrowthFromRevenue(3, ($event.target as HTMLInputElement).value)"
+              >
+              <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[2]) }}</span>
+            </div>
           </div>
 
           <!-- An 4 -->
-          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800">
-            <div class="flex items-center justify-between text-[11px] mb-1">
+          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
+            <div class="flex items-center justify-between text-[11px]">
               <span class="text-gray-400 font-semibold">An 4</span>
               <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY4) }}</span>
             </div>
@@ -476,11 +559,22 @@ function formatMOS(num: number): string {
               step="0.01"
               class="slider slider--emerald"
             >
+            <div class="pt-1">
+              <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An 4)</label>
+              <input
+                :value="yearRevenues[3]"
+                type="number"
+                step="1000000"
+                class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
+                @input="updateGrowthFromRevenue(4, ($event.target as HTMLInputElement).value)"
+              >
+              <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[3]) }}</span>
+            </div>
           </div>
 
           <!-- An 5 -->
-          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800">
-            <div class="flex items-center justify-between text-[11px] mb-1">
+          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
+            <div class="flex items-center justify-between text-[11px]">
               <span class="text-gray-400 font-semibold">An 5</span>
               <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY5) }}</span>
             </div>
@@ -492,27 +586,62 @@ function formatMOS(num: number): string {
               step="0.01"
               class="slider slider--emerald"
             >
+            <div class="pt-1">
+              <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An 5)</label>
+              <input
+                :value="yearRevenues[4]"
+                type="number"
+                step="1000000"
+                class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
+                @input="updateGrowthFromRevenue(5, ($event.target as HTMLInputElement).value)"
+              >
+              <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[4]) }}</span>
+            </div>
           </div>
         </div>
 
-        <!-- Summary Bar Explicit -->
-        <div class="flex items-center justify-between rounded-lg bg-emerald-950/40 p-2.5 border border-emerald-500/20 text-xs">
-          <div>
-            <span class="text-gray-400">CA Projeté Année 5 :</span>
-            <span class="ml-1 font-mono font-bold text-white">{{ formatLargeNumber(scenarios.base.revenue5Y) }}</span>
-          </div>
-          <div>
-            <span class="text-gray-400">CAGR Lissé Équivalent :</span>
-            <span class="ml-1 font-mono font-bold text-emerald-400">{{ formatPercent(scenarios.base.equivalentCAGR) }}/an</span>
-          </div>
+        <!-- Block CA Final Cible Année 5 -->
+        <div class="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-4 text-center space-y-1 shadow-md">
+          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+            🎯 Chiffre d'Affaires Final Cible (Année 5)
+          </span>
+          <p class="font-mono text-2xl font-extrabold text-white">
+            {{ formatLargeNumber(scenarios.base.revenue5Y) }}
+          </p>
+          <p class="text-xs text-gray-400">
+            soit un CAGR équivalent lissé de <span class="font-bold text-emerald-400">{{ formatPercent(scenarios.base.equivalentCAGR) }}/an</span> sur 5 ans
+          </p>
         </div>
       </div>
 
-      <!-- Marge -->
+      <!-- Marge & Toggle Nature de Marge -->
       <div class="slider-group">
         <div class="slider-header">
           <div class="flex items-center gap-2 flex-wrap">
-            <label class="slider-label">Marge Nette / FCF</label>
+            <label class="slider-label">
+              {{ marginType === 'net_margin' ? 'Marge Nette (Net Income)' : 'Marge FCF (Free Cash Flow)' }}
+            </label>
+
+            <!-- Toggle Nature Marge -->
+            <div class="inline-flex rounded-md bg-gray-950 p-0.5 border border-gray-800">
+              <button
+                type="button"
+                class="px-2 py-0.5 text-[10px] font-medium rounded transition"
+                :class="marginType === 'net_margin' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
+                @click="marginType = 'net_margin'"
+              >
+                Marge Nette
+              </button>
+              <button
+                type="button"
+                class="px-2 py-0.5 text-[10px] font-medium rounded transition"
+                :class="marginType === 'fcf_margin' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
+                @click="marginType = 'fcf_margin'"
+              >
+                Marge FCF
+              </button>
+            </div>
+
             <span
               v-if="stock.margin_source"
               class="source-pill bg-sky-500/10 text-sky-400 border-sky-500/20"
@@ -536,11 +665,13 @@ function formatMOS(num: number): string {
         </div>
       </div>
 
-      <!-- PER Cible -->
+      <!-- Multiple Cible (P/E ou P/FCF selon marginType) -->
       <div class="slider-group">
         <div class="slider-header">
           <div class="flex items-center gap-2 flex-wrap">
-            <label class="slider-label">Multiple de Sortie (P/E)</label>
+            <label class="slider-label">
+              Multiple de Sortie ({{ marginType === 'net_margin' ? 'P/E' : 'P/FCF' }})
+            </label>
             <span
               v-if="stock.pe_source"
               class="source-pill bg-violet-500/10 text-violet-400 border-violet-500/20"

@@ -29,6 +29,7 @@ export default defineEventHandler(async (event) => {
   const now = new Date().toISOString()
   const stmt = db.prepare(`
     UPDATE stocks SET
+      currency = ?,
       growth_mode = ?,
       projected_growth = ?,
       growth_y1 = ?,
@@ -36,6 +37,7 @@ export default defineEventHandler(async (event) => {
       growth_y3 = ?,
       growth_y4 = ?,
       growth_y5 = ?,
+      margin_type = ?,
       projected_margin = ?,
       target_pe = ?,
       discount_rate = ?,
@@ -46,6 +48,7 @@ export default defineEventHandler(async (event) => {
   `)
 
   stmt.run(
+    body.currency ?? existing.currency ?? 'USD',
     body.growth_mode ?? existing.growth_mode,
     body.projected_growth ?? existing.projected_growth,
     body.growth_y1 ?? existing.growth_y1,
@@ -53,6 +56,7 @@ export default defineEventHandler(async (event) => {
     body.growth_y3 ?? existing.growth_y3,
     body.growth_y4 ?? existing.growth_y4,
     body.growth_y5 ?? existing.growth_y5,
+    body.margin_type ?? existing.margin_type,
     body.projected_margin ?? existing.projected_margin,
     body.target_pe ?? existing.target_pe,
     body.discount_rate ?? existing.discount_rate,

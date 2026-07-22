@@ -166,11 +166,14 @@ export default defineEventHandler(async (event) => {
       marginSource = 'Cible Maturité (45% Marge Brute)'
     }
 
+    const currency = quote.currency || summaryDetail.currency || 'USD'
+    const defaultMarginType: 'net_margin' | 'fcf_margin' = marginSource === 'Marge FCF TTM' ? 'fcf_margin' : 'net_margin'
     const defaultDiscountRate = 0.10
 
     return {
       ticker,
       name,
+      currency,
       current_price: currentPrice,
       revenue_ttm: revenueTTM,
       shares_outstanding: sharesOutstanding,
@@ -183,6 +186,7 @@ export default defineEventHandler(async (event) => {
       growth_y4: parseFloat(g4.toFixed(4)),
       growth_y5: parseFloat(g5.toFixed(4)),
       growth_source: growthSource,
+      default_margin_type: defaultMarginType,
       default_margin: parseFloat(defaultMargin.toFixed(4)),
       margin_source: marginSource,
       default_pe: parseFloat(defaultPE.toFixed(2)),

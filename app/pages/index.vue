@@ -60,6 +60,7 @@ const analyzeAndAddStock = async () => {
     const stockData = await $fetch<{
       ticker: string
       name: string
+      currency: string
       current_price: number | null
       revenue_ttm: number | null
       shares_outstanding: number | null
@@ -72,6 +73,7 @@ const analyzeAndAddStock = async () => {
       growth_y4: number
       growth_y5: number
       growth_source: string
+      default_margin_type: 'net_margin' | 'fcf_margin'
       default_margin: number
       margin_source: string
       default_pe: number
@@ -93,6 +95,7 @@ const analyzeAndAddStock = async () => {
       body: {
         ticker: stockData.ticker,
         name: stockData.name,
+        currency: stockData.currency ?? 'USD',
         current_price: stockData.current_price,
         revenue_ttm: stockData.revenue_ttm,
         shares_outstanding: stockData.shares_outstanding,
@@ -104,6 +107,7 @@ const analyzeAndAddStock = async () => {
         growth_y3: existing?.growth_y3 ?? stockData.growth_y3,
         growth_y4: existing?.growth_y4 ?? stockData.growth_y4,
         growth_y5: existing?.growth_y5 ?? stockData.growth_y5,
+        margin_type: existing?.margin_type ?? stockData.default_margin_type ?? 'net_margin',
         projected_margin: existing?.projected_margin ?? stockData.default_margin,
         target_pe: existing?.target_pe ?? stockData.default_pe,
         discount_rate: existing?.discount_rate ?? stockData.default_discount_rate,
@@ -136,6 +140,7 @@ const updateStockHypotheses = async (stock: Stock) => {
     const updated = await $fetch<Stock>(`/api/stocks/${stock.id}`, {
       method: 'PUT',
       body: {
+        currency: stock.currency,
         growth_mode: stock.growth_mode,
         projected_growth: Number(stock.projected_growth),
         growth_y1: Number(stock.growth_y1),
@@ -143,6 +148,7 @@ const updateStockHypotheses = async (stock: Stock) => {
         growth_y3: Number(stock.growth_y3),
         growth_y4: Number(stock.growth_y4),
         growth_y5: Number(stock.growth_y5),
+        margin_type: stock.margin_type,
         projected_margin: Number(stock.projected_margin),
         target_pe: Number(stock.target_pe),
         discount_rate: Number(stock.discount_rate),

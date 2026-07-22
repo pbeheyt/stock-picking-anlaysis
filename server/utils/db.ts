@@ -20,6 +20,7 @@ export function getDb(): Database.Database {
         id TEXT PRIMARY KEY,
         ticker TEXT UNIQUE NOT NULL,
         name TEXT,
+        currency TEXT DEFAULT 'USD',
         current_price REAL,
         revenue_ttm REAL,
         shares_outstanding REAL,
@@ -32,6 +33,7 @@ export function getDb(): Database.Database {
         growth_y3 REAL DEFAULT 0.10,
         growth_y4 REAL DEFAULT 0.10,
         growth_y5 REAL DEFAULT 0.10,
+        margin_type TEXT DEFAULT 'net_margin',
         projected_margin REAL DEFAULT 0.20,
         target_pe REAL DEFAULT 20.0,
         discount_rate REAL DEFAULT 0.10,
@@ -40,6 +42,15 @@ export function getDb(): Database.Database {
         updated_at TEXT
       );
     `)
+
+    // Safe migration for existing SQLite databases
+    try {
+      _db.exec("ALTER TABLE stocks ADD COLUMN currency TEXT DEFAULT 'USD'")
+    } catch {}
+
+    try {
+      _db.exec("ALTER TABLE stocks ADD COLUMN margin_type TEXT DEFAULT 'net_margin'")
+    } catch {}
   }
 
   return _db

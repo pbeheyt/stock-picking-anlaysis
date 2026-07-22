@@ -1,10 +1,12 @@
 export type StockStatus = 'research' | 'watchlist' | 'portfolio'
 export type GrowthMode = 'cagr' | 'explicit'
+export type MarginType = 'net_margin' | 'fcf_margin'
 
 export interface Stock {
   id: string
   ticker: string
   name: string | null
+  currency: string
   current_price: number | null
   revenue_ttm: number | null
   shares_outstanding: number | null
@@ -17,6 +19,7 @@ export interface Stock {
   growth_y3: number
   growth_y4: number
   growth_y5: number
+  margin_type: MarginType
   projected_margin: number
   target_pe: number
   discount_rate: number
