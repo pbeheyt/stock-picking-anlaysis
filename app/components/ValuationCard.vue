@@ -108,7 +108,23 @@ const gaugeData = computed(() => {
   }
 })
 
-// Calcul bidirectionnel des CA par année
+// Configuration d'échelle (M / B / K) pour le CA
+const scaleConfig = computed(() => {
+  const r0 = props.stock.revenue_ttm ?? 0
+  if (r0 >= 1e9) return { label: 'B', divisor: 1e9 }
+  if (r0 >= 1e6) return { label: 'M', divisor: 1e6 }
+  return { label: 'K', divisor: 1e3 }
+})
+
+const currencySymbol = computed(() => {
+  const code = (props.stock.currency || 'USD').toUpperCase()
+  if (code === 'EUR') return '€'
+  if (code === 'USD') return '$'
+  if (code === 'GBP' || code === 'GBP') return '£'
+  return code
+})
+
+// Calcul bidirectionnel des CA bruts par année
 const yearRevenues = computed(() => {
   const r0 = props.stock.revenue_ttm ?? 0
   const r1 = r0 * (1 + growthY1.value)
@@ -119,20 +135,23 @@ const yearRevenues = computed(() => {
   return [r1, r2, r3, r4, r5]
 })
 
-function updateGrowthFromRevenue(yearIndex: number, newRevenueStr: string) {
-  const newRevenue = parseFloat(newRevenueStr)
-  if (isNaN(newRevenue) || newRevenue <= 0) return
+function getScaledRevenue(yearIndex: number): number {
+  const raw = yearRevenues.value[yearIndex - 1] ?? 0
+  return Number((raw / scaleConfig.value.divisor).toFixed(2))
+}
 
+function updateGrowthFromScaledRevenue(yearIndex: number, newScaledValStr: string) {
+  const newScaledVal = parseFloat(newScaledValStr)
+  if (isNaN(newScaledVal) || newScaledVal <= 0) return
+
+  const newRawRev = newScaledVal * scaleConfig.value.divisor
   const r0 = props.stock.revenue_ttm ?? 0
   let prevRev = r0
   if (yearIndex === 1) prevRev = r0
-  else if (yearIndex === 2) prevRev = yearRevenues.value[0]
-  else if (yearIndex === 3) prevRev = yearRevenues.value[1]
-  else if (yearIndex === 4) prevRev = yearRevenues.value[2]
-  else if (yearIndex === 5) prevRev = yearRevenues.value[3]
+  else prevRev = yearRevenues.value[yearIndex - 2]
 
   if (prevRev > 0) {
-    const calcGrowth = (newRevenue / prevRev) - 1
+    const calcGrowth = (newRawRev / prevRev) - 1
     if (yearIndex === 1) growthY1.value = calcGrowth
     else if (yearIndex === 2) growthY2.value = calcGrowth
     else if (yearIndex === 3) growthY3.value = calcGrowth
@@ -485,11 +504,11 @@ function formatMOS(num: number): string {
           </div>
         </div>
 
-        <!-- Mode Explicit -->
+        <!-- Mode Explicit : Composant CA Scalé à l'échelle humaine (M/B) -->
         <div v-else class="space-y-4 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4">
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-              Trajectoire Sur-Mesure sur 5 Ans (Liaison % / CA)
+              Trajectoire Sur-Mesure sur 5 Ans (Liaison % / CA Scalé)
             </span>
             <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
               {{ stock.growth_source }}
@@ -497,20 +516,23 @@ function formatMOS(num: number): string {
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
-            <div v-for="i in 5" :key="i" class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="text-gray-400 font-semibold">An {{ i }} {{ i === 1 ? '(NTM)' : '' }}</span>
-                <span class="font-mono font-bold text-emerald-400">
+            <div v-for="i in 5" :key="i" class="rounded-xl border border-gray-800 bg-gray-950/80 p-3 space-y-3">
+              <!-- Header Année & % -->
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-gray-300">An {{ i }} {{ i === 1 ? '(NTM)' : '' }}</span>
+                <span class="font-mono text-xs font-bold text-emerald-400">
                   {{ formatPercent(i === 1 ? growthY1 : i === 2 ? growthY2 : i === 3 ? growthY3 : i === 4 ? growthY4 : growthY5) }}
                 </span>
               </div>
+
+              <!-- Slider Croissance -->
               <input
                 v-if="i === 1"
                 v-model.number="growthY1"
                 type="range"
                 min="-0.3"
                 max="3.0"
-                step="0.01"
+                step="0.005"
                 class="slider slider--emerald"
               >
               <input
@@ -519,7 +541,7 @@ function formatMOS(num: number): string {
                 type="range"
                 min="-0.3"
                 max="1.5"
-                step="0.01"
+                step="0.005"
                 class="slider slider--emerald"
               >
               <input
@@ -528,7 +550,7 @@ function formatMOS(num: number): string {
                 type="range"
                 min="-0.3"
                 max="1.0"
-                step="0.01"
+                step="0.005"
                 class="slider slider--emerald"
               >
               <input
@@ -537,7 +559,7 @@ function formatMOS(num: number): string {
                 type="range"
                 min="-0.3"
                 max="0.8"
-                step="0.01"
+                step="0.005"
                 class="slider slider--emerald"
               >
               <input
@@ -546,19 +568,27 @@ function formatMOS(num: number): string {
                 type="range"
                 min="-0.3"
                 max="0.6"
-                step="0.01"
+                step="0.005"
                 class="slider slider--emerald"
               >
-              <div class="pt-1">
-                <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An {{ i }})</label>
-                <input
-                  :value="yearRevenues[i-1]"
-                  type="number"
-                  step="1000000"
-                  class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
-                  @input="updateGrowthFromRevenue(i, ($event.target as HTMLInputElement).value)"
-                >
-                <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[i-1]) }}</span>
+
+              <!-- Input CA Scalé & Propre -->
+              <div class="space-y-1">
+                <label class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+                  CA Projeté
+                </label>
+                <div class="relative flex items-center rounded-lg border border-gray-800 bg-gray-900 px-2.5 py-1.5 focus-within:border-emerald-500">
+                  <input
+                    :value="getScaledRevenue(i)"
+                    type="number"
+                    step="0.1"
+                    class="w-full bg-transparent font-mono text-xs font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    @input="updateGrowthFromScaledRevenue(i, ($event.target as HTMLInputElement).value)"
+                  >
+                  <span class="ml-1 select-none font-mono text-xs font-semibold text-gray-500 shrink-0">
+                    {{ scaleConfig.label }} {{ currencySymbol }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
