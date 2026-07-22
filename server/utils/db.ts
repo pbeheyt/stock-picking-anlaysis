@@ -24,8 +24,10 @@ export function getDb(): Database.Database {
         current_price REAL,
         revenue_ttm REAL,
         shares_outstanding REAL,
+        beta REAL DEFAULT 1.0,
         fetched_at TEXT,
         status TEXT DEFAULT 'research',
+        margin_type TEXT DEFAULT 'net_income',
         growth_mode TEXT DEFAULT 'cagr',
         projected_growth REAL DEFAULT 0.10,
         growth_y1 REAL DEFAULT 0.10,
@@ -33,24 +35,44 @@ export function getDb(): Database.Database {
         growth_y3 REAL DEFAULT 0.10,
         growth_y4 REAL DEFAULT 0.10,
         growth_y5 REAL DEFAULT 0.10,
-        margin_type TEXT DEFAULT 'net_margin',
+        revenue_y1 REAL,
+        revenue_y2 REAL,
+        revenue_y3 REAL,
+        revenue_y4 REAL,
+        revenue_y5 REAL,
         projected_margin REAL DEFAULT 0.20,
-        target_pe REAL DEFAULT 20.0,
+        target_multiple REAL DEFAULT 20.0,
         discount_rate REAL DEFAULT 0.10,
+        risk_spread REAL DEFAULT 0.20,
         thesis TEXT,
         created_at TEXT,
         updated_at TEXT
       );
     `)
 
-    // Safe migration for existing SQLite databases
-    try {
-      _db.exec("ALTER TABLE stocks ADD COLUMN currency TEXT DEFAULT 'USD'")
-    } catch {}
+    // Safe migrations for existing SQLite database files
+    const safeAddColumn = (col: string, def: string) => {
+      try {
+        _db?.exec(`ALTER TABLE stocks ADD COLUMN ${col} ${def}`)
+      } catch {}
+    }
 
-    try {
-      _db.exec("ALTER TABLE stocks ADD COLUMN margin_type TEXT DEFAULT 'net_margin'")
-    } catch {}
+    safeAddColumn('currency', "TEXT DEFAULT 'USD'")
+    safeAddColumn('beta', 'REAL DEFAULT 1.0')
+    safeAddColumn('margin_type', "TEXT DEFAULT 'net_income'")
+    safeAddColumn('growth_mode', "TEXT DEFAULT 'cagr'")
+    safeAddColumn('growth_y1', 'REAL DEFAULT 0.10')
+    safeAddColumn('growth_y2', 'REAL DEFAULT 0.10')
+    safeAddColumn('growth_y3', 'REAL DEFAULT 0.10')
+    safeAddColumn('growth_y4', 'REAL DEFAULT 0.10')
+    safeAddColumn('growth_y5', 'REAL DEFAULT 0.10')
+    safeAddColumn('revenue_y1', 'REAL')
+    safeAddColumn('revenue_y2', 'REAL')
+    safeAddColumn('revenue_y3', 'REAL')
+    safeAddColumn('revenue_y4', 'REAL')
+    safeAddColumn('revenue_y5', 'REAL')
+    safeAddColumn('target_multiple', 'REAL DEFAULT 20.0')
+    safeAddColumn('risk_spread', 'REAL DEFAULT 0.20')
   }
 
   return _db

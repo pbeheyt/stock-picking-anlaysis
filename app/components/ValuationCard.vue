@@ -24,10 +24,11 @@ const growthY2 = ref(props.stock.growth_y2 ?? 0.10)
 const growthY3 = ref(props.stock.growth_y3 ?? 0.10)
 const growthY4 = ref(props.stock.growth_y4 ?? 0.10)
 const growthY5 = ref(props.stock.growth_y5 ?? 0.10)
-const marginType = ref<MarginType>(props.stock.margin_type || 'net_margin')
+const marginType = ref<MarginType>(props.stock.margin_type || 'net_income')
 const margin = ref(props.stock.projected_margin ?? 0.20)
-const targetPE = ref(props.stock.target_pe ?? 20)
+const targetMultiple = ref(props.stock.target_multiple ?? 20.0)
 const discountRate = ref(props.stock.discount_rate ?? 0.10)
+const riskSpread = ref(props.stock.risk_spread ?? 0.20)
 
 watch(() => props.stock, (newStock) => {
   growthMode.value = newStock.growth_mode || 'cagr'
@@ -37,10 +38,11 @@ watch(() => props.stock, (newStock) => {
   growthY3.value = newStock.growth_y3 ?? 0.10
   growthY4.value = newStock.growth_y4 ?? 0.10
   growthY5.value = newStock.growth_y5 ?? 0.10
-  marginType.value = newStock.margin_type || 'net_margin'
+  marginType.value = newStock.margin_type || 'net_income'
   margin.value = newStock.projected_margin ?? 0.20
-  targetPE.value = newStock.target_pe ?? 20
+  targetMultiple.value = newStock.target_multiple ?? 20.0
   discountRate.value = newStock.discount_rate ?? 0.10
+  riskSpread.value = newStock.risk_spread ?? 0.20
 })
 
 const valuationInputs = computed<ValuationInputs>(() => ({
@@ -54,9 +56,11 @@ const valuationInputs = computed<ValuationInputs>(() => ({
   growthY3: growthY3.value,
   growthY4: growthY4.value,
   growthY5: growthY5.value,
+  marginType: marginType.value,
   margin: margin.value,
-  targetPE: targetPE.value,
+  targetMultiple: targetMultiple.value,
   discountRate: discountRate.value,
+  riskSpread: riskSpread.value,
 }))
 
 const scenarios = computed<ScenarioResults>(() => computeScenarios(valuationInputs.value))
@@ -139,16 +143,22 @@ function debouncedSave() {
       growth_y3: growthY3.value,
       growth_y4: growthY4.value,
       growth_y5: growthY5.value,
+      revenue_y1: yearRevenues.value[0],
+      revenue_y2: yearRevenues.value[1],
+      revenue_y3: yearRevenues.value[2],
+      revenue_y4: yearRevenues.value[3],
+      revenue_y5: yearRevenues.value[4],
       margin_type: marginType.value,
       projected_margin: margin.value,
-      target_pe: targetPE.value,
+      target_multiple: targetMultiple.value,
       discount_rate: discountRate.value,
+      risk_spread: riskSpread.value,
     }
     emit('update', updated)
   }, 800)
 }
 
-watch([growthMode, growth, growthY1, growthY2, growthY3, growthY4, growthY5, marginType, margin, targetPE, discountRate], () => {
+watch([growthMode, growth, growthY1, growthY2, growthY3, growthY4, growthY5, marginType, margin, targetMultiple, discountRate, riskSpread], () => {
   debouncedSave()
 })
 
@@ -199,6 +209,9 @@ function formatMOS(num: number): string {
           </h3>
           <span class="rounded bg-gray-800 px-2 py-0.5 font-mono text-[10px] text-gray-300 border border-gray-700">
             {{ stock.currency || 'USD' }}
+          </span>
+          <span class="rounded bg-indigo-500/10 px-2 py-0.5 font-mono text-[10px] text-indigo-400 border border-indigo-500/20">
+            Bêta: {{ stock.beta ?? 1.0 }}
           </span>
           <span
             class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
@@ -308,9 +321,9 @@ function formatMOS(num: number): string {
         </div>
 
         <div class="flex justify-between text-[10px] font-semibold uppercase tracking-wider text-gray-600">
-          <span>Bear</span>
+          <span>Bear (-{{ formatPercent(riskSpread) }})</span>
           <span>Base</span>
-          <span>Bull</span>
+          <span>Bull (+{{ formatPercent(riskSpread) }})</span>
         </div>
       </div>
     </div>
@@ -318,7 +331,7 @@ function formatMOS(num: number): string {
     <!-- Scénarios détaillés -->
     <div class="grid grid-cols-3 gap-3">
       <div class="scenario-cell scenario-cell--bear">
-        <span class="scenario-label text-red-400/70">Bear Case</span>
+        <span class="scenario-label text-red-400/70">Bear Case (-{{ formatPercent(riskSpread) }})</span>
         <span class="scenario-value">{{ formatMoney(scenarios.bear.fairValue) }}</span>
         <span class="scenario-mos" :class="scenarios.bear.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
           {{ formatMOS(scenarios.bear.marginOfSafety) }}
@@ -332,7 +345,7 @@ function formatMOS(num: number): string {
         </span>
       </div>
       <div class="scenario-cell scenario-cell--bull">
-        <span class="scenario-label text-emerald-400/70">Bull Case</span>
+        <span class="scenario-label text-emerald-400/70">Bull Case (+{{ formatPercent(riskSpread) }})</span>
         <span class="scenario-value">{{ formatMoney(scenarios.bull.fairValue) }}</span>
         <span class="scenario-mos" :class="scenarios.bull.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
           {{ formatMOS(scenarios.bull.marginOfSafety) }}
@@ -456,7 +469,7 @@ function formatMOS(num: number): string {
       <div v-else class="space-y-4 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4">
         <div class="flex items-center justify-between">
           <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-            Trajectoire de Croissance sur 5 Ans (Liaison % / CA)
+            Trajectoire Sur-Mesure sur 5 Ans (Liaison % / CA)
           </span>
           <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
             {{ stock.growth_source }}
@@ -619,7 +632,7 @@ function formatMOS(num: number): string {
         <div class="slider-header">
           <div class="flex items-center gap-2 flex-wrap">
             <label class="slider-label">
-              {{ marginType === 'net_margin' ? 'Marge Nette (Net Income)' : 'Marge FCF (Free Cash Flow)' }}
+              {{ marginType === 'net_income' ? 'Marge Nette (Net Income)' : 'Marge FCF (Free Cash Flow)' }}
             </label>
 
             <!-- Toggle Nature Marge -->
@@ -627,18 +640,18 @@ function formatMOS(num: number): string {
               <button
                 type="button"
                 class="px-2 py-0.5 text-[10px] font-medium rounded transition"
-                :class="marginType === 'net_margin' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
-                @click="marginType = 'net_margin'"
+                :class="marginType === 'net_income' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
+                @click="marginType = 'net_income'"
               >
-                Marge Nette
+                Marge Nette (P/E)
               </button>
               <button
                 type="button"
                 class="px-2 py-0.5 text-[10px] font-medium rounded transition"
-                :class="marginType === 'fcf_margin' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
-                @click="marginType = 'fcf_margin'"
+                :class="marginType === 'fcf' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
+                @click="marginType = 'fcf'"
               >
-                Marge FCF
+                Marge FCF (P/FCF)
               </button>
             </div>
 
@@ -670,7 +683,7 @@ function formatMOS(num: number): string {
         <div class="slider-header">
           <div class="flex items-center gap-2 flex-wrap">
             <label class="slider-label">
-              Multiple de Sortie ({{ marginType === 'net_margin' ? 'P/E' : 'P/FCF' }})
+              Multiple de Sortie ({{ marginType === 'net_income' ? 'P/E' : 'P/FCF' }})
             </label>
             <span
               v-if="stock.pe_source"
@@ -679,10 +692,10 @@ function formatMOS(num: number): string {
               {{ stock.pe_source }}
             </span>
           </div>
-          <span class="slider-value text-violet-400">{{ targetPE.toFixed(1) }}x</span>
+          <span class="slider-value text-violet-400">{{ targetMultiple.toFixed(1) }}x</span>
         </div>
         <input
-          v-model.number="targetPE"
+          v-model.number="targetMultiple"
           type="range"
           min="5"
           max="120"
@@ -712,6 +725,31 @@ function formatMOS(num: number): string {
         <div class="slider-bounds">
           <span>5%</span>
           <span>25%</span>
+        </div>
+      </div>
+
+      <!-- Contrôle de Risque / Volatilité (risk_spread) -->
+      <div class="slider-group rounded-xl border border-indigo-500/20 bg-indigo-950/10 p-4 space-y-2">
+        <div class="slider-header">
+          <div class="flex items-center gap-2 flex-wrap">
+            <label class="slider-label text-indigo-300 font-semibold">Incertitude & Risque Bear / Bull (±%)</label>
+            <span class="source-pill bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+              Basé sur Bêta ({{ stock.beta ?? 1.0 }})
+            </span>
+          </div>
+          <span class="slider-value text-indigo-400">±{{ formatPercent(riskSpread) }}</span>
+        </div>
+        <input
+          v-model.number="riskSpread"
+          type="range"
+          min="0.10"
+          max="0.50"
+          step="0.01"
+          class="slider slider--violet"
+        >
+        <div class="slider-bounds">
+          <span>±10% (Stable)</span>
+          <span>±50% (Haute Volatilité)</span>
         </div>
       </div>
     </div>

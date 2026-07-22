@@ -1,4 +1,5 @@
 export type GrowthMode = 'cagr' | 'explicit'
+export type MarginType = 'net_income' | 'fcf'
 
 export interface ValuationInputs {
   currentPrice: number
@@ -11,9 +12,11 @@ export interface ValuationInputs {
   growthY3: number
   growthY4: number
   growthY5: number
+  marginType: MarginType
   margin: number
-  targetPE: number
+  targetMultiple: number
   discountRate: number
+  riskSpread: number
 }
 
 export interface ValuationResult {
@@ -52,7 +55,7 @@ export function computeValuation(inputs: ValuationInputs): ValuationResult {
     growthY4,
     growthY5,
     margin,
-    targetPE,
+    targetMultiple,
     discountRate,
     currentPrice,
   } = inputs
@@ -77,8 +80,8 @@ export function computeValuation(inputs: ValuationInputs): ValuationResult {
   }
 
   const earnings5Y = revenue5Y * margin
-  const eps5Y = sharesOutstanding > 0 ? earnings5Y / sharesOutstanding : 0
-  const targetPrice5Y = eps5Y * targetPE
+  const marketCap5Y = earnings5Y * targetMultiple
+  const targetPrice5Y = sharesOutstanding > 0 ? marketCap5Y / sharesOutstanding : 0
   const fairValue = targetPrice5Y / Math.pow(1 + discountRate, 5)
   const marginOfSafety = fairValue !== 0
     ? ((fairValue - currentPrice) / fairValue) * 100
@@ -88,7 +91,7 @@ export function computeValuation(inputs: ValuationInputs): ValuationResult {
     revenue5Y,
     equivalentCAGR,
     earnings5Y,
-    eps5Y,
+    eps5Y: sharesOutstanding > 0 ? earnings5Y / sharesOutstanding : 0,
     targetPrice5Y,
     fairValue,
     marginOfSafety,
@@ -97,6 +100,7 @@ export function computeValuation(inputs: ValuationInputs): ValuationResult {
 
 export function computeScenarios(inputs: ValuationInputs): ScenarioResults {
   const base = computeValuation(inputs)
+  const spread = inputs.riskSpread
 
   let bearInputs: ValuationInputs
   let bullInputs: ValuationInputs
@@ -104,34 +108,34 @@ export function computeScenarios(inputs: ValuationInputs): ScenarioResults {
   if (inputs.growthMode === 'explicit') {
     bearInputs = {
       ...inputs,
-      growthY1: inputs.growthY1 * 0.8,
-      growthY2: inputs.growthY2 * 0.8,
-      growthY3: inputs.growthY3 * 0.8,
-      growthY4: inputs.growthY4 * 0.8,
-      growthY5: inputs.growthY5 * 0.8,
-      targetPE: inputs.targetPE * 0.8,
+      growthY1: inputs.growthY1 * (1 - spread),
+      growthY2: inputs.growthY2 * (1 - spread),
+      growthY3: inputs.growthY3 * (1 - spread),
+      growthY4: inputs.growthY4 * (1 - spread),
+      growthY5: inputs.growthY5 * (1 - spread),
+      targetMultiple: inputs.targetMultiple * (1 - spread),
     }
 
     bullInputs = {
       ...inputs,
-      growthY1: inputs.growthY1 * 1.15,
-      growthY2: inputs.growthY2 * 1.15,
-      growthY3: inputs.growthY3 * 1.15,
-      growthY4: inputs.growthY4 * 1.15,
-      growthY5: inputs.growthY5 * 1.15,
-      targetPE: inputs.targetPE * 1.15,
+      growthY1: inputs.growthY1 * (1 + spread),
+      growthY2: inputs.growthY2 * (1 + spread),
+      growthY3: inputs.growthY3 * (1 + spread),
+      growthY4: inputs.growthY4 * (1 + spread),
+      growthY5: inputs.growthY5 * (1 + spread),
+      targetMultiple: inputs.targetMultiple * (1 + spread),
     }
   } else {
     bearInputs = {
       ...inputs,
-      growth: inputs.growth * 0.8,
-      targetPE: inputs.targetPE * 0.8,
+      growth: inputs.growth * (1 - spread),
+      targetMultiple: inputs.targetMultiple * (1 - spread),
     }
 
     bullInputs = {
       ...inputs,
-      growth: inputs.growth * 1.15,
-      targetPE: inputs.targetPE * 1.15,
+      growth: inputs.growth * (1 + spread),
+      targetMultiple: inputs.targetMultiple * (1 + spread),
     }
   }
 
@@ -143,11 +147,11 @@ export function computeScenarios(inputs: ValuationInputs): ScenarioResults {
 }
 
 export function computeReverseDCF(inputs: ValuationInputs): ReverseDCFResult {
-  const { currentPrice, discountRate, sharesOutstanding, targetPE, margin, revenueTTM, growthMode, growthY1 } = inputs
+  const { currentPrice, discountRate, sharesOutstanding, targetMultiple, margin, revenueTTM, growthMode, growthY1 } = inputs
 
   const targetPrice5YMarket = currentPrice * Math.pow(1 + discountRate, 5)
   const marketCap5Y = targetPrice5YMarket * sharesOutstanding
-  const earnings5YMarket = targetPE > 0 ? marketCap5Y / targetPE : 0
+  const earnings5YMarket = targetMultiple > 0 ? marketCap5Y / targetMultiple : 0
   const revenue5YMarket = margin !== 0 ? earnings5YMarket / margin : 0
 
   if (growthMode === 'explicit') {

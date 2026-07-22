@@ -64,6 +64,7 @@ const analyzeAndAddStock = async () => {
       current_price: number | null
       revenue_ttm: number | null
       shares_outstanding: number | null
+      beta: number
       fetched_at: string
       growth_mode: 'cagr' | 'explicit'
       default_growth: number
@@ -73,12 +74,13 @@ const analyzeAndAddStock = async () => {
       growth_y4: number
       growth_y5: number
       growth_source: string
-      default_margin_type: 'net_margin' | 'fcf_margin'
+      default_margin_type: 'net_income' | 'fcf'
       default_margin: number
       margin_source: string
-      default_pe: number
+      default_target_multiple: number
       pe_source: string
       default_discount_rate: number
+      default_risk_spread: number
     }>(`/api/stock/${encodeURIComponent(ticker)}`)
 
     sourcesMap.value[stockData.ticker] = {
@@ -99,6 +101,7 @@ const analyzeAndAddStock = async () => {
         current_price: stockData.current_price,
         revenue_ttm: stockData.revenue_ttm,
         shares_outstanding: stockData.shares_outstanding,
+        beta: stockData.beta ?? 1.0,
         fetched_at: stockData.fetched_at,
         growth_mode: existing?.growth_mode ?? stockData.growth_mode,
         projected_growth: existing?.projected_growth ?? stockData.default_growth,
@@ -107,10 +110,11 @@ const analyzeAndAddStock = async () => {
         growth_y3: existing?.growth_y3 ?? stockData.growth_y3,
         growth_y4: existing?.growth_y4 ?? stockData.growth_y4,
         growth_y5: existing?.growth_y5 ?? stockData.growth_y5,
-        margin_type: existing?.margin_type ?? stockData.default_margin_type ?? 'net_margin',
+        margin_type: existing?.margin_type ?? stockData.default_margin_type ?? 'net_income',
         projected_margin: existing?.projected_margin ?? stockData.default_margin,
-        target_pe: existing?.target_pe ?? stockData.default_pe,
+        target_multiple: existing?.target_multiple ?? stockData.default_target_multiple ?? 20.0,
         discount_rate: existing?.discount_rate ?? stockData.default_discount_rate,
+        risk_spread: existing?.risk_spread ?? stockData.default_risk_spread ?? 0.20,
       },
     })
 
@@ -141,6 +145,7 @@ const updateStockHypotheses = async (stock: Stock) => {
       method: 'PUT',
       body: {
         currency: stock.currency,
+        beta: Number(stock.beta),
         growth_mode: stock.growth_mode,
         projected_growth: Number(stock.projected_growth),
         growth_y1: Number(stock.growth_y1),
@@ -148,10 +153,16 @@ const updateStockHypotheses = async (stock: Stock) => {
         growth_y3: Number(stock.growth_y3),
         growth_y4: Number(stock.growth_y4),
         growth_y5: Number(stock.growth_y5),
+        revenue_y1: stock.revenue_y1 !== null ? Number(stock.revenue_y1) : null,
+        revenue_y2: stock.revenue_y2 !== null ? Number(stock.revenue_y2) : null,
+        revenue_y3: stock.revenue_y3 !== null ? Number(stock.revenue_y3) : null,
+        revenue_y4: stock.revenue_y4 !== null ? Number(stock.revenue_y4) : null,
+        revenue_y5: stock.revenue_y5 !== null ? Number(stock.revenue_y5) : null,
         margin_type: stock.margin_type,
         projected_margin: Number(stock.projected_margin),
-        target_pe: Number(stock.target_pe),
+        target_multiple: Number(stock.target_multiple),
         discount_rate: Number(stock.discount_rate),
+        risk_spread: Number(stock.risk_spread),
       },
     })
 

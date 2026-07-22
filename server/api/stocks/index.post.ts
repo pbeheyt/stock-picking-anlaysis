@@ -25,6 +25,7 @@ export default defineEventHandler(async (event) => {
         current_price = ?,
         revenue_ttm = ?,
         shares_outstanding = ?,
+        beta = ?,
         fetched_at = ?,
         growth_mode = ?,
         projected_growth = ?,
@@ -33,10 +34,16 @@ export default defineEventHandler(async (event) => {
         growth_y3 = ?,
         growth_y4 = ?,
         growth_y5 = ?,
+        revenue_y1 = ?,
+        revenue_y2 = ?,
+        revenue_y3 = ?,
+        revenue_y4 = ?,
+        revenue_y5 = ?,
         margin_type = ?,
         projected_margin = ?,
-        target_pe = ?,
+        target_multiple = ?,
         discount_rate = ?,
+        risk_spread = ?,
         updated_at = ?
       WHERE ticker = ?
     `)
@@ -47,6 +54,7 @@ export default defineEventHandler(async (event) => {
       body.current_price ?? existing.current_price,
       body.revenue_ttm ?? existing.revenue_ttm,
       body.shares_outstanding ?? existing.shares_outstanding,
+      body.beta ?? existing.beta ?? 1.0,
       body.fetched_at ?? now,
       body.growth_mode ?? existing.growth_mode,
       body.projected_growth ?? existing.projected_growth,
@@ -55,10 +63,16 @@ export default defineEventHandler(async (event) => {
       body.growth_y3 ?? existing.growth_y3,
       body.growth_y4 ?? existing.growth_y4,
       body.growth_y5 ?? existing.growth_y5,
-      body.margin_type ?? existing.margin_type ?? 'net_margin',
+      body.revenue_y1 ?? existing.revenue_y1,
+      body.revenue_y2 ?? existing.revenue_y2,
+      body.revenue_y3 ?? existing.revenue_y3,
+      body.revenue_y4 ?? existing.revenue_y4,
+      body.revenue_y5 ?? existing.revenue_y5,
+      body.margin_type ?? existing.margin_type ?? 'net_income',
       body.projected_margin ?? existing.projected_margin,
-      body.target_pe ?? existing.target_pe,
+      body.target_multiple ?? existing.target_multiple ?? 20.0,
       body.discount_rate ?? existing.discount_rate,
+      body.risk_spread ?? existing.risk_spread ?? 0.20,
       now,
       ticker
     )
@@ -69,12 +83,14 @@ export default defineEventHandler(async (event) => {
     const stmt = db.prepare(`
       INSERT INTO stocks (
         id, ticker, name, currency, current_price, revenue_ttm, shares_outstanding,
-        fetched_at, status, growth_mode, projected_growth,
+        beta, fetched_at, status, margin_type, growth_mode, projected_growth,
         growth_y1, growth_y2, growth_y3, growth_y4, growth_y5,
-        margin_type, projected_margin, target_pe, discount_rate, thesis, created_at, updated_at
+        revenue_y1, revenue_y2, revenue_y3, revenue_y4, revenue_y5,
+        projected_margin, target_multiple, discount_rate, risk_spread, thesis, created_at, updated_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?, ?, ?
       )
@@ -88,8 +104,10 @@ export default defineEventHandler(async (event) => {
       body.current_price ?? null,
       body.revenue_ttm ?? null,
       body.shares_outstanding ?? null,
+      body.beta ?? 1.0,
       body.fetched_at ?? now,
       body.status ?? 'research',
+      body.margin_type ?? 'net_income',
       body.growth_mode ?? 'cagr',
       body.projected_growth ?? 0.10,
       body.growth_y1 ?? 0.10,
@@ -97,10 +115,15 @@ export default defineEventHandler(async (event) => {
       body.growth_y3 ?? 0.10,
       body.growth_y4 ?? 0.10,
       body.growth_y5 ?? 0.10,
-      body.margin_type ?? 'net_margin',
+      body.revenue_y1 ?? null,
+      body.revenue_y2 ?? null,
+      body.revenue_y3 ?? null,
+      body.revenue_y4 ?? null,
+      body.revenue_y5 ?? null,
       body.projected_margin ?? 0.20,
-      body.target_pe ?? 20.0,
+      body.target_multiple ?? 20.0,
       body.discount_rate ?? 0.10,
+      body.risk_spread ?? 0.20,
       body.thesis ?? null,
       now,
       now

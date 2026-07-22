@@ -53,6 +53,11 @@ export default defineEventHandler(async (event) => {
 
     const revenueTTM = financialData.totalRevenue ?? null
     const sharesOutstanding = keyStats.sharesOutstanding ?? quote.sharesOutstanding ?? null
+    const currency = quote.currency || summaryDetail.currency || 'USD'
+
+    const rawBeta = summaryDetail.beta ?? keyStats.beta ?? 1.0
+    const beta = typeof rawBeta === 'number' && isFinite(rawBeta) && rawBeta > 0 ? parseFloat(rawBeta.toFixed(2)) : 1.0
+    const defaultRiskSpread = parseFloat(clamp(0.20 * beta, 0.10, 0.50).toFixed(2))
 
     // 1. Croissance CA & Mode explicit vs CAGR
     let defaultGrowth = 0.10
@@ -76,7 +81,7 @@ export default defineEventHandler(async (event) => {
 
       if (analystGrowth > 0.30) {
         growthMode = 'explicit'
-        g2 = 0.50
+        g2 = parseFloat((0.50 * analystGrowth).toFixed(4))
         g3 = 0.30
         g4 = 0.20
         g5 = 0.15
@@ -116,34 +121,35 @@ export default defineEventHandler(async (event) => {
       g5 = defaultGrowth
     }
 
-    // 2. Multiple P/E de sortie (defaultPE) & source
-    let defaultPE = 20
+    // 2. Multiple P/E ou P/FCF de sortie (default_target_multiple) & source
+    let defaultTargetMultiple = 20.0
     let peSource = 'Modèle Standard (20x)'
 
     const forwardPE = summaryDetail.forwardPE ?? keyStats.forwardPE ?? quote.forwardPE
     const trailingPE = quote.trailingPE ?? summaryDetail.trailingPE ?? keyStats.trailingPE
 
     if (typeof forwardPE === 'number' && isFinite(forwardPE) && forwardPE > 0) {
-      defaultPE = clamp(forwardPE, 5, 120)
+      defaultTargetMultiple = clamp(forwardPE, 5, 120)
       peSource = 'Consensus P/E Forward'
     } else if (typeof trailingPE === 'number' && isFinite(trailingPE) && trailingPE > 0) {
-      defaultPE = clamp(trailingPE, 5, 120)
+      defaultTargetMultiple = clamp(trailingPE, 5, 120)
       peSource = 'P/E Trailing (TTM)'
     } else {
       const gComp = growthMode === 'explicit' ? g1 : defaultGrowth
       if (gComp > 0.30) {
-        defaultPE = 35
+        defaultTargetMultiple = 35.0
       } else if (gComp > 0.15) {
-        defaultPE = 25
+        defaultTargetMultiple = 25.0
       } else {
-        defaultPE = 18
+        defaultTargetMultiple = 18.0
       }
       peSource = 'Profil de Croissance (Non rentable)'
     }
 
-    // 3. Marge Op / Nette / FCF (defaultMargin) & source
+    // 3. Marge & Nature de Marge (default_margin_type) & source
     let defaultMargin = 0.20
     let marginSource = 'Modèle Standard (20%)'
+    let defaultMarginType: 'net_income' | 'fcf' = 'net_income'
 
     const totalRev = revenueTTM
     const fcf = financialData.freeCashflow
@@ -155,6 +161,7 @@ export default defineEventHandler(async (event) => {
     if (fcfMargin !== null && isFinite(fcfMargin) && fcfMargin > 0) {
       defaultMargin = clamp(fcfMargin, 0.01, 0.60)
       marginSource = 'Marge FCF TTM'
+      defaultMarginType = 'fcf'
     } else if (typeof opMargin === 'number' && isFinite(opMargin) && opMargin > 0) {
       defaultMargin = clamp(opMargin, 0.01, 0.60)
       marginSource = 'Marge Opératoire TTM'
@@ -166,8 +173,6 @@ export default defineEventHandler(async (event) => {
       marginSource = 'Cible Maturité (45% Marge Brute)'
     }
 
-    const currency = quote.currency || summaryDetail.currency || 'USD'
-    const defaultMarginType: 'net_margin' | 'fcf_margin' = marginSource === 'Marge FCF TTM' ? 'fcf_margin' : 'net_margin'
     const defaultDiscountRate = 0.10
 
     return {
@@ -177,6 +182,7 @@ export default defineEventHandler(async (event) => {
       current_price: currentPrice,
       revenue_ttm: revenueTTM,
       shares_outstanding: sharesOutstanding,
+      beta,
       fetched_at: new Date().toISOString(),
       growth_mode: growthMode,
       default_growth: parseFloat(defaultGrowth.toFixed(4)),
@@ -189,9 +195,10 @@ export default defineEventHandler(async (event) => {
       default_margin_type: defaultMarginType,
       default_margin: parseFloat(defaultMargin.toFixed(4)),
       margin_source: marginSource,
-      default_pe: parseFloat(defaultPE.toFixed(2)),
+      default_target_multiple: parseFloat(defaultTargetMultiple.toFixed(2)),
       pe_source: peSource,
       default_discount_rate: defaultDiscountRate,
+      default_risk_spread: defaultRiskSpread,
     }
   } catch (error: any) {
     if (error && typeof error === 'object' && error.statusCode && error.statusMessage && !error.response) {
