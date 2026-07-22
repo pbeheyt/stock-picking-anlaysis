@@ -705,11 +705,12 @@ function formatMOS(num: number): string {
 
     <!-- VUE 2 : SOURCING & CASCADE D'AUDIT -->
     <div v-else class="space-y-6">
+      <!-- Panneau Supérieur : Ancrages & Benchmark (2 Colonnes) -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Panneau 1 : Multiples & Devises -->
+        <!-- Colonne 1 : Données de Marché (Yahoo) -->
         <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
           <h4 class="text-xs font-semibold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-            📊 Multiples & Devises (Yahoo Finance)
+            📊 Données de Marché (Yahoo Finance)
           </h4>
           <div class="space-y-2 text-xs">
             <div class="flex justify-between py-1 border-b border-gray-850">
@@ -717,74 +718,28 @@ function formatMOS(num: number): string {
               <span class="font-mono font-bold text-white">{{ formatLargeNumber(stock.market_cap) }}</span>
             </div>
             <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">P/E Trailing (Brut) :</span>
+              <span class="text-gray-400">P/E Trailing TTM :</span>
               <span class="font-mono font-semibold text-gray-200">{{ stock.pe_trailing_raw ? `${stock.pe_trailing_raw.toFixed(1)}x` : 'N/A' }}</span>
             </div>
             <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">P/E Forward (Consensus) :</span>
+              <span class="text-gray-400">P/E Forward Consensus :</span>
               <span class="font-mono font-semibold text-gray-200">{{ stock.pe_forward_raw ? `${stock.pe_forward_raw.toFixed(1)}x` : 'N/A' }}</span>
             </div>
             <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Bêta Yahoo :</span>
-              <span class="font-mono font-semibold text-gray-200">{{ stock.beta ?? 1.0 }}</span>
-            </div>
-            <div class="flex justify-between py-1">
-              <span class="text-gray-400">Devise de Cotation :</span>
-              <span class="font-mono font-semibold text-emerald-400">{{ stock.currency || 'USD' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Panneau 2 : Marges Réelles TTM -->
-        <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
-          <h4 class="text-xs font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-2">
-            📈 Marges Financières Réelles (TTM)
-          </h4>
-          <div class="space-y-2 text-xs">
-            <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Marge Brute :</span>
-              <span class="font-mono font-semibold text-gray-200">{{ formatPercent(stock.margin_gross_raw) }}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Marge Opératoire :</span>
-              <span class="font-mono font-semibold text-gray-200">{{ formatPercent(stock.margin_operating_raw) }}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Marge Nette (Net Income) :</span>
+              <span class="text-gray-400">Marge Nette TTM :</span>
               <span class="font-mono font-semibold text-gray-200">{{ formatPercent(stock.margin_net_raw) }}</span>
             </div>
             <div class="flex justify-between py-1">
-              <span class="text-gray-400">Marge FCF (Free Cash Flow) :</span>
-              <span class="font-mono font-semibold text-sky-400">{{ formatPercent(stock.margin_fcf_raw) }}</span>
+              <span class="text-gray-400">Marge Brute TTM :</span>
+              <span class="font-mono font-semibold text-gray-200">{{ formatPercent(stock.margin_gross_raw) }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Panneau 3 : Bilan & Trésorerie -->
-        <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
-          <h4 class="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-            💰 Bilan & Cash Flow TTM
-          </h4>
-          <div class="space-y-2 text-xs">
-            <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Trésorerie Totale (Cash) :</span>
-              <span class="font-mono font-semibold text-emerald-400">{{ formatLargeNumber(stock.total_cash) }}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Dette Totale :</span>
-              <span class="font-mono font-semibold text-red-400">{{ formatLargeNumber(stock.total_debt) }}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Free Cash Flow TTM :</span>
-              <span class="font-mono font-semibold text-white">{{ formatLargeNumber(stock.free_cash_flow_raw) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Panneau 4 : Benchmark Wall Street -->
+        <!-- Colonne 2 : Consensus Wall Street -->
         <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
           <h4 class="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-2">
-            🎯 Consensus & Benchmark Analystes Wall Street
+            🎯 Consensus Wall Street (Analystes)
           </h4>
           <div class="space-y-2 text-xs">
             <div class="flex justify-between py-1 border-b border-gray-850">
@@ -792,7 +747,7 @@ function formatMOS(num: number): string {
               <span class="font-mono font-bold text-white">{{ formatMoney(stock.analyst_target_price) }}</span>
             </div>
             <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Potentiel Analystes vs Cours :</span>
+              <span class="text-gray-400">Potentiel Analystes vs Cours Actuel :</span>
               <span
                 v-if="stock.analyst_target_price && stock.current_price"
                 class="font-mono font-semibold"
@@ -802,24 +757,31 @@ function formatMOS(num: number): string {
               </span>
               <span v-else class="text-gray-500">N/A</span>
             </div>
-            <div class="flex justify-between py-1">
+            <div class="flex justify-between py-1 border-b border-gray-850">
               <span class="text-gray-400">Consensus Croissance CA NTM :</span>
               <span class="font-mono font-semibold text-amber-400">{{ formatPercent(stock.analyst_growth_estimate) }}</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-gray-400">Bêta Yahoo (Spread Volatilité) :</span>
+              <span class="font-mono font-semibold text-indigo-400">{{ stock.beta ?? 1.0 }} (±{{ formatPercent(stock.risk_spread) }})</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Panneau 5 : Table de Cascade d'Audit Explicite -->
+      <!-- Panneau Inférieur : Cascade d'Audit (Transparence Fallbacks) -->
       <div class="rounded-xl border border-gray-800 bg-gray-950/80 p-4 space-y-4">
         <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-2">
-          🔍 Cascade d'Audit Explicite (Audit Trail)
+          🔍 Cascade d'Audit (Transparence des Fallbacks)
         </h4>
 
         <div v-if="parsedAuditData" class="space-y-4">
           <!-- Cascade Croissance -->
           <div class="space-y-2">
-            <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">1. Cascade Croissance (g) — Retenu: {{ formatPercent(parsedAuditData.growth.selected) }}</span>
+            <div class="flex items-center justify-between text-xs font-bold text-emerald-400 uppercase tracking-wider">
+              <span>1. Cascade Croissance (g)</span>
+              <span class="font-mono text-white">Retenu : {{ formatPercent(parsedAuditData.growth.selected) }}</span>
+            </div>
             <table class="w-full text-left text-xs text-gray-300 border border-gray-800 rounded-lg overflow-hidden">
               <thead class="bg-gray-900 text-[10px] text-gray-500 uppercase">
                 <tr>
@@ -831,11 +793,11 @@ function formatMOS(num: number): string {
               </thead>
               <tbody class="divide-y divide-gray-850">
                 <tr v-for="c in parsedAuditData.growth.candidates" :key="c.name" :class="c.status === 'selected' ? 'bg-emerald-950/20' : ''">
-                  <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : 'text-gray-400'">{{ c.name }}</td>
+                  <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : 'text-gray-500 line-through'">{{ c.name }}</td>
                   <td class="px-3 py-2 font-mono">{{ c.value !== null ? formatPercent(c.value) : 'N/A' }}</td>
                   <td class="px-3 py-2">
-                    <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase" :class="c.status === 'selected' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : c.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-gray-800 text-gray-400'">
-                      {{ c.status }}
+                    <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase" :class="c.status === 'selected' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : c.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-gray-800 text-gray-500'">
+                      {{ c.status === 'selected' ? '[✓] Selected' : c.status === 'rejected' ? '[✗] Rejected' : '[x] Ignored' }}
                     </span>
                   </td>
                   <td class="px-3 py-2 text-gray-400">{{ c.note }}</td>
@@ -846,7 +808,10 @@ function formatMOS(num: number): string {
 
           <!-- Cascade Marge -->
           <div class="space-y-2">
-            <span class="text-xs font-bold text-sky-400 uppercase tracking-wider">2. Cascade Marge Nette (m) — Retenu: {{ formatPercent(parsedAuditData.margin.selected) }}</span>
+            <div class="flex items-center justify-between text-xs font-bold text-sky-400 uppercase tracking-wider">
+              <span>2. Cascade Marge Nette (m)</span>
+              <span class="font-mono text-white">Retenu : {{ formatPercent(parsedAuditData.margin.selected) }}</span>
+            </div>
             <table class="w-full text-left text-xs text-gray-300 border border-gray-800 rounded-lg overflow-hidden">
               <thead class="bg-gray-900 text-[10px] text-gray-500 uppercase">
                 <tr>
@@ -858,11 +823,11 @@ function formatMOS(num: number): string {
               </thead>
               <tbody class="divide-y divide-gray-850">
                 <tr v-for="c in parsedAuditData.margin.candidates" :key="c.name" :class="c.status === 'selected' ? 'bg-sky-950/20' : ''">
-                  <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : 'text-gray-400'">{{ c.name }}</td>
+                  <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : 'text-gray-500 line-through'">{{ c.name }}</td>
                   <td class="px-3 py-2 font-mono">{{ c.value !== null ? formatPercent(c.value) : 'N/A' }}</td>
                   <td class="px-3 py-2">
-                    <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase" :class="c.status === 'selected' ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : c.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-gray-800 text-gray-400'">
-                      {{ c.status }}
+                    <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase" :class="c.status === 'selected' ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : c.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-gray-800 text-gray-500'">
+                      {{ c.status === 'selected' ? '[✓] Selected' : c.status === 'rejected' ? '[✗] Rejected' : '[x] Ignored' }}
                     </span>
                   </td>
                   <td class="px-3 py-2 text-gray-400">{{ c.note }}</td>
@@ -873,7 +838,10 @@ function formatMOS(num: number): string {
 
           <!-- Cascade PE -->
           <div class="space-y-2">
-            <span class="text-xs font-bold text-violet-400 uppercase tracking-wider">3. Cascade Multiple Exit (P/E) — Retenu: {{ parsedAuditData.pe.selected.toFixed(1) }}x</span>
+            <div class="flex items-center justify-between text-xs font-bold text-violet-400 uppercase tracking-wider">
+              <span>3. Cascade Multiple Exit (P/E)</span>
+              <span class="font-mono text-white">Retenu : {{ parsedAuditData.pe.selected.toFixed(1) }}x</span>
+            </div>
             <table class="w-full text-left text-xs text-gray-300 border border-gray-800 rounded-lg overflow-hidden">
               <thead class="bg-gray-900 text-[10px] text-gray-500 uppercase">
                 <tr>
@@ -885,11 +853,11 @@ function formatMOS(num: number): string {
               </thead>
               <tbody class="divide-y divide-gray-850">
                 <tr v-for="c in parsedAuditData.pe.candidates" :key="c.name" :class="c.status === 'selected' ? 'bg-violet-950/20' : ''">
-                  <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : 'text-gray-400'">{{ c.name }}</td>
+                  <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : 'text-gray-500 line-through'">{{ c.name }}</td>
                   <td class="px-3 py-2 font-mono">{{ c.value !== null ? `${c.value.toFixed(1)}x` : 'N/A' }}</td>
                   <td class="px-3 py-2">
-                    <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase" :class="c.status === 'selected' ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30' : c.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-gray-800 text-gray-400'">
-                      {{ c.status }}
+                    <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase" :class="c.status === 'selected' ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30' : c.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-gray-800 text-gray-500'">
+                      {{ c.status === 'selected' ? '[✓] Selected' : c.status === 'rejected' ? '[✗] Rejected' : '[x] Ignored' }}
                     </span>
                   </td>
                   <td class="px-3 py-2 text-gray-400">{{ c.note }}</td>
