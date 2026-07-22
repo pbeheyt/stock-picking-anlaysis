@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
     let summary: any = null
     try {
       summary = await yahooFinance.quoteSummary(ticker, {
-        modules: ['financialData', 'defaultKeyStatistics'],
+        modules: ['earningsTrend', 'financialData', 'summaryDetail', 'defaultKeyStatistics'],
       })
     } catch (err: any) {
       console.warn(`[YahooFinance] QuoteSummary fetch failed for ${ticker}:`, err?.message || err)
@@ -45,24 +45,93 @@ export default defineEventHandler(async (event) => {
 
     const name = quote.shortName || quote.longName || ticker
     const currentPrice = quote.regularMarketPrice ?? null
-    const revenueTTM = summary?.financialData?.totalRevenue ?? null
-    const sharesOutstanding = summary?.defaultKeyStatistics?.sharesOutstanding ?? quote.sharesOutstanding ?? null
 
-    const rawGrowth = summary?.financialData?.revenueGrowth ?? null
-    const rawMargin = summary?.financialData?.profitMargins ?? null
-    const rawPE = quote.trailingPE ?? summary?.defaultKeyStatistics?.trailingPE ?? null
+    const financialData = summary?.financialData || {}
+    const summaryDetail = summary?.summaryDetail || {}
+    const keyStats = summary?.defaultKeyStatistics || {}
+    const earningsTrend = summary?.earningsTrend?.trend || []
 
-    const defaultGrowth = rawGrowth !== null && rawGrowth !== undefined
-      ? clamp(rawGrowth, -0.5, 1.0)
-      : 0.10
+    const revenueTTM = financialData.totalRevenue ?? null
+    const sharesOutstanding = keyStats.sharesOutstanding ?? quote.sharesOutstanding ?? null
 
-    const defaultMargin = rawMargin !== null && rawMargin !== undefined
-      ? clamp(rawMargin, -1.0, 1.0)
-      : 0.20
+    // 1. Croissance CA (defaultGrowth) & source
+    let defaultGrowth = 0.10
+    let growthSource = 'Modèle Standard (10%)'
 
-    const defaultPE = rawPE !== null && rawPE !== undefined && rawPE > 0
-      ? clamp(rawPE, 1, 200)
-      : 20
+    const trend1y = earningsTrend.find((t: any) => t.period === '+1y')
+    const trend5y = earningsTrend.find((t: any) => t.period === '+5y')
+    const analystGrowth = trend1y?.revenueEstimate?.growth ?? trend1y?.growth ?? trend5y?.growth
+
+    if (typeof analystGrowth === 'number' && isFinite(analystGrowth) && analystGrowth !== 0) {
+      defaultGrowth = clamp(analystGrowth, -0.5, 0.8)
+      growthSource = 'Consensus Analystes (+1y)'
+    } else if (typeof financialData.revenueGrowth === 'number' && isFinite(financialData.revenueGrowth)) {
+      defaultGrowth = clamp(financialData.revenueGrowth, -0.5, 0.8)
+      growthSource = 'Historique TTM'
+    } else {
+      const price = currentPrice ?? 0
+      const rev = revenueTTM ?? 0
+      const shares = sharesOutstanding ?? 0
+      if (price > 0 && rev > 0 && shares > 0) {
+        const p5 = price * Math.pow(1.10, 5)
+        const e5 = (p5 * shares) / 25
+        const r5 = e5 / 0.20
+        const gImplied = Math.pow(r5 / rev, 1 / 5) - 1
+        if (isFinite(gImplied) && gImplied > -0.5 && gImplied < 1.0) {
+          defaultGrowth = clamp(gImplied, -0.5, 0.8)
+          growthSource = 'Croissance Implicite du Marché'
+        }
+      }
+    }
+
+    // 2. Multiple P/E de sortie (defaultPE) & source
+    let defaultPE = 20
+    let peSource = 'Modèle Standard (20x)'
+
+    const forwardPE = summaryDetail.forwardPE ?? keyStats.forwardPE ?? quote.forwardPE
+    const trailingPE = quote.trailingPE ?? summaryDetail.trailingPE ?? keyStats.trailingPE
+
+    if (typeof forwardPE === 'number' && isFinite(forwardPE) && forwardPE > 0) {
+      defaultPE = clamp(forwardPE, 5, 120)
+      peSource = 'Consensus P/E Forward'
+    } else if (typeof trailingPE === 'number' && isFinite(trailingPE) && trailingPE > 0) {
+      defaultPE = clamp(trailingPE, 5, 120)
+      peSource = 'P/E Trailing (TTM)'
+    } else {
+      if (defaultGrowth > 0.30) {
+        defaultPE = 35
+      } else if (defaultGrowth > 0.15) {
+        defaultPE = 25
+      } else {
+        defaultPE = 18
+      }
+      peSource = 'Profil de Croissance (Non rentable)'
+    }
+
+    // 3. Marge Op / Nette / FCF (defaultMargin) & source
+    let defaultMargin = 0.20
+    let marginSource = 'Modèle Standard (20%)'
+
+    const totalRev = revenueTTM
+    const fcf = financialData.freeCashflow
+    const fcfMargin = (totalRev && fcf && totalRev > 0) ? (fcf / totalRev) : null
+    const opMargin = financialData.operatingMargins
+    const netMargin = financialData.profitMargins
+    const grossMargin = financialData.grossMargins
+
+    if (fcfMargin !== null && isFinite(fcfMargin) && fcfMargin > 0) {
+      defaultMargin = clamp(fcfMargin, 0.01, 0.60)
+      marginSource = 'Marge FCF TTM'
+    } else if (typeof opMargin === 'number' && isFinite(opMargin) && opMargin > 0) {
+      defaultMargin = clamp(opMargin, 0.01, 0.60)
+      marginSource = 'Marge Opératoire TTM'
+    } else if (typeof netMargin === 'number' && isFinite(netMargin) && netMargin > 0 && (opMargin === undefined || opMargin >= 0)) {
+      defaultMargin = clamp(netMargin, 0.01, 0.60)
+      marginSource = 'Marge Nette TTM'
+    } else if (typeof grossMargin === 'number' && isFinite(grossMargin) && grossMargin > 0) {
+      defaultMargin = clamp(grossMargin * 0.45, 0.05, 0.50)
+      marginSource = 'Cible Maturité (45% Marge Brute)'
+    }
 
     const defaultDiscountRate = 0.10
 
@@ -74,8 +143,11 @@ export default defineEventHandler(async (event) => {
       shares_outstanding: sharesOutstanding,
       fetched_at: new Date().toISOString(),
       default_growth: parseFloat(defaultGrowth.toFixed(4)),
+      growth_source: growthSource,
       default_margin: parseFloat(defaultMargin.toFixed(4)),
+      margin_source: marginSource,
       default_pe: parseFloat(defaultPE.toFixed(2)),
+      pe_source: peSource,
       default_discount_rate: defaultDiscountRate,
     }
   } catch (error: any) {
@@ -95,4 +167,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-

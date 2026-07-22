@@ -22,6 +22,9 @@ export interface Stock {
   projected_margin: number
   target_pe: number
   discount_rate: number
+  growth_source?: string
+  margin_source?: string
+  pe_source?: string
   thesis: string | null
   created_at: string
   updated_at: string

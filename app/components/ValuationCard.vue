@@ -318,27 +318,45 @@ function formatMOS(num: number): string {
       <!-- Croissance CA -->
       <div class="slider-group">
         <div class="slider-header">
-          <label class="slider-label">Croissance CA / an</label>
+          <div class="flex items-center gap-2 flex-wrap">
+            <label class="slider-label">Croissance CA / an</label>
+            <span
+              v-if="stock.growth_source"
+              class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+              title="Source de la valeur initiale"
+            >
+              {{ stock.growth_source }}
+            </span>
+          </div>
           <span class="slider-value text-emerald-400">{{ formatPercent(growth) }}</span>
         </div>
         <input
           v-model.number="growth"
           type="range"
-          min="-0.2"
-          max="0.5"
+          min="-0.3"
+          max="1.0"
           step="0.005"
           class="slider slider--emerald"
         >
         <div class="slider-bounds">
-          <span>-20%</span>
-          <span>50%</span>
+          <span>-30%</span>
+          <span>100%</span>
         </div>
       </div>
 
       <!-- Marge -->
       <div class="slider-group">
         <div class="slider-header">
-          <label class="slider-label">Marge Nette / FCF</label>
+          <div class="flex items-center gap-2 flex-wrap">
+            <label class="slider-label">Marge Nette / FCF</label>
+            <span
+              v-if="stock.margin_source"
+              class="source-pill bg-sky-500/10 text-sky-400 border-sky-500/20"
+              title="Source de la valeur initiale"
+            >
+              {{ stock.margin_source }}
+            </span>
+          </div>
           <span class="slider-value text-sky-400">{{ formatPercent(margin) }}</span>
         </div>
         <input
@@ -358,20 +376,29 @@ function formatMOS(num: number): string {
       <!-- PER Cible -->
       <div class="slider-group">
         <div class="slider-header">
-          <label class="slider-label">Multiple de Sortie (P/E)</label>
+          <div class="flex items-center gap-2 flex-wrap">
+            <label class="slider-label">Multiple de Sortie (P/E)</label>
+            <span
+              v-if="stock.pe_source"
+              class="source-pill bg-violet-500/10 text-violet-400 border-violet-500/20"
+              title="Source de la valeur initiale"
+            >
+              {{ stock.pe_source }}
+            </span>
+          </div>
           <span class="slider-value text-violet-400">{{ targetPE.toFixed(1) }}x</span>
         </div>
         <input
           v-model.number="targetPE"
           type="range"
           min="5"
-          max="80"
+          max="120"
           step="0.5"
           class="slider slider--violet"
         >
         <div class="slider-bounds">
           <span>5x</span>
-          <span>80x</span>
+          <span>120x</span>
         </div>
       </div>
 
@@ -385,13 +412,13 @@ function formatMOS(num: number): string {
           v-model.number="discountRate"
           type="range"
           min="0.05"
-          max="0.20"
+          max="0.25"
           step="0.005"
           class="slider slider--amber"
         >
         <div class="slider-bounds">
           <span>5%</span>
-          <span>20%</span>
+          <span>25%</span>
         </div>
       </div>
     </div>

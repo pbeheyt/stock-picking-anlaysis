@@ -12,6 +12,8 @@ const successMessage = ref<string | null>(null)
 const stocks = ref<Stock[]>([])
 const isFetchingStocks = ref(true)
 
+const sourcesMap = ref<Record<string, { growth_source?: string; margin_source?: string; pe_source?: string }>>({})
+
 const fetchUserStocks = async () => {
   if (!user.value) return
   isFetchingStocks.value = true
@@ -22,7 +24,28 @@ const fetchUserStocks = async () => {
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    stocks.value = (data as Stock[]) || []
+    const rawStocks = (data as Stock[]) || []
+    stocks.value = rawStocks
+
+    // Optionnel : enrichir les métadonnées de source pour les tickers existants en arrière-plan
+    rawStocks.forEach(async (s) => {
+      if (!sourcesMap.value[s.ticker]) {
+        try {
+          const apiData = await $fetch<{
+            growth_source?: string
+            margin_source?: string
+            pe_source?: string
+          }>(`/api/stock/${encodeURIComponent(s.ticker)}`)
+          sourcesMap.value[s.ticker] = {
+            growth_source: apiData.growth_source,
+            margin_source: apiData.margin_source,
+            pe_source: apiData.pe_source,
+          }
+        } catch {
+          // Ignorer les erreurs d'arrière-plan
+        }
+      }
+    })
   } catch (err: any) {
     console.error('Erreur chargement stocks:', err)
   } finally {
@@ -51,10 +74,19 @@ const analyzeAndAddStock = async () => {
       shares_outstanding: number | null
       fetched_at: string
       default_growth: number
+      growth_source: string
       default_margin: number
+      margin_source: string
       default_pe: number
+      pe_source: string
       default_discount_rate: number
     }>(`/api/stock/${encodeURIComponent(ticker)}`)
+
+    sourcesMap.value[stockData.ticker] = {
+      growth_source: stockData.growth_source,
+      margin_source: stockData.margin_source,
+      pe_source: stockData.pe_source,
+    }
 
     const existing = stocks.value.find(s => s.ticker === stockData.ticker)
 
@@ -81,13 +113,24 @@ const analyzeAndAddStock = async () => {
 
     if (error) throw error
 
-    successMessage.value = `${stockData.ticker} (${stockData.name}) — données mises à jour.`
+    successMessage.value = `${stockData.ticker} (${stockData.name}) — hypothèses auto-remplies.`
     searchTicker.value = ''
     await fetchUserStocks()
   } catch (err: any) {
     errorMessage.value = err.data?.statusMessage || err.message || 'Impossible d\'ajouter ce ticker.'
   } finally {
     isLoading.value = false
+  }
+}
+
+const getEnrichedStock = (stock: Stock): Stock => {
+  const sources = sourcesMap.value[stock.ticker]
+  if (!sources) return stock
+  return {
+    ...stock,
+    growth_source: sources.growth_source,
+    margin_source: sources.margin_source,
+    pe_source: sources.pe_source,
   }
 }
 
@@ -162,7 +205,7 @@ const signOut = async () => {
         <input
           v-model="searchTicker"
           type="text"
-          placeholder="Ex: AAPL, ASML, NVDA, TTE.PA..."
+          placeholder="Ex: AAPL, ASML, NVDA, NBIS, TTE.PA..."
           class="flex-1 rounded-lg border border-gray-700 bg-gray-950 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           :disabled="isLoading"
         >
@@ -207,7 +250,7 @@ const signOut = async () => {
         <ValuationCard
           v-for="stock in stocks"
           :key="stock.id"
-          :stock="stock"
+          :stock="getEnrichedStock(stock)"
           @update="updateStockHypotheses"
           @delete="deleteStock"
         />

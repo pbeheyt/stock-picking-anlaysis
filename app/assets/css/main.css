@@ -13,6 +13,10 @@
   @apply rounded-md bg-emerald-500/10 px-2.5 py-1 font-mono text-sm font-bold text-emerald-400 border border-emerald-500/20;
 }
 
+.source-pill {
+  @apply inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-medium border tracking-tight transition-opacity hover:opacity-90;
+}
+
 /* ═══════════════════════════════════════════
    Metrics Grid
    ═══════════════════════════════════════════ */
