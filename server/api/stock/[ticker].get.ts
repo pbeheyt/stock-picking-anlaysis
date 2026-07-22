@@ -290,11 +290,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // -------------------------------------------------------------
-    // CASCADE 4 : TAUX D'ACTUALISATION (r) - CAPM / MEDAF
+    // CASCADE 4 : TAUX D'ACTUALISATION (r) - CAPM / MEDAF (CLAMP 6.0% - 13.5%)
     // -------------------------------------------------------------
     // Formule MEDAF : Ke = RiskFreeRate (4.0%) + Beta * ERP (5.0%)
     const rawKe = 0.04 + 0.05 * beta
-    const selectedDiscountRate = parseFloat(clamp(rawKe, 0.075, 0.135).toFixed(4))
+    const selectedDiscountRate = parseFloat(clamp(rawKe, 0.060, 0.135).toFixed(4))
     const discountCandidates: any[] = []
 
     if (rawKe > 0.135) {
@@ -310,25 +310,25 @@ export default defineEventHandler(async (event) => {
         status: 'selected',
         note: 'Bridé par le Cap Maximum Guardrail (13.5%)',
       })
-    } else if (rawKe < 0.075) {
+    } else if (rawKe < 0.060) {
       discountCandidates.push({
         name: 'CAPM Brut (4.0% + Beta × 5.0%)',
         value: parseFloat(rawKe.toFixed(4)),
         status: 'rejected',
-        note: `Inférieur au plancher minimum guardrail (7.5%)`,
+        note: `Inférieur au plancher minimum guardrail (6.0%)`,
       })
       discountCandidates.push({
-        name: 'Taux Actualisation Planché (Floor 7.5%)',
-        value: 0.075,
+        name: 'Taux Actualisation Planché (Floor 6.0%)',
+        value: 0.060,
         status: 'selected',
-        note: 'Bridé par le Floor Minimum Guardrail (7.5%)',
+        note: 'Bridé par le Floor Minimum Guardrail (6.0%)',
       })
     } else {
       discountCandidates.push({
         name: 'CAPM Brut (4.0% + Beta × 5.0%)',
         value: parseFloat(rawKe.toFixed(4)),
         status: 'selected',
-        note: 'CAPM appliqué tel quel (entre 7.5% et 13.5%)',
+        note: 'CAPM appliqué tel quel (entre 6.0% et 13.5%)',
       })
     }
 

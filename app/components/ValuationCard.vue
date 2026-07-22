@@ -458,7 +458,7 @@ function formatPercent(num: number | null): string {
         <div class="flex items-center gap-2 mb-2">
           <div class="h-5 w-5 rounded-md bg-indigo-500/15 flex items-center justify-center">
             <svg class="h-3 w-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
           <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Reverse DCF</span>
@@ -730,7 +730,7 @@ function formatPercent(num: number | null): string {
           </div>
         </div>
 
-        <!-- Taux actualisation -->
+        <!-- Taux actualisation (Plage 5.0% - 15.0%) -->
         <div class="slider-group">
           <div class="slider-header">
             <label class="slider-label">Taux d'Actualisation</label>
@@ -740,13 +740,13 @@ function formatPercent(num: number | null): string {
             v-model.number="discountRate"
             type="range"
             min="0.05"
-            max="0.25"
+            max="0.15"
             step="0.005"
             class="slider slider--amber"
           >
           <div class="slider-bounds">
-            <span>5%</span>
-            <span>25%</span>
+            <span>5.0%</span>
+            <span>15.0%</span>
           </div>
         </div>
 
