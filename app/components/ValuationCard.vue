@@ -750,7 +750,7 @@ function formatMOS(num: number): string {
     <div v-else class="space-y-6">
       <!-- Panneau Supérieur : Ancrages & Benchmark (2 Colonnes) -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Colonne 1 : Données de Marché (Yahoo) -->
+        <!-- Colonne 1 : Données de Marché (Yahoo) [GAUCHE] -->
         <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
           <h4 class="text-xs font-semibold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
             📊 Données de Marché (Yahoo Finance)
@@ -768,25 +768,29 @@ function formatMOS(num: number): string {
               <span class="text-gray-400">P/E Forward Consensus :</span>
               <span class="font-mono font-semibold text-gray-200">{{ stock.pe_forward_raw ? `${stock.pe_forward_raw.toFixed(1)}x` : 'N/A' }}</span>
             </div>
-            <div class="flex justify-between py-1">
+            <div class="flex justify-between py-1 border-b border-gray-850">
               <span class="text-gray-400">Marge Nette TTM :</span>
               <span class="font-mono font-semibold text-gray-200">{{ formatPercent(stock.margin_net_raw) }}</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-gray-400">Bêta Yahoo (Spread Volatilité) :</span>
+              <span class="font-mono font-semibold text-indigo-400">{{ stock.beta ?? 1.0 }} (±{{ formatPercent(stock.risk_spread) }})</span>
             </div>
           </div>
         </div>
 
-        <!-- Colonne 2 : Consensus Wall Street -->
+        <!-- Colonne 2 : Consensus Wall Street [DROITE] -->
         <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
           <h4 class="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-2">
             🎯 Consensus Wall Street (Analystes)
           </h4>
           <div class="space-y-2 text-xs">
             <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Target Price 12M Analystes :</span>
+              <span class="text-gray-400">Prix Cible Médian (12M Analystes) :</span>
               <span class="font-mono font-bold text-white">{{ formatMoney(stock.analyst_target_price) }}</span>
             </div>
             <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Potentiel Analystes vs Cours Actuel :</span>
+              <span class="text-gray-400">Potentiel Médian vs Cours Actuel :</span>
               <span
                 v-if="stock.analyst_target_price && stock.current_price"
                 class="font-mono font-semibold"
@@ -800,13 +804,9 @@ function formatMOS(num: number): string {
               <span class="text-gray-400">Consensus Croissance CA NTM :</span>
               <span class="font-mono font-semibold text-amber-400">{{ formatPercent(stock.analyst_growth_estimate) }}</span>
             </div>
-            <div class="flex justify-between py-1 border-b border-gray-850">
+            <div class="flex justify-between py-1">
               <span class="text-gray-400">Nombre d'Analystes :</span>
               <span class="font-mono font-semibold text-gray-200">{{ stock.analyst_count ?? 'N/A' }}</span>
-            </div>
-            <div class="flex justify-between py-1">
-              <span class="text-gray-400">Bêta Yahoo (Spread Volatilité) :</span>
-              <span class="font-mono font-semibold text-indigo-400">{{ stock.beta ?? 1.0 }} (±{{ formatPercent(stock.risk_spread) }})</span>
             </div>
           </div>
         </div>
