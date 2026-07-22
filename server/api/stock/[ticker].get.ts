@@ -12,18 +12,24 @@ export default defineEventHandler(async (event) => {
   if (!tickerParam || typeof tickerParam !== 'string') {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Ticker parameter is required',
+      statusMessage: 'Le paramètre ticker est requis',
     })
   }
 
   const ticker = tickerParam.trim().toUpperCase()
 
   try {
-    const quote = await yahooFinance.quote(ticker)
+    let quote: any = null
+    try {
+      quote = await yahooFinance.quote(ticker)
+    } catch (err: any) {
+      console.warn(`[YahooFinance] Quote fetch failed for ${ticker}:`, err?.message || err)
+    }
+
     if (!quote || (!quote.shortName && !quote.longName && !quote.regularMarketPrice)) {
       throw createError({
         statusCode: 404,
-        statusMessage: `Ticker '${ticker}' non trouvé`,
+        statusMessage: `Ticker '${ticker}' non trouvé ou données indisponibles`,
       })
     }
 
@@ -32,7 +38,8 @@ export default defineEventHandler(async (event) => {
       summary = await yahooFinance.quoteSummary(ticker, {
         modules: ['financialData', 'defaultKeyStatistics'],
       })
-    } catch {
+    } catch (err: any) {
+      console.warn(`[YahooFinance] QuoteSummary fetch failed for ${ticker}:`, err?.message || err)
       summary = {}
     }
 
@@ -72,11 +79,20 @@ export default defineEventHandler(async (event) => {
       default_discount_rate: defaultDiscountRate,
     }
   } catch (error: any) {
-    if (error.statusCode) throw error
+    if (error && typeof error === 'object' && error.statusCode && error.statusMessage && !error.response) {
+      throw error
+    }
+
+    const statusCode = typeof error?.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 600
+      ? error.statusCode
+      : 404
+
+    const statusMessage = error?.statusMessage || error?.message || `Impossible de récupérer les données pour le ticker '${ticker}'`
 
     throw createError({
-      statusCode: 404,
-      statusMessage: `Impossible de récupérer les données pour le ticker '${ticker}': ${error.message || 'Ticker inconnu'}`,
+      statusCode,
+      statusMessage: String(statusMessage),
     })
   }
 })
+
