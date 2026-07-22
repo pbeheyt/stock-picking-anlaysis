@@ -77,12 +77,12 @@ const isPEFallback = computed(() => {
 
 const meanPotential = computed(() => {
   if (!props.stock.analyst_target_price || !props.stock.current_price) return null
-  return ((props.stock.analyst_target_price - props.stock.current_price) / props.stock.current_price) * 100
+  return (props.stock.analyst_target_price / props.stock.current_price) - 1
 })
 
 const medianPotential = computed(() => {
   if (!props.stock.analyst_target_median || !props.stock.current_price) return null
-  return ((props.stock.analyst_target_median - props.stock.current_price) / props.stock.current_price) * 100
+  return (props.stock.analyst_target_median / props.stock.current_price) - 1
 })
 
 const valuationInputs = computed<ValuationInputs>(() => ({
@@ -248,12 +248,6 @@ function formatPercent(num: number | null): string {
   if (num === null || num === undefined) return 'N/A'
   return `${(num * 100).toFixed(1)}%`
 }
-
-function formatMOS(num: number | null): string {
-  if (num === null || num === undefined) return ''
-  const sign = num >= 0 ? '+' : ''
-  return `(${sign}${num.toFixed(1)}%)`
-}
 </script>
 
 <template>
@@ -334,7 +328,7 @@ function formatMOS(num: number | null): string {
 
     <!-- VUE 1 : VALORISATION & SIMULATION -->
     <div v-if="activeTab === 'valuation'" class="space-y-6">
-      <!-- Métriques Brutes Clefs -->
+      <!-- Métriques Brutes Clefs (Règle Stricte : Neutre Blanc/Gris) -->
       <div class="metrics-grid">
         <div class="metric-cell">
           <span class="metric-label">Prix Actuel</span>
@@ -342,11 +336,11 @@ function formatMOS(num: number | null): string {
         </div>
         <div class="metric-cell">
           <span class="metric-label">CA TTM</span>
-          <span class="metric-value">{{ formatLargeNumber(stock.revenue_ttm) }}</span>
+          <span class="metric-value text-gray-200">{{ formatLargeNumber(stock.revenue_ttm) }}</span>
         </div>
         <div class="metric-cell">
           <span class="metric-label">Shares</span>
-          <span class="metric-value">{{ formatLargeNumber(stock.shares_outstanding) }}</span>
+          <span class="metric-value text-gray-200">{{ formatLargeNumber(stock.shares_outstanding) }}</span>
         </div>
       </div>
 
@@ -357,16 +351,7 @@ function formatMOS(num: number | null): string {
             <span class="text-xs font-medium uppercase tracking-wider text-gray-500">Fair Value (Base Case)</span>
             <div class="mt-1 flex items-baseline gap-2">
               <span class="text-3xl font-bold tracking-tight text-white">{{ formatMoney(fairValue) }}</span>
-              <span
-                class="text-sm font-bold"
-                :class="{
-                  'text-emerald-400': marginOfSafety > 15,
-                  'text-amber-400': marginOfSafety >= 0 && marginOfSafety <= 15,
-                  'text-red-400': marginOfSafety < 0,
-                }"
-              >
-                {{ formatMOS(marginOfSafety) }} MoS
-              </span>
+              <SmartValue :value="marginOfSafety" type="mos" class="text-sm font-bold" suffix=" MoS" />
             </div>
           </div>
           <div class="text-right">
@@ -425,23 +410,17 @@ function formatMOS(num: number | null): string {
         <div class="scenario-cell scenario-cell--bear">
           <span class="scenario-label text-red-400/70">Bear Case (-{{ formatPercent(riskSpread) }})</span>
           <span class="scenario-value">{{ formatMoney(scenarios.bear.fairValue) }}</span>
-          <span class="scenario-mos" :class="scenarios.bear.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
-            {{ formatMOS(scenarios.bear.marginOfSafety) }}
-          </span>
+          <SmartValue :value="scenarios.bear.marginOfSafety" type="mos" class="text-xs" />
         </div>
         <div class="scenario-cell scenario-cell--base">
           <span class="scenario-label text-amber-400/70">Base Case</span>
           <span class="scenario-value text-white">{{ formatMoney(scenarios.base.fairValue) }}</span>
-          <span class="scenario-mos" :class="scenarios.base.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
-            {{ formatMOS(scenarios.base.marginOfSafety) }}
-          </span>
+          <SmartValue :value="scenarios.base.marginOfSafety" type="mos" class="text-xs" />
         </div>
         <div class="scenario-cell scenario-cell--bull">
           <span class="scenario-label text-emerald-400/70">Bull Case (+{{ formatPercent(riskSpread) }})</span>
           <span class="scenario-value">{{ formatMoney(scenarios.bull.fairValue) }}</span>
-          <span class="scenario-mos" :class="scenarios.bull.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
-            {{ formatMOS(scenarios.bull.marginOfSafety) }}
-          </span>
+          <SmartValue :value="scenarios.bull.marginOfSafety" type="mos" class="text-xs" />
         </div>
       </div>
 
@@ -450,7 +429,7 @@ function formatMOS(num: number | null): string {
         <div class="flex items-center gap-2 mb-2">
           <div class="h-5 w-5 rounded-md bg-indigo-500/15 flex items-center justify-center">
             <svg class="h-3 w-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
           <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Reverse DCF</span>
@@ -458,18 +437,14 @@ function formatMOS(num: number | null): string {
 
         <p v-if="growthMode === 'cagr'" class="text-sm text-gray-300 leading-relaxed">
           Le marché anticipe une croissance du CA de
-          <span class="font-bold" :class="reverseDCF.impliedGrowth > growth ? 'text-amber-400' : 'text-emerald-400'">
-            {{ formatPercent(reverseDCF.impliedGrowth) }}/an
-          </span>
+          <SmartValue :value="reverseDCF.impliedGrowth" type="percent" suffix="/an" />
           sur 5 ans pour justifier le cours actuel de
           <span class="font-semibold text-white">{{ formatMoney(stock.current_price ?? 0) }}</span>.
         </p>
 
         <p v-else class="text-sm text-gray-300 leading-relaxed">
-          En conservant g₁ à <span class="font-semibold text-emerald-400">{{ formatPercent(growthY1) }}</span> (Guidance NTM), le marché exige une croissance moyenne de
-          <span class="font-bold" :class="(reverseDCF.impliedGrowthY2Y5 ?? 0) > growthY2 ? 'text-amber-400' : 'text-emerald-400'">
-            {{ formatPercent(reverseDCF.impliedGrowthY2Y5 ?? 0) }}/an
-          </span>
+          En conservant g₁ à <SmartValue :value="growthY1" type="percent" />, le marché exige une croissance moyenne de
+          <SmartValue :value="reverseDCF.impliedGrowthY2Y5 ?? 0" type="percent" suffix="/an" />
           sur les années 2 à 5 pour justifier le cours actuel.
         </p>
 
@@ -531,7 +506,7 @@ function formatMOS(num: number | null): string {
                 [⚠️ DEFAULT]
               </span>
             </div>
-            <span class="slider-value text-emerald-400">{{ formatPercent(growth) }}</span>
+            <SmartValue :value="growth" type="percent" />
           </div>
           <input
             v-model.number="growth"
@@ -547,7 +522,7 @@ function formatMOS(num: number | null): string {
           </div>
         </div>
 
-        <!-- Mode Explicit : Composant CA Scalé à l'échelle humaine (M/B) -->
+        <!-- Mode Explicit : Panneau Unifié (Grille 5Y & Synthèse Inférieure) -->
         <div v-else class="space-y-4 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4">
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
@@ -563,14 +538,13 @@ function formatMOS(num: number | null): string {
             </div>
           </div>
 
+          <!-- Grille 5 Ans (An 1 à An 5) -->
           <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
             <div v-for="i in 5" :key="i" class="rounded-xl border border-gray-800 bg-gray-950/80 p-3 space-y-3">
-              <!-- Header Année & % -->
+              <!-- Header Année & % SmartValue -->
               <div class="flex items-center justify-between">
                 <span class="text-xs font-semibold text-gray-300">An {{ i }} {{ i === 1 ? '(NTM)' : '' }}</span>
-                <span class="font-mono text-xs font-bold text-emerald-400">
-                  {{ formatPercent(i === 1 ? growthY1 : i === 2 ? growthY2 : i === 3 ? growthY3 : i === 4 ? growthY4 : growthY5) }}
-                </span>
+                <SmartValue :value="i === 1 ? growthY1 : i === 2 ? growthY2 : i === 3 ? growthY3 : i === 4 ? growthY4 : growthY5" type="percent" class="text-xs" />
               </div>
 
               <!-- Slider Croissance -->
@@ -641,20 +615,30 @@ function formatMOS(num: number | null): string {
             </div>
           </div>
 
-          <div class="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-4 text-center space-y-1 shadow-md">
-            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              🎯 Chiffre d'Affaires Final Cible (Année 5)
-            </span>
-            <p class="font-mono text-2xl font-extrabold text-white">
-              {{ formatLargeNumber(scenarios.base.revenue5Y) }}
-            </p>
-            <p class="text-xs text-gray-400">
-              soit un CAGR équivalent lissé de <span class="font-bold text-emerald-400">{{ formatPercent(scenarios.base.equivalentCAGR) }}/an</span> sur 5 ans
-            </p>
+          <!-- Bannière de Synthèse Unifiée (Footer de la Carte CA) -->
+          <div class="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-4 shadow-md">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
+              <div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                  🎯 Chiffre d'Affaires Final Cible (An 5)
+                </span>
+                <p class="font-mono text-2xl font-extrabold text-white mt-1">
+                  {{ formatLargeNumber(scenarios.base.revenue5Y) }}
+                </p>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                  📈 CAGR Équivalent Lissé
+                </span>
+                <p class="mt-1">
+                  <SmartValue :value="scenarios.base.equivalentCAGR" type="percent" class="text-2xl font-extrabold" suffix="/an" />
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Marge Nette Cible (%) -->
+        <!-- Marge Nette Cible (%) - Slider jusqu'à 80% (0.80) -->
         <div class="slider-group">
           <div class="slider-header">
             <div class="flex items-center gap-2 flex-wrap">
@@ -672,13 +656,13 @@ function formatMOS(num: number | null): string {
             v-model.number="margin"
             type="range"
             min="0"
-            max="0.6"
+            max="0.8"
             step="0.005"
             class="slider slider--sky"
           >
           <div class="slider-bounds">
             <span>0%</span>
-            <span>60%</span>
+            <span>80%</span>
           </div>
         </div>
 
@@ -714,7 +698,7 @@ function formatMOS(num: number | null): string {
         <div class="slider-group">
           <div class="slider-header">
             <label class="slider-label">Taux d'Actualisation</label>
-            <span class="slider-value text-amber-400">{{ formatPercent(discountRate) }}</span>
+            <SmartValue :value="discountRate" type="percent" class="text-amber-400" :colored="false" />
           </div>
           <input
             v-model.number="discountRate"
@@ -745,13 +729,13 @@ function formatMOS(num: number | null): string {
             v-model.number="riskSpread"
             type="range"
             min="0.10"
-            max="0.50"
+            max="0.25"
             step="0.01"
             class="slider slider--violet"
           >
           <div class="slider-bounds">
             <span>±10% (Stable)</span>
-            <span>±50% (Haute Volatilité)</span>
+            <span>±25% (Amorti Bêta)</span>
           </div>
         </div>
       </div>
@@ -761,7 +745,7 @@ function formatMOS(num: number | null): string {
     <div v-else class="space-y-6">
       <!-- Panneau Supérieur : Ancrages & Benchmark (2 Colonnes) -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Colonne 1 : Données de Marché (Yahoo) [GAUCHE] -->
+        <!-- Colonne 1 : Données de Marché (Yahoo) [GAUCHE - Métriques Brutes Neutres] -->
         <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
           <h4 class="text-xs font-semibold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
             📊 Données de Marché (Yahoo Finance)
@@ -790,7 +774,7 @@ function formatMOS(num: number | null): string {
           </div>
         </div>
 
-        <!-- Colonne 2 : Consensus Wall Street [DROITE] -->
+        <!-- Colonne 2 : Consensus Wall Street [DROITE - Directionnels SmartValue] -->
         <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
           <h4 class="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-2">
             🎯 Consensus Wall Street (Analystes)
@@ -801,13 +785,7 @@ function formatMOS(num: number | null): string {
               <span class="text-gray-400">Prix Cible Moyen (12M) :</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatMoney(stock.analyst_target_price) }}</span>
-                <span
-                  v-if="meanPotential !== null"
-                  class="font-semibold"
-                  :class="meanPotential >= 0 ? 'text-emerald-400' : 'text-red-400'"
-                >
-                  {{ formatMOS(meanPotential) }}
-                </span>
+                <SmartValue v-if="meanPotential !== null" :value="meanPotential" type="percent" prefix="(" suffix=")" />
               </div>
             </div>
 
@@ -816,20 +794,14 @@ function formatMOS(num: number | null): string {
               <span class="text-gray-400">Prix Cible Médian (12M) :</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatMoney(stock.analyst_target_median) }}</span>
-                <span
-                  v-if="medianPotential !== null"
-                  class="font-semibold"
-                  :class="medianPotential >= 0 ? 'text-emerald-400' : 'text-red-400'"
-                >
-                  {{ formatMOS(medianPotential) }}
-                </span>
+                <SmartValue v-if="medianPotential !== null" :value="medianPotential" type="percent" prefix="(" suffix=")" />
               </div>
             </div>
 
             <!-- Consensus Croissance CA NTM -->
             <div class="flex justify-between py-1 border-b border-gray-850">
               <span class="text-gray-400">Consensus Croissance CA NTM :</span>
-              <span class="font-mono font-semibold text-amber-400">{{ formatPercent(stock.analyst_growth_estimate) }}</span>
+              <SmartValue :value="stock.analyst_growth_estimate" type="percent" />
             </div>
 
             <!-- Nombre d'Analystes -->

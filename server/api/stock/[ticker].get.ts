@@ -57,7 +57,8 @@ export default defineEventHandler(async (event) => {
 
     const rawBeta = summaryDetail.beta ?? keyStats.beta ?? 1.0
     const beta = typeof rawBeta === 'number' && isFinite(rawBeta) && rawBeta > 0 ? parseFloat(rawBeta.toFixed(2)) : 1.0
-    const defaultRiskSpread = parseFloat(clamp(0.20 * beta, 0.10, 0.50).toFixed(2))
+    // Formule amortie du spread de risque Bêta (Solution 1) : Clamp(0.10 + 0.05 * beta, 0.10, 0.25)
+    const defaultRiskSpread = parseFloat(clamp(0.10 + 0.05 * beta, 0.10, 0.25).toFixed(2))
 
     // Raw control metrics & Wall Street benchmark
     const marketCap = quote.marketCap ?? summaryDetail.marketCap ?? null
@@ -185,7 +186,7 @@ export default defineEventHandler(async (event) => {
     const marginCandidates: any[] = []
 
     if (typeof marginNetRaw === 'number' && isFinite(marginNetRaw) && marginNetRaw > 0) {
-      selectedMargin = clamp(marginNetRaw, 0.01, 0.60)
+      selectedMargin = clamp(marginNetRaw, 0.01, 0.80)
       marginSource = 'Marge Nette TTM Réelle'
       marginCandidates.push({
         name: 'Marge Nette TTM Réelle',
