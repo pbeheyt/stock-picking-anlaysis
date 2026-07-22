@@ -768,13 +768,9 @@ function formatMOS(num: number): string {
               <span class="text-gray-400">P/E Forward Consensus :</span>
               <span class="font-mono font-semibold text-gray-200">{{ stock.pe_forward_raw ? `${stock.pe_forward_raw.toFixed(1)}x` : 'N/A' }}</span>
             </div>
-            <div class="flex justify-between py-1 border-b border-gray-850">
+            <div class="flex justify-between py-1">
               <span class="text-gray-400">Marge Nette TTM :</span>
               <span class="font-mono font-semibold text-gray-200">{{ formatPercent(stock.margin_net_raw) }}</span>
-            </div>
-            <div class="flex justify-between py-1">
-              <span class="text-gray-400">Marge Brute TTM :</span>
-              <span class="font-mono font-semibold text-gray-200">{{ formatPercent(stock.margin_gross_raw) }}</span>
             </div>
           </div>
         </div>

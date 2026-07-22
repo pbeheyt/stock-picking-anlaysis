@@ -75,11 +75,11 @@ export default defineEventHandler(async (event) => {
     // -------------------------------------------------------------
     // CASCADE 1 : CROISSANCE (g)
     // -------------------------------------------------------------
-    const trend5y = earningsTrend.find((t: any) => t.period === '+5y')
+    const trend5y = earningsTrend.find((t: any) => t.period === '+5y' || t.period === '5y')
     const trend1y = earningsTrend.find((t: any) => t.period === '+1y')
 
-    const growth5Y = trend5y?.growth ?? trend5y?.earningsEstimate?.growth
-    const growth1Y = trend1y?.revenueEstimate?.growth ?? trend1y?.growth
+    const growth5Y = trend5y?.growth ?? trend5y?.earningsEstimate?.growth ?? trend5y?.revenueEstimate?.growth
+    const growth1Y = trend1y?.revenueEstimate?.growth ?? trend1y?.growth ?? financialData.revenueGrowth
 
     const valid5Y = typeof growth5Y === 'number' && isFinite(growth5Y) && growth5Y !== 0 ? growth5Y : null
     const valid1Y = typeof growth1Y === 'number' && isFinite(growth1Y) && growth1Y !== 0 ? growth1Y : null
