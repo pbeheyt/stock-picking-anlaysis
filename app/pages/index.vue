@@ -91,8 +91,10 @@ const analyzeAndAddStock = async () => {
       total_cash: number | null
       total_debt: number | null
       free_cash_flow_raw: number | null
-      analyst_target_price: number | null
+      analyst_target_low: number | null
       analyst_target_median: number | null
+      analyst_target_price: number | null
+      analyst_target_high: number | null
       analyst_growth_estimate: number | null
       analyst_count: number | null
       audit_data: any
@@ -142,6 +144,8 @@ const analyzeAndAddStock = async () => {
         free_cash_flow_raw: stockData.free_cash_flow_raw,
         analyst_target_price: stockData.analyst_target_price,
         analyst_target_median: stockData.analyst_target_median,
+        analyst_target_low: stockData.analyst_target_low,
+        analyst_target_high: stockData.analyst_target_high,
         analyst_growth_estimate: stockData.analyst_growth_estimate,
         analyst_count: stockData.analyst_count,
         audit_data: stockData.audit_data,

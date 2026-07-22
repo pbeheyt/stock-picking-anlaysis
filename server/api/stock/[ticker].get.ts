@@ -72,9 +72,11 @@ export default defineEventHandler(async (event) => {
     const totalCash = financialData.totalCash ?? null
     const totalDebt = financialData.totalDebt ?? null
 
-    // Target Prices (Mean & Median)
-    const targetMeanPrice = financialData.targetMeanPrice ?? summaryDetail.targetMeanPrice ?? null
+    // Target Prices (Low, Median, Mean, High)
+    const targetLowPrice = financialData.targetLowPrice ?? summaryDetail.targetLowPrice ?? null
     const targetMedianPrice = financialData.targetMedianPrice ?? summaryDetail.targetMedianPrice ?? null
+    const targetMeanPrice = financialData.targetMeanPrice ?? summaryDetail.targetMeanPrice ?? null
+    const targetHighPrice = financialData.targetHighPrice ?? summaryDetail.targetHighPrice ?? null
     const analystCount = financialData.numberOfAnalystOpinions ?? keyStats.numberOfAnalystOpinions ?? null
 
     const targetMeanPotential = (currentPrice && targetMeanPrice) ? (targetMeanPrice / currentPrice) - 1 : null
@@ -292,7 +294,6 @@ export default defineEventHandler(async (event) => {
     // -------------------------------------------------------------
     // CASCADE 4 : TAUX D'ACTUALISATION (r) - CAPM / MEDAF (CLAMP 6.0% - 13.5%)
     // -------------------------------------------------------------
-    // Formule MEDAF : Ke = RiskFreeRate (4.0%) + Beta * ERP (5.0%)
     const rawKe = 0.04 + 0.05 * beta
     const selectedDiscountRate = parseFloat(clamp(rawKe, 0.060, 0.135).toFixed(4))
     const discountCandidates: any[] = []
@@ -385,8 +386,10 @@ export default defineEventHandler(async (event) => {
       total_cash: totalCash,
       total_debt: totalDebt,
       free_cash_flow_raw: freeCashFlowRaw,
-      analyst_target_price: targetMeanPrice,
+      analyst_target_low: targetLowPrice,
       analyst_target_median: targetMedianPrice,
+      analyst_target_price: targetMeanPrice,
+      analyst_target_high: targetHighPrice,
       analyst_target_mean_potential: targetMeanPotential,
       analyst_target_median_potential: targetMedianPotential,
       analyst_growth_estimate: validNTM ?? validTTM,

@@ -136,6 +136,42 @@ const gaugeData = computed(() => {
   }
 })
 
+// Graphic Spectrum Wall Street vs StockPick Model
+const wallStreetSpectrum = computed(() => {
+  const low = props.stock.analyst_target_low
+  const high = props.stock.analyst_target_high
+  const median = props.stock.analyst_target_median
+  const mean = props.stock.analyst_target_price
+  const price = props.stock.current_price
+  const fv = fairValue.value
+
+  if (!low || !high || high <= low) return null
+
+  const allVals = [low, high, median, mean, price, fv].filter((v): v is number => v !== null && !isNaN(v) && v > 0)
+  const minBound = Math.min(...allVals) * 0.92
+  const maxBound = Math.max(...allVals) * 1.08
+  const range = maxBound - minBound
+
+  if (range <= 0) return null
+
+  const calcPos = (v: number | null) => (v !== null && v > 0) ? Math.max(0, Math.min(100, ((v - minBound) / range) * 100)) : null
+
+  return {
+    lowPos: calcPos(low)!,
+    highPos: calcPos(high)!,
+    medianPos: calcPos(median),
+    meanPos: calcPos(mean),
+    pricePos: calcPos(price),
+    fvPos: calcPos(fv),
+    lowVal: low,
+    highVal: high,
+    medianVal: median,
+    meanVal: mean,
+    priceVal: price,
+    fvVal: fv,
+  }
+})
+
 // Configuration d'échelle (M / B / K) pour le CA
 const scaleConfig = computed(() => {
   const r0 = props.stock.revenue_ttm ?? 0
@@ -810,15 +846,21 @@ function formatPercent(num: number | null): string {
           </div>
         </div>
 
-        <!-- Colonne 2 : Consensus Wall Street [DROITE - Directionnels SmartValue] -->
+        <!-- Colonne 2 : Consensus Wall Street [DROITE - Fourchette Complète & Directionnels] -->
         <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
           <h4 class="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-2">
             🎯 Consensus Wall Street (Analystes)
           </h4>
           <div class="space-y-2 text-xs">
+            <!-- Prix Cible Min -->
+            <div v-if="stock.analyst_target_low" class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Prix Cible Min (Low) :</span>
+              <span class="font-mono font-bold text-gray-300">{{ formatMoney(stock.analyst_target_low) }}</span>
+            </div>
+
             <!-- Prix Cible Moyen -->
             <div class="flex justify-between py-1 border-b border-gray-850">
-              <span class="text-gray-400">Prix Cible Moyen (12M) :</span>
+              <span class="text-gray-400">Prix Cible Moyen (Mean 12M) :</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatMoney(stock.analyst_target_price) }}</span>
                 <SmartValue v-if="meanPotential !== null" :value="meanPotential" type="percent" prefix="(" suffix=")" />
@@ -834,6 +876,12 @@ function formatPercent(num: number | null): string {
               </div>
             </div>
 
+            <!-- Prix Cible Max -->
+            <div v-if="stock.analyst_target_high" class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Prix Cible Max (High) :</span>
+              <span class="font-mono font-bold text-gray-300">{{ formatMoney(stock.analyst_target_high) }}</span>
+            </div>
+
             <!-- Consensus Croissance CA NTM -->
             <div class="flex justify-between py-1 border-b border-gray-850">
               <span class="text-gray-400">Consensus Croissance CA NTM :</span>
@@ -845,6 +893,102 @@ function formatPercent(num: number | null): string {
               <span class="text-gray-400">Nombre d'Analystes :</span>
               <span class="font-mono font-semibold text-gray-200">{{ stock.analyst_count ?? 'N/A' }}</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPECTRUM GRAPHIQUE WALL STREET VS MODEL STOCKPICK -->
+      <div v-if="wallStreetSpectrum" class="rounded-xl border border-purple-500/30 bg-purple-950/20 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-purple-300 flex items-center gap-2">
+            🔮 Spectrum Visuel : Consensus Wall Street (Low / Médian / Mean / High) vs Modèle StockPick
+          </h4>
+          <span class="text-[10px] text-purple-400 font-mono">12M Target Range</span>
+        </div>
+
+        <div class="mt-4 space-y-2">
+          <div class="relative h-9 rounded-lg border border-purple-500/30 bg-purple-950/40 overflow-hidden">
+            <!-- Barre Range Wall Street (Low à High) -->
+            <div
+              class="absolute top-0 bottom-0 bg-purple-500/25 border-l border-r border-purple-400/50"
+              :style="{
+                left: `${wallStreetSpectrum.lowPos}%`,
+                width: `${wallStreetSpectrum.highPos - wallStreetSpectrum.lowPos}%`,
+              }"
+            />
+
+            <!-- Repère Médian -->
+            <div
+              v-if="wallStreetSpectrum.medianPos !== null"
+              class="absolute top-0 bottom-0 w-0.5 bg-amber-400 z-10"
+              :style="{ left: `${wallStreetSpectrum.medianPos}%` }"
+              title="Cible Médiane Wall Street"
+            />
+
+            <!-- Repère Moyen -->
+            <div
+              v-if="wallStreetSpectrum.meanPos !== null"
+              class="absolute top-0 bottom-0 w-0.5 bg-indigo-400 z-10"
+              :style="{ left: `${wallStreetSpectrum.meanPos}%` }"
+              title="Cible Moyenne Wall Street"
+            />
+
+            <!-- Marker Prix Actuel (P0) -->
+            <div
+              v-if="wallStreetSpectrum.pricePos !== null"
+              class="absolute top-0 bottom-0 z-20 flex flex-col items-center -translate-x-1/2"
+              :style="{ left: `${wallStreetSpectrum.pricePos}%` }"
+            >
+              <div class="w-1 h-full bg-white shadow-lg" />
+            </div>
+
+            <!-- Marker Fair Value StockPick (Base Case) -->
+            <div
+              v-if="wallStreetSpectrum.fvPos !== null"
+              class="absolute top-0 bottom-0 z-20 flex flex-col items-center -translate-x-1/2"
+              :style="{ left: `${wallStreetSpectrum.fvPos}%` }"
+            >
+              <div class="w-1.5 h-full bg-emerald-400 shadow-xl" />
+            </div>
+          </div>
+
+          <!-- Labels et Légende sous la jauge -->
+          <div class="relative h-6 text-[10px] font-semibold font-mono">
+            <!-- Low Label -->
+            <span class="absolute -translate-x-1/2 text-purple-300" :style="{ left: `${wallStreetSpectrum.lowPos}%` }">
+              Low: {{ formatMoney(wallStreetSpectrum.lowVal) }}
+            </span>
+            <!-- High Label -->
+            <span class="absolute -translate-x-1/2 text-purple-300" :style="{ left: `${wallStreetSpectrum.highPos}%` }">
+              High: {{ formatMoney(wallStreetSpectrum.highVal) }}
+            </span>
+            <!-- Price P0 -->
+            <span v-if="wallStreetSpectrum.pricePos !== null" class="absolute -translate-x-1/2 text-white font-bold" :style="{ left: `${wallStreetSpectrum.pricePos}%` }">
+              P₀: {{ formatMoney(wallStreetSpectrum.priceVal) }}
+            </span>
+            <!-- Fair Value -->
+            <span v-if="wallStreetSpectrum.fvPos !== null" class="absolute -translate-x-1/2 text-emerald-400 font-bold" :style="{ left: `${wallStreetSpectrum.fvPos}%` }">
+              FV: {{ formatMoney(wallStreetSpectrum.fvVal) }}
+            </span>
+          </div>
+
+          <!-- Légende en bas du spectrum -->
+          <div class="flex flex-wrap items-center justify-between text-[10px] text-gray-400 border-t border-purple-500/20 pt-2">
+            <span class="flex items-center gap-1.5">
+              <span class="inline-block w-3 h-2 rounded bg-purple-500/40 border border-purple-400/50" /> Range Wall Street (Low-High)
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="inline-block w-1.5 h-3 bg-amber-400" /> Médian Analystes
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="inline-block w-1.5 h-3 bg-indigo-400" /> Moyen Analystes
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="inline-block w-1.5 h-3 bg-white" /> P₀ (Prix Actuel)
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="inline-block w-2 h-3 bg-emerald-400" /> Fair Value (StockPick)
+            </span>
           </div>
         </div>
       </div>
