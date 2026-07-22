@@ -116,59 +116,51 @@ const badgeConfig = computed(() => {
   return { label: 'Surévaluée', class: 'bg-red-500/15 text-red-400 border-red-500/30' }
 })
 
-const gaugeData = computed(() => {
+// Unified Gauge Data incorporating Model Scenarios + Wall Street Targets (L, Med, Moy, H) + P0
+const unifiedGaugeData = computed(() => {
   const bear = scenarios.value.bear.fairValue
   const base = scenarios.value.base.fairValue
   const bull = scenarios.value.bull.fairValue
   const price = props.stock.current_price ?? 0
 
-  const min = Math.min(bear, price) * 0.85
-  const max = Math.max(bull, price) * 1.15
-  const range = max - min
-
-  if (range <= 0) return { bearPos: 0, basePos: 50, bullPos: 100, pricePos: 50 }
-
-  return {
-    bearPos: ((bear - min) / range) * 100,
-    basePos: ((base - min) / range) * 100,
-    bullPos: ((bull - min) / range) * 100,
-    pricePos: ((price - min) / range) * 100,
-  }
-})
-
-// Graphic Spectrum Wall Street vs StockPick Model
-const wallStreetSpectrum = computed(() => {
   const low = props.stock.analyst_target_low
-  const high = props.stock.analyst_target_high
   const median = props.stock.analyst_target_median
   const mean = props.stock.analyst_target_price
-  const price = props.stock.current_price
-  const fv = fairValue.value
+  const high = props.stock.analyst_target_high
 
-  if (!low || !high || high <= low) return null
+  const allVals = [bear, base, bull, price, low, median, mean, high].filter((v): v is number => v !== null && !isNaN(v) && v > 0)
+  
+  if (allVals.length === 0) {
+    return { bearPos: 0, basePos: 50, bullPos: 100, pricePos: 50, lowPos: null, medianPos: null, meanPos: null, highPos: null, bearVal: 0, baseVal: 0, bullVal: 0, priceVal: 0, lowVal: null, medianVal: null, meanVal: null, highVal: null }
+  }
 
-  const allVals = [low, high, median, mean, price, fv].filter((v): v is number => v !== null && !isNaN(v) && v > 0)
-  const minBound = Math.min(...allVals) * 0.92
-  const maxBound = Math.max(...allVals) * 1.08
-  const range = maxBound - minBound
+  const min = Math.min(...allVals) * 0.92
+  const max = Math.max(...allVals) * 1.08
+  const range = max - min
 
-  if (range <= 0) return null
+  if (range <= 0) {
+    return { bearPos: 0, basePos: 50, bullPos: 100, pricePos: 50, lowPos: null, medianPos: null, meanPos: null, highPos: null, bearVal: bear, baseVal: base, bullVal: bull, priceVal: price, lowVal: low, medianVal: median, meanVal: mean, highVal: high }
+  }
 
-  const calcPos = (v: number | null) => (v !== null && v > 0) ? Math.max(0, Math.min(100, ((v - minBound) / range) * 100)) : null
+  const getPos = (val: number | null) => (val !== null && val > 0) ? Math.max(0, Math.min(100, ((val - min) / range) * 100)) : null
 
   return {
-    lowPos: calcPos(low)!,
-    highPos: calcPos(high)!,
-    medianPos: calcPos(median),
-    meanPos: calcPos(mean),
-    pricePos: calcPos(price),
-    fvPos: calcPos(fv),
+    bearPos: getPos(bear)!,
+    basePos: getPos(base)!,
+    bullPos: getPos(bull)!,
+    pricePos: getPos(price)!,
+    lowPos: getPos(low),
+    medianPos: getPos(median),
+    meanPos: getPos(mean),
+    highPos: getPos(high),
+    bearVal: bear,
+    baseVal: base,
+    bullVal: bull,
+    priceVal: price,
     lowVal: low,
-    highVal: high,
     medianVal: median,
     meanVal: mean,
-    priceVal: price,
-    fvVal: fv,
+    highVal: high,
   }
 })
 
@@ -409,8 +401,8 @@ function formatPercent(num: number | null): string {
         </div>
       </div>
 
-      <!-- Fair Value & Marge de Sécurité -->
-      <div class="fair-value-section">
+      <!-- Fair Value & Marge de Sécurité avec Jauge Unifiée Modèle + Wall Street (Discrète) -->
+      <div class="fair-value-section space-y-4">
         <div class="flex items-end justify-between gap-4">
           <div>
             <span class="text-xs font-medium uppercase tracking-wider text-gray-500">Fair Value (Base Case)</span>
@@ -425,47 +417,79 @@ function formatPercent(num: number | null): string {
           </div>
         </div>
 
-        <!-- Gauge Visuelle -->
-        <div class="mt-5 space-y-1.5">
-          <div class="gauge-track">
+        <!-- JAUGE UNIFIÉE DISCRÈTE (Modèle StockPick + Repères Wall Street L / Med / Moy / H + P0) -->
+        <div class="space-y-2 pt-2">
+          <div class="relative h-9 w-full rounded-xl border border-gray-800 bg-gray-950/80 overflow-hidden">
+            <!-- Zone d'Incertitude Modèle (Bear-Bull) -->
             <div
-              class="gauge-fill"
+              class="absolute top-0 bottom-0 bg-gradient-to-r from-red-500/15 via-amber-500/15 to-emerald-500/15"
               :style="{
-                left: `${gaugeData.bearPos}%`,
-                width: `${gaugeData.bullPos - gaugeData.bearPos}%`,
+                left: `${unifiedGaugeData.bearPos}%`,
+                width: `${unifiedGaugeData.bullPos - unifiedGaugeData.bearPos}%`,
               }"
             />
-            <div class="gauge-marker gauge-marker--bear" :style="{ left: `${gaugeData.bearPos}%` }">
-              <div class="gauge-marker-dot bg-red-400" />
+
+            <!-- Wall Street Markers (Discrets) -->
+            <!-- L (Low Wall Street) -->
+            <div
+              v-if="unifiedGaugeData.lowPos !== null"
+              class="absolute top-0 bottom-0 w-0.5 bg-purple-400/60 z-10"
+              :style="{ left: `${unifiedGaugeData.lowPos}%` }"
+              :title="`Wall St Low: ${formatMoney(unifiedGaugeData.lowVal)}`"
+            >
+              <span class="absolute top-0.5 -translate-x-1/2 font-mono text-[9px] font-bold text-purple-300/80 select-none">L</span>
             </div>
-            <div class="gauge-marker gauge-marker--base" :style="{ left: `${gaugeData.basePos}%` }">
-              <div class="gauge-marker-dot bg-amber-400" />
+
+            <!-- Med (Médian Wall Street) -->
+            <div
+              v-if="unifiedGaugeData.medianPos !== null"
+              class="absolute top-0 bottom-0 w-0.5 bg-amber-400/80 z-10"
+              :style="{ left: `${unifiedGaugeData.medianPos}%` }"
+              :title="`Wall St Médian: ${formatMoney(unifiedGaugeData.medianVal)}`"
+            >
+              <span class="absolute top-0.5 -translate-x-1/2 font-mono text-[9px] font-bold text-amber-300 select-none">Med</span>
             </div>
-            <div class="gauge-marker gauge-marker--bull" :style="{ left: `${gaugeData.bullPos}%` }">
-              <div class="gauge-marker-dot bg-emerald-400" />
+
+            <!-- Moy (Moyen Wall Street) -->
+            <div
+              v-if="unifiedGaugeData.meanPos !== null"
+              class="absolute top-0 bottom-0 w-0.5 bg-sky-400/80 z-10"
+              :style="{ left: `${unifiedGaugeData.meanPos}%` }"
+              :title="`Wall St Moyen: ${formatMoney(unifiedGaugeData.meanVal)}`"
+            >
+              <span class="absolute top-0.5 -translate-x-1/2 font-mono text-[9px] font-bold text-sky-300 select-none">Moy</span>
             </div>
-            <div class="gauge-price" :style="{ left: `${gaugeData.pricePos}%` }">
-              <div class="gauge-price-line" />
-              <div class="gauge-price-label">P₀</div>
+
+            <!-- H (High Wall Street) -->
+            <div
+              v-if="unifiedGaugeData.highPos !== null"
+              class="absolute top-0 bottom-0 w-0.5 bg-purple-400/60 z-10"
+              :style="{ left: `${unifiedGaugeData.highPos}%` }"
+              :title="`Wall St High: ${formatMoney(unifiedGaugeData.highVal)}`"
+            >
+              <span class="absolute top-0.5 -translate-x-1/2 font-mono text-[9px] font-bold text-purple-300/80 select-none">H</span>
+            </div>
+
+            <!-- Repères Modèle StockPick (Bear / Base / Bull Dots) -->
+            <div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-2.5 w-2.5 rounded-full bg-red-400 border border-gray-950 z-20" :style="{ left: `${unifiedGaugeData.bearPos}%` }" :title="`Bear Case: ${formatMoney(unifiedGaugeData.bearVal)}`" />
+            <div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-3.5 w-3.5 rounded-full bg-amber-400 border-2 border-gray-950 z-20 shadow-md" :style="{ left: `${unifiedGaugeData.basePos}%` }" :title="`Fair Value (Base Case): ${formatMoney(unifiedGaugeData.baseVal)}`" />
+            <div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-2.5 w-2.5 rounded-full bg-emerald-400 border border-gray-950 z-20" :style="{ left: `${unifiedGaugeData.bullPos}%` }" :title="`Bull Case: ${formatMoney(unifiedGaugeData.bullVal)}`" />
+
+            <!-- Marker Prix Actuel P0 -->
+            <div
+              class="absolute top-0 bottom-0 w-1 bg-white z-30 shadow-md -translate-x-1/2"
+              :style="{ left: `${unifiedGaugeData.pricePos}%` }"
+              :title="`Prix Actuel P₀: ${formatMoney(unifiedGaugeData.priceVal)}`"
+            >
+              <span class="absolute bottom-0.5 -translate-x-1/2 font-mono text-[9px] font-extrabold text-gray-950 bg-white px-1 rounded shadow select-none">P₀</span>
             </div>
           </div>
 
-          <div class="relative h-5 text-[10px] font-medium">
-            <span class="absolute -translate-x-1/2 text-red-400/80" :style="{ left: `${gaugeData.bearPos}%` }">
-              {{ formatMoney(scenarios.bear.fairValue) }}
-            </span>
-            <span class="absolute -translate-x-1/2 text-amber-400/80" :style="{ left: `${gaugeData.basePos}%` }">
-              {{ formatMoney(scenarios.base.fairValue) }}
-            </span>
-            <span class="absolute -translate-x-1/2 text-emerald-400/80" :style="{ left: `${gaugeData.bullPos}%` }">
-              {{ formatMoney(scenarios.bull.fairValue) }}
-            </span>
-          </div>
-
-          <div class="flex justify-between text-[10px] font-semibold uppercase tracking-wider text-gray-600">
-            <span>Bear (-{{ formatPercent(riskSpread) }})</span>
-            <span>Base</span>
-            <span>Bull (+{{ formatPercent(riskSpread) }})</span>
+          <!-- Légende synthétique sous la jauge -->
+          <div class="flex flex-wrap items-center justify-between text-[10px] text-gray-400 pt-0.5 font-medium">
+            <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-red-400" /> Bear: {{ formatMoney(unifiedGaugeData.bearVal) }}</span>
+            <span class="flex items-center gap-1 text-white font-semibold"><span class="h-2.5 w-2.5 rounded-full bg-amber-400" /> Fair Value: {{ formatMoney(unifiedGaugeData.baseVal) }}</span>
+            <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-400" /> Bull: {{ formatMoney(unifiedGaugeData.bullVal) }}</span>
           </div>
         </div>
       </div>
@@ -494,7 +518,7 @@ function formatPercent(num: number | null): string {
         <div class="flex items-center gap-2 mb-2">
           <div class="h-5 w-5 rounded-md bg-indigo-500/15 flex items-center justify-center">
             <svg class="h-3 w-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
           <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Reverse DCF</span>
@@ -855,7 +879,7 @@ function formatPercent(num: number | null): string {
             <!-- Prix Cible Min -->
             <div v-if="stock.analyst_target_low" class="flex justify-between py-1 border-b border-gray-850">
               <span class="text-gray-400">Prix Cible Min (Low) :</span>
-              <span class="font-mono font-bold text-gray-300">{{ formatMoney(stock.analyst_target_low) }}</span>
+              <span class="font-mono font-bold text-purple-300">{{ formatMoney(stock.analyst_target_low) }}</span>
             </div>
 
             <!-- Prix Cible Moyen -->
@@ -879,7 +903,7 @@ function formatPercent(num: number | null): string {
             <!-- Prix Cible Max -->
             <div v-if="stock.analyst_target_high" class="flex justify-between py-1 border-b border-gray-850">
               <span class="text-gray-400">Prix Cible Max (High) :</span>
-              <span class="font-mono font-bold text-gray-300">{{ formatMoney(stock.analyst_target_high) }}</span>
+              <span class="font-mono font-bold text-purple-300">{{ formatMoney(stock.analyst_target_high) }}</span>
             </div>
 
             <!-- Consensus Croissance CA NTM -->
@@ -893,102 +917,6 @@ function formatPercent(num: number | null): string {
               <span class="text-gray-400">Nombre d'Analystes :</span>
               <span class="font-mono font-semibold text-gray-200">{{ stock.analyst_count ?? 'N/A' }}</span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SPECTRUM GRAPHIQUE WALL STREET VS MODEL STOCKPICK -->
-      <div v-if="wallStreetSpectrum" class="rounded-xl border border-purple-500/30 bg-purple-950/20 p-4 space-y-3">
-        <div class="flex items-center justify-between">
-          <h4 class="text-xs font-semibold uppercase tracking-wider text-purple-300 flex items-center gap-2">
-            🔮 Spectrum Visuel : Consensus Wall Street (Low / Médian / Mean / High) vs Modèle StockPick
-          </h4>
-          <span class="text-[10px] text-purple-400 font-mono">12M Target Range</span>
-        </div>
-
-        <div class="mt-4 space-y-2">
-          <div class="relative h-9 rounded-lg border border-purple-500/30 bg-purple-950/40 overflow-hidden">
-            <!-- Barre Range Wall Street (Low à High) -->
-            <div
-              class="absolute top-0 bottom-0 bg-purple-500/25 border-l border-r border-purple-400/50"
-              :style="{
-                left: `${wallStreetSpectrum.lowPos}%`,
-                width: `${wallStreetSpectrum.highPos - wallStreetSpectrum.lowPos}%`,
-              }"
-            />
-
-            <!-- Repère Médian -->
-            <div
-              v-if="wallStreetSpectrum.medianPos !== null"
-              class="absolute top-0 bottom-0 w-0.5 bg-amber-400 z-10"
-              :style="{ left: `${wallStreetSpectrum.medianPos}%` }"
-              title="Cible Médiane Wall Street"
-            />
-
-            <!-- Repère Moyen -->
-            <div
-              v-if="wallStreetSpectrum.meanPos !== null"
-              class="absolute top-0 bottom-0 w-0.5 bg-indigo-400 z-10"
-              :style="{ left: `${wallStreetSpectrum.meanPos}%` }"
-              title="Cible Moyenne Wall Street"
-            />
-
-            <!-- Marker Prix Actuel (P0) -->
-            <div
-              v-if="wallStreetSpectrum.pricePos !== null"
-              class="absolute top-0 bottom-0 z-20 flex flex-col items-center -translate-x-1/2"
-              :style="{ left: `${wallStreetSpectrum.pricePos}%` }"
-            >
-              <div class="w-1 h-full bg-white shadow-lg" />
-            </div>
-
-            <!-- Marker Fair Value StockPick (Base Case) -->
-            <div
-              v-if="wallStreetSpectrum.fvPos !== null"
-              class="absolute top-0 bottom-0 z-20 flex flex-col items-center -translate-x-1/2"
-              :style="{ left: `${wallStreetSpectrum.fvPos}%` }"
-            >
-              <div class="w-1.5 h-full bg-emerald-400 shadow-xl" />
-            </div>
-          </div>
-
-          <!-- Labels et Légende sous la jauge -->
-          <div class="relative h-6 text-[10px] font-semibold font-mono">
-            <!-- Low Label -->
-            <span class="absolute -translate-x-1/2 text-purple-300" :style="{ left: `${wallStreetSpectrum.lowPos}%` }">
-              Low: {{ formatMoney(wallStreetSpectrum.lowVal) }}
-            </span>
-            <!-- High Label -->
-            <span class="absolute -translate-x-1/2 text-purple-300" :style="{ left: `${wallStreetSpectrum.highPos}%` }">
-              High: {{ formatMoney(wallStreetSpectrum.highVal) }}
-            </span>
-            <!-- Price P0 -->
-            <span v-if="wallStreetSpectrum.pricePos !== null" class="absolute -translate-x-1/2 text-white font-bold" :style="{ left: `${wallStreetSpectrum.pricePos}%` }">
-              P₀: {{ formatMoney(wallStreetSpectrum.priceVal) }}
-            </span>
-            <!-- Fair Value -->
-            <span v-if="wallStreetSpectrum.fvPos !== null" class="absolute -translate-x-1/2 text-emerald-400 font-bold" :style="{ left: `${wallStreetSpectrum.fvPos}%` }">
-              FV: {{ formatMoney(wallStreetSpectrum.fvVal) }}
-            </span>
-          </div>
-
-          <!-- Légende en bas du spectrum -->
-          <div class="flex flex-wrap items-center justify-between text-[10px] text-gray-400 border-t border-purple-500/20 pt-2">
-            <span class="flex items-center gap-1.5">
-              <span class="inline-block w-3 h-2 rounded bg-purple-500/40 border border-purple-400/50" /> Range Wall Street (Low-High)
-            </span>
-            <span class="flex items-center gap-1.5">
-              <span class="inline-block w-1.5 h-3 bg-amber-400" /> Médian Analystes
-            </span>
-            <span class="flex items-center gap-1.5">
-              <span class="inline-block w-1.5 h-3 bg-indigo-400" /> Moyen Analystes
-            </span>
-            <span class="flex items-center gap-1.5">
-              <span class="inline-block w-1.5 h-3 bg-white" /> P₀ (Prix Actuel)
-            </span>
-            <span class="flex items-center gap-1.5">
-              <span class="inline-block w-2 h-3 bg-emerald-400" /> Fair Value (StockPick)
-            </span>
           </div>
         </div>
       </div>
