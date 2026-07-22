@@ -59,7 +59,7 @@ const parsedAuditData = computed<AuditData | null>(() => {
 
 const hasFallback = computed(() => {
   if (!parsedAuditData.value) return false
-  const categories = [parsedAuditData.value.growth, parsedAuditData.value.margin, parsedAuditData.value.pe]
+  const categories = [parsedAuditData.value.growth, parsedAuditData.value.margin, parsedAuditData.value.pe, parsedAuditData.value.discount_rate]
   return categories.some(cat => cat?.candidates?.some(c => c.status === 'fallback'))
 })
 
@@ -458,7 +458,7 @@ function formatPercent(num: number | null): string {
         <div class="flex items-center gap-2 mb-2">
           <div class="h-5 w-5 rounded-md bg-indigo-500/15 flex items-center justify-center">
             <svg class="h-3 w-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
           <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Reverse DCF</span>
@@ -852,7 +852,7 @@ function formatPercent(num: number | null): string {
       <!-- Panneau Inférieur : Cascade d'Audit (Transparence Fallbacks) -->
       <div class="rounded-xl border border-gray-800 bg-gray-950/80 p-4 space-y-4">
         <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-2">
-          🔍 Cascade d'Audit (Transparence des Fallbacks)
+          🔍 Cascade d'Audit (Transparence des Fallbacks & Guardrails)
         </h4>
 
         <div v-if="parsedAuditData" class="space-y-4">
@@ -958,6 +958,45 @@ function formatPercent(num: number | null): string {
                       [⚠️ DEFAULT]
                     </span>
                     <span v-else-if="c.status === 'selected'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-violet-500/20 text-violet-400 border border-violet-500/30">
+                      [✓] Selected
+                    </span>
+                    <span v-else-if="c.status === 'rejected'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-red-500/20 text-red-400">
+                      [✗] Rejected
+                    </span>
+                    <span v-else class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-gray-800 text-gray-500">
+                      [x] Ignored
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-gray-400">{{ c.note }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Cascade Taux d'Actualisation (r) -->
+          <div v-if="parsedAuditData.discount_rate" class="space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-amber-400 uppercase tracking-wider">
+              <span>4. Cascade Taux d'Actualisation (r)</span>
+              <span class="font-mono text-white">Retenu : {{ formatPercent(parsedAuditData.discount_rate.selected) }}</span>
+            </div>
+            <table class="w-full text-left text-xs text-gray-300 border border-gray-800 rounded-lg overflow-hidden">
+              <thead class="bg-gray-900 text-[10px] text-gray-500 uppercase">
+                <tr>
+                  <th class="px-3 py-1.5">Candidat</th>
+                  <th class="px-3 py-1.5">Valeur Brut</th>
+                  <th class="px-3 py-1.5">Statut</th>
+                  <th class="px-3 py-1.5">Explication</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-850">
+                <tr v-for="c in parsedAuditData.discount_rate.candidates" :key="c.name" :class="c.status === 'selected' ? 'bg-amber-950/20' : c.status === 'fallback' ? 'bg-amber-950/20' : ''">
+                  <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : c.status === 'fallback' ? 'text-amber-300 font-bold' : 'text-gray-500 line-through'">{{ c.name }}</td>
+                  <td class="px-3 py-2 font-mono">{{ c.value !== null ? formatPercent(c.value) : 'N/A' }}</td>
+                  <td class="px-3 py-2">
+                    <span v-if="c.status === 'fallback'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                      [⚠️ DEFAULT]
+                    </span>
+                    <span v-else-if="c.status === 'selected'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
                       [✓] Selected
                     </span>
                     <span v-else-if="c.status === 'rejected'" class="rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-red-500/20 text-red-400">

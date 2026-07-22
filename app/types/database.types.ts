@@ -18,6 +18,7 @@ export interface AuditData {
   growth: AuditCategory
   margin: AuditCategory
   pe: AuditCategory
+  discount_rate?: AuditCategory
 }
 
 export interface Stock {

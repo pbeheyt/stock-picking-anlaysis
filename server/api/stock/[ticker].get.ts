@@ -289,7 +289,48 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const defaultDiscountRate = 0.10
+    // -------------------------------------------------------------
+    // CASCADE 4 : TAUX D'ACTUALISATION (r) - CAPM / MEDAF
+    // -------------------------------------------------------------
+    // Formule MEDAF : Ke = RiskFreeRate (4.0%) + Beta * ERP (5.0%)
+    const rawKe = 0.04 + 0.05 * beta
+    const selectedDiscountRate = parseFloat(clamp(rawKe, 0.075, 0.135).toFixed(4))
+    const discountCandidates: any[] = []
+
+    if (rawKe > 0.135) {
+      discountCandidates.push({
+        name: 'CAPM Brut (4.0% + Beta × 5.0%)',
+        value: parseFloat(rawKe.toFixed(4)),
+        status: 'rejected',
+        note: `Supérieur au plafond maximum guardrail (13.5%)`,
+      })
+      discountCandidates.push({
+        name: 'Taux Actualisation Plafonné (Cap 13.5%)',
+        value: 0.135,
+        status: 'selected',
+        note: 'Bridé par le Cap Maximum Guardrail (13.5%)',
+      })
+    } else if (rawKe < 0.075) {
+      discountCandidates.push({
+        name: 'CAPM Brut (4.0% + Beta × 5.0%)',
+        value: parseFloat(rawKe.toFixed(4)),
+        status: 'rejected',
+        note: `Inférieur au plancher minimum guardrail (7.5%)`,
+      })
+      discountCandidates.push({
+        name: 'Taux Actualisation Planché (Floor 7.5%)',
+        value: 0.075,
+        status: 'selected',
+        note: 'Bridé par le Floor Minimum Guardrail (7.5%)',
+      })
+    } else {
+      discountCandidates.push({
+        name: 'CAPM Brut (4.0% + Beta × 5.0%)',
+        value: parseFloat(rawKe.toFixed(4)),
+        status: 'selected',
+        note: 'CAPM appliqué tel quel (entre 7.5% et 13.5%)',
+      })
+    }
 
     const auditData = {
       growth: {
@@ -303,6 +344,10 @@ export default defineEventHandler(async (event) => {
       pe: {
         selected: parseFloat(selectedPE.toFixed(2)),
         candidates: peCandidates,
+      },
+      discount_rate: {
+        selected: selectedDiscountRate,
+        candidates: discountCandidates,
       },
     }
 
@@ -328,7 +373,7 @@ export default defineEventHandler(async (event) => {
       margin_source: marginSource,
       default_target_multiple: parseFloat(selectedPE.toFixed(2)),
       pe_source: peSource,
-      default_discount_rate: defaultDiscountRate,
+      default_discount_rate: selectedDiscountRate,
       default_risk_spread: defaultRiskSpread,
       market_cap: marketCap,
       pe_trailing_raw: peTrailingRaw,
