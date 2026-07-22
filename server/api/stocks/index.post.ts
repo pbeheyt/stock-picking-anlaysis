@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
   const ticker = String(body.ticker).trim().toUpperCase()
 
   const existing = db.prepare('SELECT * FROM stocks WHERE ticker = ?').get(ticker) as any
+  const auditDataStr = body.audit_data ? (typeof body.audit_data === 'string' ? body.audit_data : JSON.stringify(body.audit_data)) : null
 
   if (existing) {
     const stmt = db.prepare(`
@@ -56,6 +57,7 @@ export default defineEventHandler(async (event) => {
         free_cash_flow_raw = ?,
         analyst_target_price = ?,
         analyst_growth_estimate = ?,
+        audit_data = ?,
         updated_at = ?
       WHERE ticker = ?
     `)
@@ -97,11 +99,16 @@ export default defineEventHandler(async (event) => {
       body.free_cash_flow_raw ?? existing.free_cash_flow_raw,
       body.analyst_target_price ?? existing.analyst_target_price,
       body.analyst_growth_estimate ?? existing.analyst_growth_estimate,
+      auditDataStr ?? existing.audit_data,
       now,
       ticker
     )
 
-    return db.prepare('SELECT * FROM stocks WHERE ticker = ?').get(ticker)
+    const updatedRow = db.prepare('SELECT * FROM stocks WHERE ticker = ?').get(ticker) as any
+    if (updatedRow && updatedRow.audit_data && typeof updatedRow.audit_data === 'string') {
+      try { updatedRow.audit_data = JSON.parse(updatedRow.audit_data) } catch {}
+    }
+    return updatedRow
   } else {
     const id = randomUUID()
     const stmt = db.prepare(`
@@ -113,7 +120,7 @@ export default defineEventHandler(async (event) => {
         projected_margin, target_multiple, discount_rate, risk_spread,
         market_cap, pe_trailing_raw, pe_forward_raw, margin_gross_raw, margin_operating_raw,
         margin_net_raw, margin_fcf_raw, total_cash, total_debt, free_cash_flow_raw,
-        analyst_target_price, analyst_growth_estimate, thesis, created_at, updated_at
+        analyst_target_price, analyst_growth_estimate, audit_data, thesis, created_at, updated_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?, ?,
@@ -122,7 +129,7 @@ export default defineEventHandler(async (event) => {
         ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?
       )
     `)
 
@@ -166,11 +173,16 @@ export default defineEventHandler(async (event) => {
       body.free_cash_flow_raw ?? null,
       body.analyst_target_price ?? null,
       body.analyst_growth_estimate ?? null,
+      auditDataStr ?? null,
       body.thesis ?? null,
       now,
       now
     )
 
-    return db.prepare('SELECT * FROM stocks WHERE id = ?').get(id)
+    const newRow = db.prepare('SELECT * FROM stocks WHERE id = ?').get(id) as any
+    if (newRow && newRow.audit_data && typeof newRow.audit_data === 'string') {
+      try { newRow.audit_data = JSON.parse(newRow.audit_data) } catch {}
+    }
+    return newRow
   }
 })

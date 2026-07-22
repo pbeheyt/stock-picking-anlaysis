@@ -2,6 +2,24 @@ export type StockStatus = 'research' | 'watchlist' | 'portfolio'
 export type GrowthMode = 'cagr' | 'explicit'
 export type MarginType = 'net_income' | 'fcf'
 
+export interface AuditCandidate {
+  name: string
+  value: number | null
+  status: 'selected' | 'rejected' | 'ignored'
+  note: string
+}
+
+export interface AuditCategory {
+  selected: number
+  candidates: AuditCandidate[]
+}
+
+export interface AuditData {
+  growth: AuditCategory
+  margin: AuditCategory
+  pe: AuditCategory
+}
+
 export interface Stock {
   id: string
   ticker: string
@@ -42,6 +60,7 @@ export interface Stock {
   free_cash_flow_raw: number | null
   analyst_target_price: number | null
   analyst_growth_estimate: number | null
+  audit_data?: AuditData | string | null
   thesis: string | null
   created_at: string
   updated_at: string

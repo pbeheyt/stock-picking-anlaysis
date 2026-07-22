@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Stock, GrowthMode } from '~/types/database.types'
+import type { Stock, GrowthMode, AuditData } from '~/types/database.types'
 import {
   computeScenarios,
   computeReverseDCF,
@@ -43,6 +43,18 @@ watch(() => props.stock, (newStock) => {
   targetMultiple.value = newStock.target_multiple ?? 20.0
   discountRate.value = newStock.discount_rate ?? 0.10
   riskSpread.value = newStock.risk_spread ?? 0.20
+})
+
+const parsedAuditData = computed<AuditData | null>(() => {
+  if (!props.stock.audit_data) return null
+  if (typeof props.stock.audit_data === 'string') {
+    try {
+      return JSON.parse(props.stock.audit_data)
+    } catch {
+      return null
+    }
+  }
+  return props.stock.audit_data as AuditData
 })
 
 const valuationInputs = computed<ValuationInputs>(() => ({
@@ -221,7 +233,7 @@ function formatMOS(num: number): string {
           <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
-          Sourcing & Données Brutes
+          Sourcing & Cascade d'Audit
         </button>
       </div>
 
@@ -661,7 +673,7 @@ function formatMOS(num: number): string {
       </div>
     </div>
 
-    <!-- VUE 2 : SOURCING & FONDAMENTAUX BRUTS -->
+    <!-- VUE 2 : SOURCING & CASCADE D'AUDIT -->
     <div v-else class="space-y-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Panneau 1 : Multiples & Devises -->
@@ -768,43 +780,97 @@ function formatMOS(num: number): string {
         </div>
       </div>
 
-      <!-- Panneau 5 : Table de Provenance des Valeurs par Défaut -->
-      <div class="rounded-xl border border-gray-800 bg-gray-950/80 p-4 space-y-3">
+      <!-- Panneau 5 : Table de Cascade d'Audit Explicite -->
+      <div class="rounded-xl border border-gray-800 bg-gray-950/80 p-4 space-y-4">
         <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-2">
-          🔍 Explication du Sourcing des Paramètres Initiaux
+          🔍 Cascade d'Audit Explicite (Audit Trail)
         </h4>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-gray-300">
-            <thead class="border-b border-gray-800 text-[11px] uppercase tracking-wider text-gray-500 bg-gray-900/50">
-              <tr>
-                <th class="px-3 py-2">Paramètre</th>
-                <th class="px-3 py-2">Valeur de Départ</th>
-                <th class="px-3 py-2">Source / Règle d'Auto-Fill</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-800/60">
-              <tr>
-                <td class="px-3 py-2.5 font-medium text-white">Croissance (Growth)</td>
-                <td class="px-3 py-2.5 font-mono text-emerald-400">{{ formatPercent(stock.projected_growth) }}</td>
-                <td class="px-3 py-2.5 text-gray-400">{{ stock.growth_source || 'Consensus NTM / Historique TTM' }}</td>
-              </tr>
-              <tr>
-                <td class="px-3 py-2.5 font-medium text-white">Marge Nette Cible</td>
-                <td class="px-3 py-2.5 font-mono text-sky-400">{{ formatPercent(stock.projected_margin) }}</td>
-                <td class="px-3 py-2.5 text-gray-400">{{ stock.margin_source || 'Marge Nette TTM' }}</td>
-              </tr>
-              <tr>
-                <td class="px-3 py-2.5 font-medium text-white">Multiple Cible (P/E)</td>
-                <td class="px-3 py-2.5 font-mono text-violet-400">{{ stock.target_multiple.toFixed(1) }}x</td>
-                <td class="px-3 py-2.5 text-gray-400">{{ stock.pe_source || 'Consensus P/E Forward / Trailing' }}</td>
-              </tr>
-              <tr>
-                <td class="px-3 py-2.5 font-medium text-white">Incertitude Bear/Bull</td>
-                <td class="px-3 py-2.5 font-mono text-indigo-400">±{{ formatPercent(stock.risk_spread) }}</td>
-                <td class="px-3 py-2.5 text-gray-400">Formule `Clamp(0.20 × Bêta, 0.10, 0.50)` basée sur Bêta {{ stock.beta ?? 1.0 }}</td>
-              </tr>
-            </tbody>
-          </table>
+
+        <div v-if="parsedAuditData" class="space-y-4">
+          <!-- Cascade Croissance -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">1. Cascade Croissance (g) — Retenu: {{ formatPercent(parsedAuditData.growth.selected) }}</span>
+            <table class="w-full text-left text-xs text-gray-300 border border-gray-800 rounded-lg overflow-hidden">
+              <thead class="bg-gray-900 text-[10px] text-gray-500 uppercase">
+                <tr>
+                  <th class="px-3 py-1.5">Candidat</th>
+                  <th class="px-3 py-1.5">Valeur Brut</th>
+                  <th class="px-3 py-1.5">Statut</th>
+                  <th class="px-3 py-1.5">Explication</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-850">
+                <tr v-for="c in parsedAuditData.growth.candidates" :key="c.name" :class="c.status === 'selected' ? 'bg-emerald-950/20' : ''">
+                  <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : 'text-gray-400'">{{ c.name }}</td>
+                  <td class="px-3 py-2 font-mono">{{ c.value !== null ? formatPercent(c.value) : 'N/A' }}</td>
+                  <td class="px-3 py-2">
+                    <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase" :class="c.status === 'selected' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : c.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-gray-800 text-gray-400'">
+                      {{ c.status }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-gray-400">{{ c.note }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Cascade Marge -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-sky-400 uppercase tracking-wider">2. Cascade Marge Nette (m) — Retenu: {{ formatPercent(parsedAuditData.margin.selected) }}</span>
+            <table class="w-full text-left text-xs text-gray-300 border border-gray-800 rounded-lg overflow-hidden">
+              <thead class="bg-gray-900 text-[10px] text-gray-500 uppercase">
+                <tr>
+                  <th class="px-3 py-1.5">Candidat</th>
+                  <th class="px-3 py-1.5">Valeur Brut</th>
+                  <th class="px-3 py-1.5">Statut</th>
+                  <th class="px-3 py-1.5">Explication</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-850">
+                <tr v-for="c in parsedAuditData.margin.candidates" :key="c.name" :class="c.status === 'selected' ? 'bg-sky-950/20' : ''">
+                  <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : 'text-gray-400'">{{ c.name }}</td>
+                  <td class="px-3 py-2 font-mono">{{ c.value !== null ? formatPercent(c.value) : 'N/A' }}</td>
+                  <td class="px-3 py-2">
+                    <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase" :class="c.status === 'selected' ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : c.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-gray-800 text-gray-400'">
+                      {{ c.status }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-gray-400">{{ c.note }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Cascade PE -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-violet-400 uppercase tracking-wider">3. Cascade Multiple Exit (P/E) — Retenu: {{ parsedAuditData.pe.selected.toFixed(1) }}x</span>
+            <table class="w-full text-left text-xs text-gray-300 border border-gray-800 rounded-lg overflow-hidden">
+              <thead class="bg-gray-900 text-[10px] text-gray-500 uppercase">
+                <tr>
+                  <th class="px-3 py-1.5">Candidat</th>
+                  <th class="px-3 py-1.5">Valeur Brut</th>
+                  <th class="px-3 py-1.5">Statut</th>
+                  <th class="px-3 py-1.5">Explication</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-850">
+                <tr v-for="c in parsedAuditData.pe.candidates" :key="c.name" :class="c.status === 'selected' ? 'bg-violet-950/20' : ''">
+                  <td class="px-3 py-2 font-medium" :class="c.status === 'selected' ? 'text-white' : 'text-gray-400'">{{ c.name }}</td>
+                  <td class="px-3 py-2 font-mono">{{ c.value !== null ? `${c.value.toFixed(1)}x` : 'N/A' }}</td>
+                  <td class="px-3 py-2">
+                    <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase" :class="c.status === 'selected' ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30' : c.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-gray-800 text-gray-400'">
+                      {{ c.status }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-gray-400">{{ c.note }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div v-else class="text-xs text-gray-500 py-4 text-center">
+          Aucune donnée de cascade d'audit enregistrée pour cette action. Effectuez à nouveau la recherche du ticker pour régénérer l'audit trail.
         </div>
       </div>
     </div>

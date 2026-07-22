@@ -72,108 +72,264 @@ export default defineEventHandler(async (event) => {
     const totalDebt = financialData.totalDebt ?? null
     const analystTargetPrice = financialData.targetMeanPrice ?? summaryDetail.targetMeanPrice ?? null
 
-    // 1. Croissance CA & Mode explicit vs CAGR
-    let defaultGrowth = 0.10
-    let growthSource = 'Modèle Standard (10%)'
-    let growthMode: 'cagr' | 'explicit' = 'cagr'
-
-    let g1 = 0.10
-    let g2 = 0.10
-    let g3 = 0.10
-    let g4 = 0.10
-    let g5 = 0.10
-
+    // -------------------------------------------------------------
+    // CASCADE 1 : CROISSANCE (g)
+    // -------------------------------------------------------------
     const trend1y = earningsTrend.find((t: any) => t.period === '+1y')
     const trend5y = earningsTrend.find((t: any) => t.period === '+5y')
     const analystGrowth = trend1y?.revenueEstimate?.growth ?? trend1y?.growth ?? trend5y?.growth
     const analystGrowthEstimate = typeof analystGrowth === 'number' && isFinite(analystGrowth) ? analystGrowth : null
+    const rawRevenueGrowth = financialData.revenueGrowth ?? null
 
-    if (typeof analystGrowth === 'number' && isFinite(analystGrowth) && analystGrowth !== 0) {
-      defaultGrowth = analystGrowth
-      growthSource = 'Consensus Analystes (+1y)'
-      g1 = analystGrowth
+    let selectedGrowth = 0.10
+    let growthSource = 'Fallback Modèle Standard'
+    let growthMode: 'cagr' | 'explicit' = 'cagr'
+    let g1 = 0.10, g2 = 0.10, g3 = 0.10, g4 = 0.10, g5 = 0.10
 
-      if (analystGrowth > 0.30) {
-        growthMode = 'explicit'
-        g2 = parseFloat((0.50 * analystGrowth).toFixed(4))
-        g3 = 0.30
-        g4 = 0.20
-        g5 = 0.15
-        growthSource = 'Consensus NTM > 30% -> Mode Sur-Mesure'
-      } else {
-        g2 = defaultGrowth
-        g3 = defaultGrowth
-        g4 = defaultGrowth
-        g5 = defaultGrowth
-      }
-    } else if (typeof financialData.revenueGrowth === 'number' && isFinite(financialData.revenueGrowth)) {
-      defaultGrowth = clamp(financialData.revenueGrowth, -0.5, 0.8)
+    const growthCandidates: any[] = []
+
+    if (typeof analystGrowthEstimate === 'number' && analystGrowthEstimate !== 0) {
+      selectedGrowth = analystGrowthEstimate
+      growthSource = 'Consensus Analystes (+1Y)'
+      growthCandidates.push({
+        name: 'Consensus Analystes (+1Y)',
+        value: parseFloat(analystGrowthEstimate.toFixed(4)),
+        status: 'selected',
+        note: 'Consensus prioritaire retenu',
+      })
+      growthCandidates.push({
+        name: 'Historique TTM',
+        value: rawRevenueGrowth !== null ? parseFloat(rawRevenueGrowth.toFixed(4)) : null,
+        status: 'ignored',
+        note: 'Ignoré : Consensus disponible',
+      })
+      growthCandidates.push({
+        name: 'Fallback Standard',
+        value: 0.10,
+        status: 'ignored',
+        note: 'Non requis',
+      })
+    } else if (typeof rawRevenueGrowth === 'number' && isFinite(rawRevenueGrowth)) {
+      selectedGrowth = clamp(rawRevenueGrowth, -0.5, 0.8)
       growthSource = 'Historique TTM'
-      g1 = defaultGrowth
-      g2 = defaultGrowth
-      g3 = defaultGrowth
-      g4 = defaultGrowth
-      g5 = defaultGrowth
+      growthCandidates.push({
+        name: 'Consensus Analystes (+1Y)',
+        value: null,
+        status: 'rejected',
+        note: 'Non disponible',
+      })
+      growthCandidates.push({
+        name: 'Historique TTM',
+        value: parseFloat(rawRevenueGrowth.toFixed(4)),
+        status: 'selected',
+        note: 'Retenu (Historique TTM)',
+      })
+      growthCandidates.push({
+        name: 'Fallback Standard',
+        value: 0.10,
+        status: 'ignored',
+        note: 'Non requis',
+      })
     } else {
-      const price = currentPrice ?? 0
-      const rev = revenueTTM ?? 0
-      const shares = sharesOutstanding ?? 0
-      if (price > 0 && rev > 0 && shares > 0) {
-        const p5 = price * Math.pow(1.10, 5)
-        const e5 = (p5 * shares) / 25
-        const r5 = e5 / 0.20
-        const gImplied = Math.pow(r5 / rev, 1 / 5) - 1
-        if (isFinite(gImplied) && gImplied > -0.5 && gImplied < 1.0) {
-          defaultGrowth = clamp(gImplied, -0.5, 0.8)
-          growthSource = 'Croissance Implicite du Marché'
-        }
-      }
-      g1 = defaultGrowth
-      g2 = defaultGrowth
-      g3 = defaultGrowth
-      g4 = defaultGrowth
-      g5 = defaultGrowth
+      selectedGrowth = 0.10
+      growthSource = 'Fallback Modèle Standard'
+      growthCandidates.push({
+        name: 'Consensus Analystes (+1Y)',
+        value: null,
+        status: 'rejected',
+        note: 'Non disponible',
+      })
+      growthCandidates.push({
+        name: 'Historique TTM',
+        value: null,
+        status: 'rejected',
+        note: 'Non disponible',
+      })
+      growthCandidates.push({
+        name: 'Fallback Standard',
+        value: 0.10,
+        status: 'selected',
+        note: 'Retenu (Modèle standard 10%)',
+      })
     }
 
-    // 2. Extraction Marge Nette (profitMargins)
-    let defaultMargin = 0.15
-    let marginSource = 'Modèle Standard (15%)'
-    const defaultMarginType = 'net_income'
+    g1 = selectedGrowth
+    if (selectedGrowth > 0.30) {
+      growthMode = 'explicit'
+      g2 = parseFloat((0.50 * selectedGrowth).toFixed(4))
+      g3 = 0.30
+      g4 = 0.20
+      g5 = 0.15
+      growthSource = `Consensus NTM > 30% (${(selectedGrowth * 100).toFixed(0)}%) -> Mode Sur-Mesure`
+    } else {
+      growthMode = 'cagr'
+      g2 = selectedGrowth
+      g3 = selectedGrowth
+      g4 = selectedGrowth
+      g5 = selectedGrowth
+    }
+
+    // -------------------------------------------------------------
+    // CASCADE 2 : MARGE NETTE (m)
+    // -------------------------------------------------------------
+    let selectedMargin = 0.15
+    let marginSource = 'Fallback Modèle Standard'
+    const marginCandidates: any[] = []
 
     if (typeof marginNetRaw === 'number' && isFinite(marginNetRaw) && marginNetRaw > 0) {
-      defaultMargin = clamp(marginNetRaw, 0.01, 0.60)
-      marginSource = 'Marge Nette TTM'
-    } else if (typeof marginOperatingRaw === 'number' && isFinite(marginOperatingRaw) && marginOperatingRaw > 0) {
-      defaultMargin = clamp(marginOperatingRaw, 0.01, 0.60)
-      marginSource = 'Marge Opératoire TTM'
+      selectedMargin = clamp(marginNetRaw, 0.01, 0.60)
+      marginSource = 'Marge Nette TTM Réelle'
+      marginCandidates.push({
+        name: 'Marge Nette TTM Réelle',
+        value: parseFloat(marginNetRaw.toFixed(4)),
+        status: 'selected',
+        note: 'Retenu (Marge Nette TTM positive)',
+      })
+      marginCandidates.push({
+        name: 'Cible 45% Marge Brute',
+        value: marginGrossRaw !== null ? parseFloat((marginGrossRaw * 0.45).toFixed(4)) : null,
+        status: 'ignored',
+        note: 'Non requis',
+      })
+      marginCandidates.push({
+        name: 'Fallback Standard',
+        value: 0.15,
+        status: 'ignored',
+        note: 'Non requis',
+      })
     } else if (typeof marginGrossRaw === 'number' && isFinite(marginGrossRaw) && marginGrossRaw > 0) {
-      defaultMargin = clamp(marginGrossRaw * 0.45, 0.05, 0.50)
-      marginSource = 'Cible Maturité (45% Marge Brute)'
+      selectedMargin = clamp(marginGrossRaw * 0.45, 0.05, 0.50)
+      marginSource = `Cible 45% Marge Brute (${(marginGrossRaw * 100).toFixed(1)}%)`
+      marginCandidates.push({
+        name: 'Marge Nette TTM Réelle',
+        value: marginNetRaw !== null ? parseFloat(marginNetRaw.toFixed(4)) : null,
+        status: 'rejected',
+        note: 'Rejeté : Marge Nette négative ou nulle',
+      })
+      marginCandidates.push({
+        name: 'Cible 45% Marge Brute',
+        value: parseFloat((marginGrossRaw * 0.45).toFixed(4)),
+        status: 'selected',
+        note: `Retenu (45% de Marge Brute à ${(marginGrossRaw * 100).toFixed(1)}%)`,
+      })
+      marginCandidates.push({
+        name: 'Fallback Standard',
+        value: 0.15,
+        status: 'ignored',
+        note: 'Non requis',
+      })
+    } else {
+      selectedMargin = 0.15
+      marginSource = 'Fallback Secteur Mature (15%)'
+      marginCandidates.push({
+        name: 'Marge Nette TTM Réelle',
+        value: marginNetRaw !== null ? parseFloat(marginNetRaw.toFixed(4)) : null,
+        status: 'rejected',
+        note: 'Rejeté : Non disponible ou négatif',
+      })
+      marginCandidates.push({
+        name: 'Cible 45% Marge Brute',
+        value: null,
+        status: 'rejected',
+        note: 'Non disponible',
+      })
+      marginCandidates.push({
+        name: 'Fallback Standard',
+        value: 0.15,
+        status: 'selected',
+        note: 'Retenu (Fallback 15%)',
+      })
     }
 
-    // 3. Multiple P/E (Forward P/E ou Trailing P/E)
-    let defaultTargetMultiple = 20.0
+    // -------------------------------------------------------------
+    // CASCADE 3 : MULTIPLE EXIT (P/E)
+    // -------------------------------------------------------------
+    let selectedPE = 20.0
     let peSource = 'Modèle Standard (20x)'
+    const peCandidates: any[] = []
 
     if (typeof peForwardRaw === 'number' && isFinite(peForwardRaw) && peForwardRaw > 0) {
-      defaultTargetMultiple = clamp(peForwardRaw, 5, 120)
-      peSource = 'Consensus P/E Forward'
+      selectedPE = clamp(peForwardRaw, 5, 120)
+      peSource = 'Consensus Forward P/E'
+      peCandidates.push({
+        name: 'Forward P/E',
+        value: parseFloat(peForwardRaw.toFixed(2)),
+        status: 'selected',
+        note: 'Consensus Forward P/E retenu',
+      })
+      peCandidates.push({
+        name: 'Trailing P/E',
+        value: peTrailingRaw !== null ? parseFloat(peTrailingRaw.toFixed(2)) : null,
+        status: 'ignored',
+        note: 'Ignoré : Forward P/E disponible',
+      })
+      peCandidates.push({
+        name: 'P/E Profilé',
+        value: selectedGrowth > 0.30 ? 35.0 : selectedGrowth > 0.15 ? 25.0 : 18.0,
+        status: 'ignored',
+        note: 'Non requis',
+      })
     } else if (typeof peTrailingRaw === 'number' && isFinite(peTrailingRaw) && peTrailingRaw > 0) {
-      defaultTargetMultiple = clamp(peTrailingRaw, 5, 120)
-      peSource = 'P/E Trailing (TTM)'
+      selectedPE = clamp(peTrailingRaw, 5, 120)
+      peSource = 'P/E Trailing TTM'
+      peCandidates.push({
+        name: 'Forward P/E',
+        value: null,
+        status: 'rejected',
+        note: 'Non disponible',
+      })
+      peCandidates.push({
+        name: 'Trailing P/E',
+        value: parseFloat(peTrailingRaw.toFixed(2)),
+        status: 'selected',
+        note: 'Retenu (P/E Trailing TTM)',
+      })
+      peCandidates.push({
+        name: 'P/E Profilé',
+        value: selectedGrowth > 0.30 ? 35.0 : selectedGrowth > 0.15 ? 25.0 : 18.0,
+        status: 'ignored',
+        note: 'Non requis',
+      })
     } else {
-      const gComp = growthMode === 'explicit' ? g1 : defaultGrowth
-      if (gComp > 0.30) {
-        defaultTargetMultiple = 35.0
-      } else if (gComp > 0.15) {
-        defaultTargetMultiple = 25.0
-      } else {
-        defaultTargetMultiple = 18.0
-      }
-      peSource = 'Profil de Croissance (Non rentable)'
+      const profiledPE = selectedGrowth > 0.30 ? 35.0 : selectedGrowth > 0.15 ? 25.0 : 18.0
+      selectedPE = profiledPE
+      peSource = `P/E Profilé (${profiledPE}x)`
+      peCandidates.push({
+        name: 'Forward P/E',
+        value: null,
+        status: 'rejected',
+        note: 'Non disponible',
+      })
+      peCandidates.push({
+        name: 'Trailing P/E',
+        value: peTrailingRaw !== null ? parseFloat(peTrailingRaw.toFixed(2)) : null,
+        status: 'rejected',
+        note: 'Rejeté : Bénéfice Négatif ou non disponible',
+      })
+      peCandidates.push({
+        name: `P/E Profilé (${profiledPE}x)`,
+        value: profiledPE,
+        status: 'selected',
+        note: `Retenu (Car croissance de ${(selectedGrowth * 100).toFixed(0)}%)`,
+      })
     }
 
     const defaultDiscountRate = 0.10
+
+    const auditData = {
+      growth: {
+        selected: parseFloat(selectedGrowth.toFixed(4)),
+        candidates: growthCandidates,
+      },
+      margin: {
+        selected: parseFloat(selectedMargin.toFixed(4)),
+        candidates: marginCandidates,
+      },
+      pe: {
+        selected: parseFloat(selectedPE.toFixed(2)),
+        candidates: peCandidates,
+      },
+    }
 
     return {
       ticker,
@@ -185,17 +341,17 @@ export default defineEventHandler(async (event) => {
       beta,
       fetched_at: new Date().toISOString(),
       growth_mode: growthMode,
-      default_growth: parseFloat(defaultGrowth.toFixed(4)),
+      default_growth: parseFloat(selectedGrowth.toFixed(4)),
       growth_y1: parseFloat(g1.toFixed(4)),
       growth_y2: parseFloat(g2.toFixed(4)),
       growth_y3: parseFloat(g3.toFixed(4)),
       growth_y4: parseFloat(g4.toFixed(4)),
       growth_y5: parseFloat(g5.toFixed(4)),
       growth_source: growthSource,
-      default_margin_type: defaultMarginType,
-      default_margin: parseFloat(defaultMargin.toFixed(4)),
+      default_margin_type: 'net_income',
+      default_margin: parseFloat(selectedMargin.toFixed(4)),
       margin_source: marginSource,
-      default_target_multiple: parseFloat(defaultTargetMultiple.toFixed(2)),
+      default_target_multiple: parseFloat(selectedPE.toFixed(2)),
       pe_source: peSource,
       default_discount_rate: defaultDiscountRate,
       default_risk_spread: defaultRiskSpread,
@@ -211,6 +367,7 @@ export default defineEventHandler(async (event) => {
       free_cash_flow_raw: freeCashFlowRaw,
       analyst_target_price: analystTargetPrice,
       analyst_growth_estimate: analystGrowthEstimate,
+      audit_data: auditData,
     }
   } catch (error: any) {
     if (error && typeof error === 'object' && error.statusCode && error.statusMessage && !error.response) {

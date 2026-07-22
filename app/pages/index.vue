@@ -93,6 +93,7 @@ const analyzeAndAddStock = async () => {
       free_cash_flow_raw: number | null
       analyst_target_price: number | null
       analyst_growth_estimate: number | null
+      audit_data: any
     }>(`/api/stock/${encodeURIComponent(ticker)}`)
 
     sourcesMap.value[stockData.ticker] = {
@@ -122,7 +123,7 @@ const analyzeAndAddStock = async () => {
         growth_y3: existing?.growth_y3 ?? stockData.growth_y3,
         growth_y4: existing?.growth_y4 ?? stockData.growth_y4,
         growth_y5: existing?.growth_y5 ?? stockData.growth_y5,
-        margin_type: existing?.margin_type ?? stockData.default_margin_type ?? 'net_income',
+        margin_type: 'net_income',
         projected_margin: existing?.projected_margin ?? stockData.default_margin,
         target_multiple: existing?.target_multiple ?? stockData.default_target_multiple ?? 20.0,
         discount_rate: existing?.discount_rate ?? stockData.default_discount_rate,
@@ -139,10 +140,11 @@ const analyzeAndAddStock = async () => {
         free_cash_flow_raw: stockData.free_cash_flow_raw,
         analyst_target_price: stockData.analyst_target_price,
         analyst_growth_estimate: stockData.analyst_growth_estimate,
+        audit_data: stockData.audit_data,
       },
     })
 
-    successMessage.value = `${saved.ticker} (${saved.name}) — enregistré en SQLite local.`
+    successMessage.value = `${saved.ticker} (${saved.name}) — enregistré en SQLite local avec Audit Trail.`
     searchTicker.value = ''
     await fetchStocks()
   } catch (err: any) {
@@ -182,7 +184,7 @@ const updateStockHypotheses = async (stock: Stock) => {
         revenue_y3: stock.revenue_y3 !== null ? Number(stock.revenue_y3) : null,
         revenue_y4: stock.revenue_y4 !== null ? Number(stock.revenue_y4) : null,
         revenue_y5: stock.revenue_y5 !== null ? Number(stock.revenue_y5) : null,
-        margin_type: stock.margin_type,
+        margin_type: 'net_income',
         projected_margin: Number(stock.projected_margin),
         target_multiple: Number(stock.target_multiple),
         discount_rate: Number(stock.discount_rate),
