@@ -9,24 +9,12 @@ export default defineNuxtConfig({
 
   devtools: { enabled: true },
 
-  modules: ['@nuxtjs/supabase'],
+  modules: [],
 
   css: ['~/assets/css/main.css'],
 
   vite: {
     plugins: [tailwindcss()],
-  },
-
-  nitro: {
-    preset: 'cloudflare_pages',
-  },
-
-  supabase: {
-    redirectOptions: {
-      login: '/login',
-      callback: '/confirm',
-      exclude: ['/login', '/confirm'],
-    },
   },
 
   typescript: {

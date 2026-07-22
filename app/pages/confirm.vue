@@ -3,17 +3,11 @@ definePageMeta({
   layout: false,
 })
 
-const user = useSupabaseUser()
-
-watch(user, (newUser) => {
-  if (newUser) {
-    navigateTo('/')
-  }
-}, { immediate: true })
+navigateTo('/')
 </script>
 
 <template>
   <div class="flex min-h-screen items-center justify-center bg-gray-950 text-gray-400">
-    <div class="h-6 w-6 animate-spin rounded-full border-2 border-gray-700 border-t-white" />
+    <p class="text-sm">Redirection vers le tableau de bord local…</p>
   </div>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Stock } from '~/types/database.types'
+import type { Stock, GrowthMode } from '~/types/database.types'
 import {
   computeScenarios,
   computeReverseDCF,
@@ -17,23 +17,41 @@ const emit = defineEmits<{
   delete: [id: string, ticker: string]
 }>()
 
-const growth = ref(props.stock.projected_growth)
-const margin = ref(props.stock.projected_margin)
-const targetPE = ref(props.stock.target_pe)
-const discountRate = ref(props.stock.discount_rate)
+const growthMode = ref<GrowthMode>(props.stock.growth_mode || 'cagr')
+const growth = ref(props.stock.projected_growth ?? 0.10)
+const growthY1 = ref(props.stock.growth_y1 ?? 0.10)
+const growthY2 = ref(props.stock.growth_y2 ?? 0.10)
+const growthY3 = ref(props.stock.growth_y3 ?? 0.10)
+const growthY4 = ref(props.stock.growth_y4 ?? 0.10)
+const growthY5 = ref(props.stock.growth_y5 ?? 0.10)
+const margin = ref(props.stock.projected_margin ?? 0.20)
+const targetPE = ref(props.stock.target_pe ?? 20)
+const discountRate = ref(props.stock.discount_rate ?? 0.10)
 
 watch(() => props.stock, (newStock) => {
-  growth.value = newStock.projected_growth
-  margin.value = newStock.projected_margin
-  targetPE.value = newStock.target_pe
-  discountRate.value = newStock.discount_rate
+  growthMode.value = newStock.growth_mode || 'cagr'
+  growth.value = newStock.projected_growth ?? 0.10
+  growthY1.value = newStock.growth_y1 ?? 0.10
+  growthY2.value = newStock.growth_y2 ?? 0.10
+  growthY3.value = newStock.growth_y3 ?? 0.10
+  growthY4.value = newStock.growth_y4 ?? 0.10
+  growthY5.value = newStock.growth_y5 ?? 0.10
+  margin.value = newStock.projected_margin ?? 0.20
+  targetPE.value = newStock.target_pe ?? 20
+  discountRate.value = newStock.discount_rate ?? 0.10
 })
 
 const valuationInputs = computed<ValuationInputs>(() => ({
   currentPrice: props.stock.current_price ?? 0,
   revenueTTM: props.stock.revenue_ttm ?? 0,
   sharesOutstanding: props.stock.shares_outstanding ?? 0,
+  growthMode: growthMode.value,
   growth: growth.value,
+  growthY1: growthY1.value,
+  growthY2: growthY2.value,
+  growthY3: growthY3.value,
+  growthY4: growthY4.value,
+  growthY5: growthY5.value,
   margin: margin.value,
   targetPE: targetPE.value,
   discountRate: discountRate.value,
@@ -79,7 +97,13 @@ function debouncedSave() {
   saveTimeout = setTimeout(() => {
     const updated: Stock = {
       ...props.stock,
+      growth_mode: growthMode.value,
       projected_growth: growth.value,
+      growth_y1: growthY1.value,
+      growth_y2: growthY2.value,
+      growth_y3: growthY3.value,
+      growth_y4: growthY4.value,
+      growth_y5: growthY5.value,
       projected_margin: margin.value,
       target_pe: targetPE.value,
       discount_rate: discountRate.value,
@@ -88,7 +112,7 @@ function debouncedSave() {
   }, 800)
 }
 
-watch([growth, margin, targetPE, discountRate], () => {
+watch([growthMode, growth, growthY1, growthY2, growthY3, growthY4, growthY5, margin, targetPE, discountRate], () => {
   debouncedSave()
 })
 
@@ -276,7 +300,9 @@ function formatMOS(num: number): string {
         </div>
         <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Reverse DCF</span>
       </div>
-      <p class="text-sm text-gray-300 leading-relaxed">
+
+      <!-- Mode CAGR -->
+      <p v-if="growthMode === 'cagr'" class="text-sm text-gray-300 leading-relaxed">
         Le marché anticipe une croissance du CA de
         <span class="font-bold" :class="reverseDCF.impliedGrowth > growth ? 'text-amber-400' : 'text-emerald-400'">
           {{ formatPercent(reverseDCF.impliedGrowth) }}/an
@@ -290,6 +316,17 @@ function formatMOS(num: number): string {
           ✓ Inférieur à votre hypothèse ({{ formatPercent(growth) }})
         </span>
       </p>
+
+      <!-- Mode Explicit -->
+      <p v-else class="text-sm text-gray-300 leading-relaxed">
+        En conservant g₁ à <span class="font-semibold text-emerald-400">{{ formatPercent(growthY1) }}</span> (Guidance NTM), le marché exige une croissance moyenne de
+        <span class="font-bold" :class="(reverseDCF.impliedGrowthY2Y5 ?? 0) > growthY2 ? 'text-amber-400' : 'text-emerald-400'">
+          {{ formatPercent(reverseDCF.impliedGrowthY2Y5 ?? 0) }}/an
+        </span>
+        sur les années 2 à 5 pour justifier le cours actuel de
+        <span class="font-semibold text-white">${{ formatCurrency(stock.current_price ?? 0) }}</span>.
+      </p>
+
       <div class="mt-3 grid grid-cols-3 gap-3 text-center">
         <div>
           <span class="text-[10px] text-gray-500 uppercase">CA Requis 5Y</span>
@@ -306,24 +343,45 @@ function formatMOS(num: number): string {
       </div>
     </div>
 
-    <!-- Sliders Réactifs -->
+    <!-- Sliders Réactifs & Selector de Mode -->
     <div class="space-y-4 pt-1">
-      <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2">
-        <svg class="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-        </svg>
-        Hypothèses de Valorisation
-      </h4>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800/80 pb-3">
+        <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+          <svg class="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Hypothèses de Valorisation
+        </h4>
 
-      <!-- Croissance CA -->
-      <div class="slider-group">
+        <!-- Toggle Mode CAGR vs Explicit -->
+        <div class="inline-flex rounded-lg bg-gray-950 p-1 border border-gray-800">
+          <button
+            type="button"
+            class="px-3 py-1 text-xs font-medium rounded-md transition"
+            :class="growthMode === 'cagr' ? 'bg-gray-800 text-white shadow-sm font-semibold' : 'text-gray-400 hover:text-white'"
+            @click="growthMode = 'cagr'"
+          >
+            Mode Lissé (CAGR)
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1 text-xs font-medium rounded-md transition"
+            :class="growthMode === 'explicit' ? 'bg-emerald-600 text-white shadow-sm font-semibold' : 'text-gray-400 hover:text-white'"
+            @click="growthMode = 'explicit'"
+          >
+            Mode Sur-Mesure (5 Ans)
+          </button>
+        </div>
+      </div>
+
+      <!-- Mode CAGR : Single Slider -->
+      <div v-if="growthMode === 'cagr'" class="slider-group">
         <div class="slider-header">
           <div class="flex items-center gap-2 flex-wrap">
-            <label class="slider-label">Croissance CA / an</label>
+            <label class="slider-label">Croissance CA / an (CAGR 5Y)</label>
             <span
               v-if="stock.growth_source"
               class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-              title="Source de la valeur initiale"
             >
               {{ stock.growth_source }}
             </span>
@@ -344,6 +402,112 @@ function formatMOS(num: number): string {
         </div>
       </div>
 
+      <!-- Mode Explicit : 5 Mini-Sliders -->
+      <div v-else class="space-y-3 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+            Trajectoire de Croissance sur 5 Ans
+          </span>
+          <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+            {{ stock.growth_source }}
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+          <!-- An 1 -->
+          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800">
+            <div class="flex items-center justify-between text-[11px] mb-1">
+              <span class="text-gray-400 font-semibold">An 1 (NTM)</span>
+              <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY1) }}</span>
+            </div>
+            <input
+              v-model.number="growthY1"
+              type="range"
+              min="-0.3"
+              max="3.0"
+              step="0.01"
+              class="slider slider--emerald"
+            >
+          </div>
+
+          <!-- An 2 -->
+          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800">
+            <div class="flex items-center justify-between text-[11px] mb-1">
+              <span class="text-gray-400 font-semibold">An 2</span>
+              <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY2) }}</span>
+            </div>
+            <input
+              v-model.number="growthY2"
+              type="range"
+              min="-0.3"
+              max="1.5"
+              step="0.01"
+              class="slider slider--emerald"
+            >
+          </div>
+
+          <!-- An 3 -->
+          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800">
+            <div class="flex items-center justify-between text-[11px] mb-1">
+              <span class="text-gray-400 font-semibold">An 3</span>
+              <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY3) }}</span>
+            </div>
+            <input
+              v-model.number="growthY3"
+              type="range"
+              min="-0.3"
+              max="1.0"
+              step="0.01"
+              class="slider slider--emerald"
+            >
+          </div>
+
+          <!-- An 4 -->
+          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800">
+            <div class="flex items-center justify-between text-[11px] mb-1">
+              <span class="text-gray-400 font-semibold">An 4</span>
+              <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY4) }}</span>
+            </div>
+            <input
+              v-model.number="growthY4"
+              type="range"
+              min="-0.3"
+              max="0.8"
+              step="0.01"
+              class="slider slider--emerald"
+            >
+          </div>
+
+          <!-- An 5 -->
+          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800">
+            <div class="flex items-center justify-between text-[11px] mb-1">
+              <span class="text-gray-400 font-semibold">An 5</span>
+              <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY5) }}</span>
+            </div>
+            <input
+              v-model.number="growthY5"
+              type="range"
+              min="-0.3"
+              max="0.6"
+              step="0.01"
+              class="slider slider--emerald"
+            >
+          </div>
+        </div>
+
+        <!-- Summary Bar Explicit -->
+        <div class="flex items-center justify-between rounded-lg bg-emerald-950/40 p-2.5 border border-emerald-500/20 text-xs">
+          <div>
+            <span class="text-gray-400">CA Projeté Année 5 :</span>
+            <span class="ml-1 font-mono font-bold text-white">{{ formatLargeNumber(scenarios.base.revenue5Y) }}</span>
+          </div>
+          <div>
+            <span class="text-gray-400">CAGR Lissé Équivalent :</span>
+            <span class="ml-1 font-mono font-bold text-emerald-400">{{ formatPercent(scenarios.base.equivalentCAGR) }}/an</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Marge -->
       <div class="slider-group">
         <div class="slider-header">
@@ -352,7 +516,6 @@ function formatMOS(num: number): string {
             <span
               v-if="stock.margin_source"
               class="source-pill bg-sky-500/10 text-sky-400 border-sky-500/20"
-              title="Source de la valeur initiale"
             >
               {{ stock.margin_source }}
             </span>
@@ -381,7 +544,6 @@ function formatMOS(num: number): string {
             <span
               v-if="stock.pe_source"
               class="source-pill bg-violet-500/10 text-violet-400 border-violet-500/20"
-              title="Source de la valeur initiale"
             >
               {{ stock.pe_source }}
             </span>

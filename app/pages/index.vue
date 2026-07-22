@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import type { Database, Stock } from '~/types/database.types'
-
-const user = useSupabaseUser()
-const supabase = useSupabaseClient<Database>()
+import type { Stock } from '~/types/database.types'
 
 const searchTicker = ref('')
 const isLoading = ref(false)
@@ -14,21 +11,14 @@ const isFetchingStocks = ref(true)
 
 const sourcesMap = ref<Record<string, { growth_source?: string; margin_source?: string; pe_source?: string }>>({})
 
-const fetchUserStocks = async () => {
-  if (!user.value) return
+const fetchStocks = async () => {
   isFetchingStocks.value = true
   try {
-    const { data, error } = await supabase
-      .from('stocks')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const data = await $fetch<Stock[]>('/api/stocks')
+    stocks.value = data || []
 
-    if (error) throw error
-    const rawStocks = (data as Stock[]) || []
-    stocks.value = rawStocks
-
-    // Optionnel : enrichir les métadonnées de source pour les tickers existants en arrière-plan
-    rawStocks.forEach(async (s) => {
+    // Background prefetch source indicators for existing stocks
+    data.forEach(async (s) => {
       if (!sourcesMap.value[s.ticker]) {
         try {
           const apiData = await $fetch<{
@@ -47,25 +37,26 @@ const fetchUserStocks = async () => {
       }
     })
   } catch (err: any) {
-    console.error('Erreur chargement stocks:', err)
+    console.error('Erreur chargement stocks SQLite:', err)
   } finally {
     isFetchingStocks.value = false
   }
 }
 
 onMounted(() => {
-  fetchUserStocks()
+  fetchStocks()
 })
 
 const analyzeAndAddStock = async () => {
   const ticker = searchTicker.value.trim().toUpperCase()
-  if (!ticker || !user.value) return
+  if (!ticker) return
 
   isLoading.value = true
   errorMessage.value = null
   successMessage.value = null
 
   try {
+    // 1. Fetch Nitro API Yahoo Finance
     const stockData = await $fetch<{
       ticker: string
       name: string
@@ -73,7 +64,13 @@ const analyzeAndAddStock = async () => {
       revenue_ttm: number | null
       shares_outstanding: number | null
       fetched_at: string
+      growth_mode: 'cagr' | 'explicit'
       default_growth: number
+      growth_y1: number
+      growth_y2: number
+      growth_y3: number
+      growth_y4: number
+      growth_y5: number
       growth_source: string
       default_margin: number
       margin_source: string
@@ -90,32 +87,32 @@ const analyzeAndAddStock = async () => {
 
     const existing = stocks.value.find(s => s.ticker === stockData.ticker)
 
-    const { data, error } = await supabase
-      .from('stocks')
-      .upsert(
-        {
-          user_id: user.value.id,
-          ticker: stockData.ticker,
-          name: stockData.name,
-          current_price: stockData.current_price,
-          revenue_ttm: stockData.revenue_ttm,
-          shares_outstanding: stockData.shares_outstanding,
-          fetched_at: stockData.fetched_at,
-          projected_growth: existing?.projected_growth ?? stockData.default_growth,
-          projected_margin: existing?.projected_margin ?? stockData.default_margin,
-          target_pe: existing?.target_pe ?? stockData.default_pe,
-          discount_rate: existing?.discount_rate ?? stockData.default_discount_rate,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,ticker' }
-      )
-      .select()
+    // 2. POST to SQLite local
+    const saved = await $fetch<Stock>('/api/stocks', {
+      method: 'POST',
+      body: {
+        ticker: stockData.ticker,
+        name: stockData.name,
+        current_price: stockData.current_price,
+        revenue_ttm: stockData.revenue_ttm,
+        shares_outstanding: stockData.shares_outstanding,
+        fetched_at: stockData.fetched_at,
+        growth_mode: existing?.growth_mode ?? stockData.growth_mode,
+        projected_growth: existing?.projected_growth ?? stockData.default_growth,
+        growth_y1: existing?.growth_y1 ?? stockData.growth_y1,
+        growth_y2: existing?.growth_y2 ?? stockData.growth_y2,
+        growth_y3: existing?.growth_y3 ?? stockData.growth_y3,
+        growth_y4: existing?.growth_y4 ?? stockData.growth_y4,
+        growth_y5: existing?.growth_y5 ?? stockData.growth_y5,
+        projected_margin: existing?.projected_margin ?? stockData.default_margin,
+        target_pe: existing?.target_pe ?? stockData.default_pe,
+        discount_rate: existing?.discount_rate ?? stockData.default_discount_rate,
+      },
+    })
 
-    if (error) throw error
-
-    successMessage.value = `${stockData.ticker} (${stockData.name}) — hypothèses auto-remplies.`
+    successMessage.value = `${saved.ticker} (${saved.name}) — enregistré en SQLite local.`
     searchTicker.value = ''
-    await fetchUserStocks()
+    await fetchStocks()
   } catch (err: any) {
     errorMessage.value = err.data?.statusMessage || err.message || 'Impossible d\'ajouter ce ticker.'
   } finally {
@@ -136,42 +133,39 @@ const getEnrichedStock = (stock: Stock): Stock => {
 
 const updateStockHypotheses = async (stock: Stock) => {
   try {
-    const { error } = await supabase
-      .from('stocks')
-      .update({
+    const updated = await $fetch<Stock>(`/api/stocks/${stock.id}`, {
+      method: 'PUT',
+      body: {
+        growth_mode: stock.growth_mode,
         projected_growth: Number(stock.projected_growth),
+        growth_y1: Number(stock.growth_y1),
+        growth_y2: Number(stock.growth_y2),
+        growth_y3: Number(stock.growth_y3),
+        growth_y4: Number(stock.growth_y4),
+        growth_y5: Number(stock.growth_y5),
         projected_margin: Number(stock.projected_margin),
         target_pe: Number(stock.target_pe),
         discount_rate: Number(stock.discount_rate),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', stock.id)
-
-    if (error) throw error
+      },
+    })
 
     const idx = stocks.value.findIndex(s => s.id === stock.id)
     if (idx !== -1) {
-      stocks.value[idx] = { ...stocks.value[idx], ...stock }
+      stocks.value[idx] = { ...stocks.value[idx], ...updated }
     }
   } catch (err: any) {
-    console.error('Erreur mise à jour hypothèses:', err)
+    console.error('Erreur mise à jour hypothèses SQLite:', err)
   }
 }
 
 const deleteStock = async (id: string, ticker: string) => {
-  if (!confirm(`Supprimer ${ticker} de votre liste ?`)) return
+  if (!confirm(`Supprimer ${ticker} de votre base locale ?`)) return
   try {
-    const { error } = await supabase.from('stocks').delete().eq('id', id)
-    if (error) throw error
+    await $fetch(`/api/stocks/${id}`, { method: 'DELETE' })
     stocks.value = stocks.value.filter(s => s.id !== id)
   } catch (err: any) {
     console.error('Erreur suppression:', err)
   }
-}
-
-const signOut = async () => {
-  await supabase.auth.signOut()
-  await navigateTo('/login')
 }
 </script>
 
@@ -181,19 +175,12 @@ const signOut = async () => {
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-800 pb-6">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-white">
-          Moteur de Valorisation
+          Moteur de Valorisation & Pricing
         </h1>
         <p class="text-sm text-gray-400">
-          Connecté : <span class="font-medium text-emerald-400">{{ user?.email }}</span>
+          Base de données : <span class="font-medium text-emerald-400">SQLite Local (.data/stocks.db)</span>
         </p>
       </div>
-      <button
-        type="button"
-        class="self-start sm:self-auto rounded-lg border border-gray-800 bg-gray-900 px-4 py-2 text-xs font-medium text-gray-300 transition hover:bg-gray-800 hover:text-white"
-        @click="signOut"
-      >
-        Déconnexion
-      </button>
     </div>
 
     <!-- Barre de recherche -->
@@ -243,7 +230,7 @@ const signOut = async () => {
       </div>
 
       <div v-else-if="stocks.length === 0" class="rounded-xl border border-dashed border-gray-800 p-12 text-center text-sm text-gray-500">
-        Aucune action enregistrée. Utilisez la barre de recherche ci-dessus pour commencer.
+        Aucune action enregistrée en SQLite. Utilisez la barre de recherche ci-dessus pour commencer.
       </div>
 
       <div v-else class="grid gap-6">

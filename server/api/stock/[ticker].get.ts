@@ -54,20 +54,47 @@ export default defineEventHandler(async (event) => {
     const revenueTTM = financialData.totalRevenue ?? null
     const sharesOutstanding = keyStats.sharesOutstanding ?? quote.sharesOutstanding ?? null
 
-    // 1. Croissance CA (defaultGrowth) & source
+    // 1. Croissance CA & Mode explicit vs CAGR
     let defaultGrowth = 0.10
     let growthSource = 'Modèle Standard (10%)'
+    let growthMode: 'cagr' | 'explicit' = 'cagr'
+
+    let g1 = 0.10
+    let g2 = 0.10
+    let g3 = 0.10
+    let g4 = 0.10
+    let g5 = 0.10
 
     const trend1y = earningsTrend.find((t: any) => t.period === '+1y')
     const trend5y = earningsTrend.find((t: any) => t.period === '+5y')
     const analystGrowth = trend1y?.revenueEstimate?.growth ?? trend1y?.growth ?? trend5y?.growth
 
     if (typeof analystGrowth === 'number' && isFinite(analystGrowth) && analystGrowth !== 0) {
-      defaultGrowth = clamp(analystGrowth, -0.5, 0.8)
+      defaultGrowth = analystGrowth
       growthSource = 'Consensus Analystes (+1y)'
+      g1 = analystGrowth
+
+      if (analystGrowth > 0.30) {
+        growthMode = 'explicit'
+        g2 = 0.50
+        g3 = 0.30
+        g4 = 0.20
+        g5 = 0.15
+        growthSource = 'Consensus NTM > 30% -> Mode Sur-Mesure'
+      } else {
+        g2 = defaultGrowth
+        g3 = defaultGrowth
+        g4 = defaultGrowth
+        g5 = defaultGrowth
+      }
     } else if (typeof financialData.revenueGrowth === 'number' && isFinite(financialData.revenueGrowth)) {
       defaultGrowth = clamp(financialData.revenueGrowth, -0.5, 0.8)
       growthSource = 'Historique TTM'
+      g1 = defaultGrowth
+      g2 = defaultGrowth
+      g3 = defaultGrowth
+      g4 = defaultGrowth
+      g5 = defaultGrowth
     } else {
       const price = currentPrice ?? 0
       const rev = revenueTTM ?? 0
@@ -82,6 +109,11 @@ export default defineEventHandler(async (event) => {
           growthSource = 'Croissance Implicite du Marché'
         }
       }
+      g1 = defaultGrowth
+      g2 = defaultGrowth
+      g3 = defaultGrowth
+      g4 = defaultGrowth
+      g5 = defaultGrowth
     }
 
     // 2. Multiple P/E de sortie (defaultPE) & source
@@ -98,9 +130,10 @@ export default defineEventHandler(async (event) => {
       defaultPE = clamp(trailingPE, 5, 120)
       peSource = 'P/E Trailing (TTM)'
     } else {
-      if (defaultGrowth > 0.30) {
+      const gComp = growthMode === 'explicit' ? g1 : defaultGrowth
+      if (gComp > 0.30) {
         defaultPE = 35
-      } else if (defaultGrowth > 0.15) {
+      } else if (gComp > 0.15) {
         defaultPE = 25
       } else {
         defaultPE = 18
@@ -142,7 +175,13 @@ export default defineEventHandler(async (event) => {
       revenue_ttm: revenueTTM,
       shares_outstanding: sharesOutstanding,
       fetched_at: new Date().toISOString(),
+      growth_mode: growthMode,
       default_growth: parseFloat(defaultGrowth.toFixed(4)),
+      growth_y1: parseFloat(g1.toFixed(4)),
+      growth_y2: parseFloat(g2.toFixed(4)),
+      growth_y3: parseFloat(g3.toFixed(4)),
+      growth_y4: parseFloat(g4.toFixed(4)),
+      growth_y5: parseFloat(g5.toFixed(4)),
       growth_source: growthSource,
       default_margin: parseFloat(defaultMargin.toFixed(4)),
       margin_source: marginSource,

@@ -1,16 +1,8 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
-
 export type StockStatus = 'research' | 'watchlist' | 'portfolio'
+export type GrowthMode = 'cagr' | 'explicit'
 
 export interface Stock {
   id: string
-  user_id: string
   ticker: string
   name: string | null
   current_price: number | null
@@ -18,34 +10,20 @@ export interface Stock {
   shares_outstanding: number | null
   fetched_at: string
   status: StockStatus
+  growth_mode: GrowthMode
   projected_growth: number
+  growth_y1: number
+  growth_y2: number
+  growth_y3: number
+  growth_y4: number
+  growth_y5: number
   projected_margin: number
   target_pe: number
   discount_rate: number
-  growth_source?: string
-  margin_source?: string
-  pe_source?: string
   thesis: string | null
   created_at: string
   updated_at: string
-}
-
-export interface Database {
-  public: {
-    Tables: {
-      stocks: {
-        Row: Stock
-        Insert: Omit<Stock, 'id' | 'created_at' | 'updated_at' | 'fetched_at'> & {
-          id?: string
-          fetched_at?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Omit<Stock, 'id'>>
-      }
-    }
-    Enums: {
-      stock_status: StockStatus
-    }
-  }
+  growth_source?: string
+  margin_source?: string
+  pe_source?: string
 }
