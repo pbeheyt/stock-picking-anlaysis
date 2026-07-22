@@ -132,7 +132,7 @@ export default defineEventHandler(async (event) => {
       })
     } else {
       selectedGrowth = 0.10
-      growthSource = 'Fallback Modèle Standard'
+      growthSource = 'Fallback Modèle Standard (10%)'
       growthCandidates.push({
         name: 'Consensus Analystes (+1Y)',
         value: null,
@@ -146,10 +146,10 @@ export default defineEventHandler(async (event) => {
         note: 'Non disponible',
       })
       growthCandidates.push({
-        name: 'Fallback Standard',
+        name: 'Fallback Standard (10%)',
         value: 0.10,
-        status: 'selected',
-        note: 'Retenu (Modèle standard 10%)',
+        status: 'fallback',
+        note: '⚠️ Croissance non disponible : Fallback 10% appliqué',
       })
     }
 
@@ -234,18 +234,18 @@ export default defineEventHandler(async (event) => {
         note: 'Non disponible',
       })
       marginCandidates.push({
-        name: 'Fallback Standard',
+        name: 'Fallback Standard (15%)',
         value: 0.15,
-        status: 'selected',
-        note: 'Retenu (Fallback 15%)',
+        status: 'fallback',
+        note: '⚠️ Marge nette non disponible : Fallback 15% appliqué',
       })
     }
 
     // -------------------------------------------------------------
-    // CASCADE 3 : MULTIPLE EXIT (P/E)
+    // CASCADE 3 : MULTIPLE EXIT (P/E) - NOUVELLE CASCADE SIMPLE
     // -------------------------------------------------------------
     let selectedPE = 20.0
-    let peSource = 'Modèle Standard (20x)'
+    let peSource = 'Multiple par Défaut (20.0x)'
     const peCandidates: any[] = []
 
     if (typeof peForwardRaw === 'number' && isFinite(peForwardRaw) && peForwardRaw > 0) {
@@ -261,11 +261,11 @@ export default defineEventHandler(async (event) => {
         name: 'Trailing P/E',
         value: peTrailingRaw !== null ? parseFloat(peTrailingRaw.toFixed(2)) : null,
         status: 'ignored',
-        note: 'Ignoré : Forward P/E disponible',
+        note: 'Non requis',
       })
       peCandidates.push({
-        name: 'P/E Profilé',
-        value: selectedGrowth > 0.30 ? 35.0 : selectedGrowth > 0.15 ? 25.0 : 18.0,
+        name: 'Multiple par Défaut (20.0x)',
+        value: 20.0,
         status: 'ignored',
         note: 'Non requis',
       })
@@ -282,18 +282,17 @@ export default defineEventHandler(async (event) => {
         name: 'Trailing P/E',
         value: parseFloat(peTrailingRaw.toFixed(2)),
         status: 'selected',
-        note: 'Retenu (P/E Trailing TTM)',
+        note: 'P/E Trailing TTM retenu',
       })
       peCandidates.push({
-        name: 'P/E Profilé',
-        value: selectedGrowth > 0.30 ? 35.0 : selectedGrowth > 0.15 ? 25.0 : 18.0,
+        name: 'Multiple par Défaut (20.0x)',
+        value: 20.0,
         status: 'ignored',
         note: 'Non requis',
       })
     } else {
-      const profiledPE = selectedGrowth > 0.30 ? 35.0 : selectedGrowth > 0.15 ? 25.0 : 18.0
-      selectedPE = profiledPE
-      peSource = `P/E Profilé (${profiledPE}x)`
+      selectedPE = 20.0
+      peSource = 'Multiple par Défaut (20.0x)'
       peCandidates.push({
         name: 'Forward P/E',
         value: null,
@@ -307,10 +306,10 @@ export default defineEventHandler(async (event) => {
         note: 'Rejeté : Bénéfice Négatif ou non disponible',
       })
       peCandidates.push({
-        name: `P/E Profilé (${profiledPE}x)`,
-        value: profiledPE,
-        status: 'selected',
-        note: `Retenu (Car croissance de ${(selectedGrowth * 100).toFixed(0)}%)`,
+        name: 'Multiple par Défaut (20.0x)',
+        value: 20.0,
+        status: 'fallback',
+        note: '⚠️ Boîte non rentable ou P/E absent : Multiple par défaut appliqué (Ajuster manuellement)',
       })
     }
 

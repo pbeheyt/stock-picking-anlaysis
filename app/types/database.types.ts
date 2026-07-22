@@ -5,7 +5,7 @@ export type MarginType = 'net_income' | 'fcf'
 export interface AuditCandidate {
   name: string
   value: number | null
-  status: 'selected' | 'rejected' | 'ignored'
+  status: 'selected' | 'rejected' | 'ignored' | 'fallback'
   note: string
 }
 
