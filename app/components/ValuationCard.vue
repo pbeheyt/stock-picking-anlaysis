@@ -116,7 +116,7 @@ const badgeConfig = computed(() => {
   return { label: 'Surévaluée', class: 'bg-red-500/15 text-red-400 border-red-500/30' }
 })
 
-// Unified Gauge Data incorporating Model Scenarios + Wall Street Targets (L, Med, Moy, H) + P0
+// Unified Gauge Data incorporating Model Scenarios + Wall Street Targets (L, Moy, H) + P
 const unifiedGaugeData = computed(() => {
   const bear = scenarios.value.bear.fairValue
   const base = scenarios.value.base.fairValue
@@ -124,14 +124,13 @@ const unifiedGaugeData = computed(() => {
   const price = props.stock.current_price ?? 0
 
   const low = props.stock.analyst_target_low
-  const median = props.stock.analyst_target_median
   const mean = props.stock.analyst_target_price
   const high = props.stock.analyst_target_high
 
-  const allVals = [bear, base, bull, price, low, median, mean, high].filter((v): v is number => v !== null && !isNaN(v) && v > 0)
+  const allVals = [bear, base, bull, price, low, mean, high].filter((v): v is number => v !== null && !isNaN(v) && v > 0)
   
   if (allVals.length === 0) {
-    return { bearPos: 0, basePos: 50, bullPos: 100, pricePos: 50, lowPos: null, medianPos: null, meanPos: null, highPos: null, bearVal: 0, baseVal: 0, bullVal: 0, priceVal: 0, lowVal: null, medianVal: null, meanVal: null, highVal: null }
+    return { bearPos: 0, basePos: 50, bullPos: 100, pricePos: 50, lowPos: null, meanPos: null, highPos: null, bearVal: 0, baseVal: 0, bullVal: 0, priceVal: 0, lowVal: null, meanVal: null, highVal: null }
   }
 
   const min = Math.min(...allVals) * 0.90
@@ -139,7 +138,7 @@ const unifiedGaugeData = computed(() => {
   const range = max - min
 
   if (range <= 0) {
-    return { bearPos: 0, basePos: 50, bullPos: 100, pricePos: 50, lowPos: null, medianPos: null, meanPos: null, highPos: null, bearVal: bear, baseVal: base, bullVal: bull, priceVal: price, lowVal: low, medianVal: median, meanVal: mean, highVal: high }
+    return { bearPos: 0, basePos: 50, bullPos: 100, pricePos: 50, lowPos: null, meanPos: null, highPos: null, bearVal: bear, baseVal: base, bullVal: bull, priceVal: price, lowVal: low, meanVal: mean, highVal: high }
   }
 
   const getPos = (val: number | null) => (val !== null && val > 0) ? Math.max(0, Math.min(100, ((val - min) / range) * 100)) : null
@@ -150,7 +149,6 @@ const unifiedGaugeData = computed(() => {
     bullPos: getPos(bull)!,
     pricePos: getPos(price)!,
     lowPos: getPos(low),
-    medianPos: getPos(median),
     meanPos: getPos(mean),
     highPos: getPos(high),
     bearVal: bear,
@@ -158,7 +156,6 @@ const unifiedGaugeData = computed(() => {
     bullVal: bull,
     priceVal: price,
     lowVal: low,
-    medianVal: median,
     meanVal: mean,
     highVal: high,
   }
@@ -401,7 +398,7 @@ function formatPercent(num: number | null): string {
         </div>
       </div>
 
-      <!-- Fair Value & Marge de Sécurité avec Jauge Unifiée Modèle + Wall Street (Initiales Uniquement) -->
+      <!-- Fair Value & Marge de Sécurité avec Jauge Unifiée (L, Moy, H, P) -->
       <div class="fair-value-section space-y-4">
         <div class="flex items-end justify-between gap-4">
           <div>
@@ -417,9 +414,9 @@ function formatPercent(num: number | null): string {
           </div>
         </div>
 
-        <!-- INITIALES COMPACTES AU-DESSUS DU GRAPHIQUE (AUCUN PRIX DANS LES BADGES) -->
+        <!-- INITIALES COMPACTES AU-DESSUS DU GRAPHIQUE (L, Moy, H, P) -->
         <div class="space-y-1.5 pt-2">
-          <!-- Bandeau Supérieur des Initiales Alignées sur les Lignes Verticales -->
+          <!-- Bandeau Supérieur des Initiales Alignées -->
           <div class="relative h-5 w-full overflow-hidden text-xs font-mono font-bold">
             <!-- Wall Street Low (L) -->
             <span
@@ -429,16 +426,6 @@ function formatPercent(num: number | null): string {
               :title="`Wall St Low: ${formatMoney(unifiedGaugeData.lowVal)}`"
             >
               L
-            </span>
-
-            <!-- Wall Street Median (Med) -->
-            <span
-              v-if="unifiedGaugeData.medianPos !== null"
-              class="absolute -translate-x-1/2 z-10 rounded px-1 py-0.2 text-[9px] bg-amber-900 text-amber-200 border border-amber-500/50 shadow-sm"
-              :style="{ left: `${unifiedGaugeData.medianPos}%` }"
-              :title="`Wall St Médian: ${formatMoney(unifiedGaugeData.medianVal)}`"
-            >
-              Med
             </span>
 
             <!-- Wall Street Mean (Moy) -->
@@ -461,13 +448,13 @@ function formatPercent(num: number | null): string {
               H
             </span>
 
-            <!-- Badge P0 (Prix Actuel Blanc) -->
+            <!-- Badge P (Prix Actuel Blanc) -->
             <span
               class="absolute -translate-x-1/2 z-30 rounded px-1 py-0.2 text-[9px] bg-white text-gray-950 font-black shadow-md border border-white"
               :style="{ left: `${unifiedGaugeData.pricePos}%` }"
-              :title="`Prix Actuel P₀: ${formatMoney(unifiedGaugeData.priceVal)}`"
+              :title="`Prix Actuel P: ${formatMoney(unifiedGaugeData.priceVal)}`"
             >
-              P₀
+              P
             </span>
           </div>
 
@@ -490,12 +477,6 @@ function formatPercent(num: number | null): string {
               :title="`Wall St Low: ${formatMoney(unifiedGaugeData.lowVal)}`"
             />
             <div
-              v-if="unifiedGaugeData.medianPos !== null"
-              class="absolute top-0 bottom-0 w-0.5 bg-amber-400 z-10"
-              :style="{ left: `${unifiedGaugeData.medianPos}%` }"
-              :title="`Wall St Médian: ${formatMoney(unifiedGaugeData.medianVal)}`"
-            />
-            <div
               v-if="unifiedGaugeData.meanPos !== null"
               class="absolute top-0 bottom-0 w-0.5 bg-sky-400 z-10"
               :style="{ left: `${unifiedGaugeData.meanPos}%` }"
@@ -513,11 +494,11 @@ function formatPercent(num: number | null): string {
             <div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-3.5 w-3.5 rounded-full bg-amber-400 border-2 border-gray-950 z-20 shadow-md" :style="{ left: `${unifiedGaugeData.basePos}%` }" :title="`Fair Value (Base Case): ${formatMoney(unifiedGaugeData.baseVal)}`" />
             <div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-2.5 w-2.5 rounded-full bg-emerald-400 border border-gray-950 z-20" :style="{ left: `${unifiedGaugeData.bullPos}%` }" :title="`Bull Case: ${formatMoney(unifiedGaugeData.bullVal)}`" />
 
-            <!-- Marker Prix Actuel P0 (Ligne Blanche) -->
+            <!-- Marker Prix Actuel P (Ligne Blanche) -->
             <div
               class="absolute top-0 bottom-0 w-1 bg-white z-30 shadow-md -translate-x-1/2"
               :style="{ left: `${unifiedGaugeData.pricePos}%` }"
-              :title="`Prix Actuel P₀: ${formatMoney(unifiedGaugeData.priceVal)}`"
+              :title="`Prix Actuel P: ${formatMoney(unifiedGaugeData.priceVal)}`"
             />
           </div>
 
