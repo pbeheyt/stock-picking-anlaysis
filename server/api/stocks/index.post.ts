@@ -44,6 +44,18 @@ export default defineEventHandler(async (event) => {
         target_multiple = ?,
         discount_rate = ?,
         risk_spread = ?,
+        market_cap = ?,
+        pe_trailing_raw = ?,
+        pe_forward_raw = ?,
+        margin_gross_raw = ?,
+        margin_operating_raw = ?,
+        margin_net_raw = ?,
+        margin_fcf_raw = ?,
+        total_cash = ?,
+        total_debt = ?,
+        free_cash_flow_raw = ?,
+        analyst_target_price = ?,
+        analyst_growth_estimate = ?,
         updated_at = ?
       WHERE ticker = ?
     `)
@@ -73,6 +85,18 @@ export default defineEventHandler(async (event) => {
       body.target_multiple ?? existing.target_multiple ?? 20.0,
       body.discount_rate ?? existing.discount_rate,
       body.risk_spread ?? existing.risk_spread ?? 0.20,
+      body.market_cap ?? existing.market_cap,
+      body.pe_trailing_raw ?? existing.pe_trailing_raw,
+      body.pe_forward_raw ?? existing.pe_forward_raw,
+      body.margin_gross_raw ?? existing.margin_gross_raw,
+      body.margin_operating_raw ?? existing.margin_operating_raw,
+      body.margin_net_raw ?? existing.margin_net_raw,
+      body.margin_fcf_raw ?? existing.margin_fcf_raw,
+      body.total_cash ?? existing.total_cash,
+      body.total_debt ?? existing.total_debt,
+      body.free_cash_flow_raw ?? existing.free_cash_flow_raw,
+      body.analyst_target_price ?? existing.analyst_target_price,
+      body.analyst_growth_estimate ?? existing.analyst_growth_estimate,
       now,
       ticker
     )
@@ -86,13 +110,19 @@ export default defineEventHandler(async (event) => {
         beta, fetched_at, status, margin_type, growth_mode, projected_growth,
         growth_y1, growth_y2, growth_y3, growth_y4, growth_y5,
         revenue_y1, revenue_y2, revenue_y3, revenue_y4, revenue_y5,
-        projected_margin, target_multiple, discount_rate, risk_spread, thesis, created_at, updated_at
+        projected_margin, target_multiple, discount_rate, risk_spread,
+        market_cap, pe_trailing_raw, pe_forward_raw, margin_gross_raw, margin_operating_raw,
+        margin_net_raw, margin_fcf_raw, total_cash, total_debt, free_cash_flow_raw,
+        analyst_target_price, analyst_growth_estimate, thesis, created_at, updated_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?
       )
     `)
 
@@ -124,6 +154,18 @@ export default defineEventHandler(async (event) => {
       body.target_multiple ?? 20.0,
       body.discount_rate ?? 0.10,
       body.risk_spread ?? 0.20,
+      body.market_cap ?? null,
+      body.pe_trailing_raw ?? null,
+      body.pe_forward_raw ?? null,
+      body.margin_gross_raw ?? null,
+      body.margin_operating_raw ?? null,
+      body.margin_net_raw ?? null,
+      body.margin_fcf_raw ?? null,
+      body.total_cash ?? null,
+      body.total_debt ?? null,
+      body.free_cash_flow_raw ?? null,
+      body.analyst_target_price ?? null,
+      body.analyst_growth_estimate ?? null,
       body.thesis ?? null,
       now,
       now

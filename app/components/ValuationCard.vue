@@ -17,6 +17,8 @@ const emit = defineEmits<{
   delete: [id: string, ticker: string]
 }>()
 
+const activeTab = ref<'valuation' | 'sourcing'>('valuation')
+
 const growthMode = ref<GrowthMode>(props.stock.growth_mode || 'cagr')
 const growth = ref(props.stock.projected_growth ?? 0.10)
 const growthY1 = ref(props.stock.growth_y1 ?? 0.10)
@@ -185,7 +187,8 @@ function formatLargeNumber(num: number | null): string {
   return num.toLocaleString('fr-FR')
 }
 
-function formatPercent(num: number): string {
+function formatPercent(num: number | null): string {
+  if (num === null || num === undefined) return 'N/A'
   return `${(num * 100).toFixed(1)}%`
 }
 
@@ -197,33 +200,33 @@ function formatMOS(num: number): string {
 
 <template>
   <div class="valuation-card group">
-    <!-- Header -->
-    <div class="flex items-start justify-between gap-4">
-      <div class="min-w-0 flex-1">
-        <div class="flex flex-wrap items-center gap-2.5">
-          <span class="ticker-badge">
-            {{ stock.ticker }}
-          </span>
-          <h3 class="truncate text-base font-semibold text-white">
-            {{ stock.name || stock.ticker }}
-          </h3>
-          <span class="rounded bg-gray-800 px-2 py-0.5 font-mono text-[10px] text-gray-300 border border-gray-700">
-            {{ stock.currency || 'USD' }}
-          </span>
-          <span class="rounded bg-indigo-500/10 px-2 py-0.5 font-mono text-[10px] text-indigo-400 border border-indigo-500/20">
-            Bêta: {{ stock.beta ?? 1.0 }}
-          </span>
-          <span
-            class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
-            :class="badgeConfig.class"
-          >
-            {{ badgeConfig.label }}
-          </span>
-        </div>
-        <p class="mt-1 text-xs text-gray-500">
-          Mis à jour le {{ new Date(stock.fetched_at).toLocaleString() }}
-        </p>
+    <!-- Navigation par Onglets -->
+    <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-4">
+      <div class="flex items-center gap-1 rounded-lg bg-gray-950 p-1 border border-gray-800">
+        <button
+          type="button"
+          class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md transition"
+          :class="activeTab === 'valuation' ? 'bg-emerald-600 text-white shadow' : 'text-gray-400 hover:text-white'"
+          @click="activeTab = 'valuation'"
+        >
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          Valorisation & Simulation
+        </button>
+        <button
+          type="button"
+          class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md transition"
+          :class="activeTab === 'sourcing' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'"
+          @click="activeTab = 'sourcing'"
+        >
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          Sourcing & Fondamentaux Bruts
+        </button>
       </div>
+
       <button
         type="button"
         class="shrink-0 rounded-lg p-2 text-gray-600 transition hover:bg-red-950/50 hover:text-red-400"
@@ -236,520 +239,598 @@ function formatMOS(num: number): string {
       </button>
     </div>
 
-    <!-- Métriques Brutes -->
-    <div class="metrics-grid">
-      <div class="metric-cell">
-        <span class="metric-label">Prix Actuel</span>
-        <span class="metric-value text-white">{{ formatMoney(stock.current_price ?? 0) }}</span>
+    <!-- Header Ticker Info -->
+    <div class="flex flex-wrap items-center justify-between gap-2.5 mb-4">
+      <div class="flex items-center gap-2.5">
+        <span class="ticker-badge">
+          {{ stock.ticker }}
+        </span>
+        <h3 class="truncate text-base font-semibold text-white">
+          {{ stock.name || stock.ticker }}
+        </h3>
+        <span class="rounded bg-gray-800 px-2 py-0.5 font-mono text-[10px] text-gray-300 border border-gray-700">
+          {{ stock.currency || 'USD' }}
+        </span>
+        <span class="rounded bg-indigo-500/10 px-2 py-0.5 font-mono text-[10px] text-indigo-400 border border-indigo-500/20">
+          Bêta: {{ stock.beta ?? 1.0 }}
+        </span>
       </div>
-      <div class="metric-cell">
-        <span class="metric-label">CA TTM</span>
-        <span class="metric-value">{{ formatLargeNumber(stock.revenue_ttm) }}</span>
-      </div>
-      <div class="metric-cell">
-        <span class="metric-label">Shares</span>
-        <span class="metric-value">{{ formatLargeNumber(stock.shares_outstanding) }}</span>
-      </div>
+      <span
+        class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
+        :class="badgeConfig.class"
+      >
+        {{ badgeConfig.label }}
+      </span>
     </div>
 
-    <!-- Fair Value & Marge de Sécurité -->
-    <div class="fair-value-section">
-      <div class="flex items-end justify-between gap-4">
-        <div>
-          <span class="text-xs font-medium uppercase tracking-wider text-gray-500">Fair Value (Base Case)</span>
-          <div class="mt-1 flex items-baseline gap-2">
-            <span class="text-3xl font-bold tracking-tight text-white">{{ formatMoney(fairValue) }}</span>
-            <span
-              class="text-sm font-bold"
-              :class="{
-                'text-emerald-400': marginOfSafety > 15,
-                'text-amber-400': marginOfSafety >= 0 && marginOfSafety <= 15,
-                'text-red-400': marginOfSafety < 0,
+    <!-- VUE 1 : VALORISATION & SIMULATION -->
+    <div v-if="activeTab === 'valuation'" class="space-y-6">
+      <!-- Métriques Brutes Clefs -->
+      <div class="metrics-grid">
+        <div class="metric-cell">
+          <span class="metric-label">Prix Actuel</span>
+          <span class="metric-value text-white">{{ formatMoney(stock.current_price ?? 0) }}</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-label">CA TTM</span>
+          <span class="metric-value">{{ formatLargeNumber(stock.revenue_ttm) }}</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-label">Shares</span>
+          <span class="metric-value">{{ formatLargeNumber(stock.shares_outstanding) }}</span>
+        </div>
+      </div>
+
+      <!-- Fair Value & Marge de Sécurité -->
+      <div class="fair-value-section">
+        <div class="flex items-end justify-between gap-4">
+          <div>
+            <span class="text-xs font-medium uppercase tracking-wider text-gray-500">Fair Value (Base Case)</span>
+            <div class="mt-1 flex items-baseline gap-2">
+              <span class="text-3xl font-bold tracking-tight text-white">{{ formatMoney(fairValue) }}</span>
+              <span
+                class="text-sm font-bold"
+                :class="{
+                  'text-emerald-400': marginOfSafety > 15,
+                  'text-amber-400': marginOfSafety >= 0 && marginOfSafety <= 15,
+                  'text-red-400': marginOfSafety < 0,
+                }"
+              >
+                {{ formatMOS(marginOfSafety) }} MoS
+              </span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs font-medium uppercase tracking-wider text-gray-500">Prix Cible 5Y</span>
+            <p class="mt-1 font-mono text-lg font-semibold text-gray-300">{{ formatMoney(scenarios.base.targetPrice5Y) }}</p>
+          </div>
+        </div>
+
+        <!-- Gauge Visuelle -->
+        <div class="mt-5 space-y-1.5">
+          <div class="gauge-track">
+            <div
+              class="gauge-fill"
+              :style="{
+                left: `${gaugeData.bearPos}%`,
+                width: `${gaugeData.bullPos - gaugeData.bearPos}%`,
               }"
-            >
-              {{ formatMOS(marginOfSafety) }} MoS
+            />
+            <div class="gauge-marker gauge-marker--bear" :style="{ left: `${gaugeData.bearPos}%` }">
+              <div class="gauge-marker-dot bg-red-400" />
+            </div>
+            <div class="gauge-marker gauge-marker--base" :style="{ left: `${gaugeData.basePos}%` }">
+              <div class="gauge-marker-dot bg-amber-400" />
+            </div>
+            <div class="gauge-marker gauge-marker--bull" :style="{ left: `${gaugeData.bullPos}%` }">
+              <div class="gauge-marker-dot bg-emerald-400" />
+            </div>
+            <div class="gauge-price" :style="{ left: `${gaugeData.pricePos}%` }">
+              <div class="gauge-price-line" />
+              <div class="gauge-price-label">P₀</div>
+            </div>
+          </div>
+
+          <div class="relative h-5 text-[10px] font-medium">
+            <span class="absolute -translate-x-1/2 text-red-400/80" :style="{ left: `${gaugeData.bearPos}%` }">
+              {{ formatMoney(scenarios.bear.fairValue) }}
+            </span>
+            <span class="absolute -translate-x-1/2 text-amber-400/80" :style="{ left: `${gaugeData.basePos}%` }">
+              {{ formatMoney(scenarios.base.fairValue) }}
+            </span>
+            <span class="absolute -translate-x-1/2 text-emerald-400/80" :style="{ left: `${gaugeData.bullPos}%` }">
+              {{ formatMoney(scenarios.bull.fairValue) }}
             </span>
           </div>
-        </div>
-        <div class="text-right">
-          <span class="text-xs font-medium uppercase tracking-wider text-gray-500">Prix Cible 5Y</span>
-          <p class="mt-1 font-mono text-lg font-semibold text-gray-300">{{ formatMoney(scenarios.base.targetPrice5Y) }}</p>
+
+          <div class="flex justify-between text-[10px] font-semibold uppercase tracking-wider text-gray-600">
+            <span>Bear (-{{ formatPercent(riskSpread) }})</span>
+            <span>Base</span>
+            <span>Bull (+{{ formatPercent(riskSpread) }})</span>
+          </div>
         </div>
       </div>
 
-      <!-- Gauge Visuelle -->
-      <div class="mt-5 space-y-1.5">
-        <div class="gauge-track">
-          <!-- Zone Bear → Bull gradient -->
-          <div
-            class="gauge-fill"
-            :style="{
-              left: `${gaugeData.bearPos}%`,
-              width: `${gaugeData.bullPos - gaugeData.bearPos}%`,
-            }"
-          />
-
-          <!-- Markers Bear / Base / Bull -->
-          <div class="gauge-marker gauge-marker--bear" :style="{ left: `${gaugeData.bearPos}%` }">
-            <div class="gauge-marker-dot bg-red-400" />
-          </div>
-          <div class="gauge-marker gauge-marker--base" :style="{ left: `${gaugeData.basePos}%` }">
-            <div class="gauge-marker-dot bg-amber-400" />
-          </div>
-          <div class="gauge-marker gauge-marker--bull" :style="{ left: `${gaugeData.bullPos}%` }">
-            <div class="gauge-marker-dot bg-emerald-400" />
-          </div>
-
-          <!-- Prix Actuel -->
-          <div class="gauge-price" :style="{ left: `${gaugeData.pricePos}%` }">
-            <div class="gauge-price-line" />
-            <div class="gauge-price-label">P₀</div>
-          </div>
-        </div>
-
-        <!-- Labels -->
-        <div class="relative h-5 text-[10px] font-medium">
-          <span class="absolute -translate-x-1/2 text-red-400/80" :style="{ left: `${gaugeData.bearPos}%` }">
-            {{ formatMoney(scenarios.bear.fairValue) }}
-          </span>
-          <span class="absolute -translate-x-1/2 text-amber-400/80" :style="{ left: `${gaugeData.basePos}%` }">
-            {{ formatMoney(scenarios.base.fairValue) }}
-          </span>
-          <span class="absolute -translate-x-1/2 text-emerald-400/80" :style="{ left: `${gaugeData.bullPos}%` }">
-            {{ formatMoney(scenarios.bull.fairValue) }}
+      <!-- Scénarios détaillés -->
+      <div class="grid grid-cols-3 gap-3">
+        <div class="scenario-cell scenario-cell--bear">
+          <span class="scenario-label text-red-400/70">Bear Case (-{{ formatPercent(riskSpread) }})</span>
+          <span class="scenario-value">{{ formatMoney(scenarios.bear.fairValue) }}</span>
+          <span class="scenario-mos" :class="scenarios.bear.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
+            {{ formatMOS(scenarios.bear.marginOfSafety) }}
           </span>
         </div>
-
-        <div class="flex justify-between text-[10px] font-semibold uppercase tracking-wider text-gray-600">
-          <span>Bear (-{{ formatPercent(riskSpread) }})</span>
-          <span>Base</span>
-          <span>Bull (+{{ formatPercent(riskSpread) }})</span>
+        <div class="scenario-cell scenario-cell--base">
+          <span class="scenario-label text-amber-400/70">Base Case</span>
+          <span class="scenario-value text-white">{{ formatMoney(scenarios.base.fairValue) }}</span>
+          <span class="scenario-mos" :class="scenarios.base.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
+            {{ formatMOS(scenarios.base.marginOfSafety) }}
+          </span>
         </div>
-      </div>
-    </div>
-
-    <!-- Scénarios détaillés -->
-    <div class="grid grid-cols-3 gap-3">
-      <div class="scenario-cell scenario-cell--bear">
-        <span class="scenario-label text-red-400/70">Bear Case (-{{ formatPercent(riskSpread) }})</span>
-        <span class="scenario-value">{{ formatMoney(scenarios.bear.fairValue) }}</span>
-        <span class="scenario-mos" :class="scenarios.bear.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
-          {{ formatMOS(scenarios.bear.marginOfSafety) }}
-        </span>
-      </div>
-      <div class="scenario-cell scenario-cell--base">
-        <span class="scenario-label text-amber-400/70">Base Case</span>
-        <span class="scenario-value text-white">{{ formatMoney(scenarios.base.fairValue) }}</span>
-        <span class="scenario-mos" :class="scenarios.base.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
-          {{ formatMOS(scenarios.base.marginOfSafety) }}
-        </span>
-      </div>
-      <div class="scenario-cell scenario-cell--bull">
-        <span class="scenario-label text-emerald-400/70">Bull Case (+{{ formatPercent(riskSpread) }})</span>
-        <span class="scenario-value">{{ formatMoney(scenarios.bull.fairValue) }}</span>
-        <span class="scenario-mos" :class="scenarios.bull.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
-          {{ formatMOS(scenarios.bull.marginOfSafety) }}
-        </span>
-      </div>
-    </div>
-
-    <!-- Reverse DCF -->
-    <div class="reverse-dcf-section">
-      <div class="flex items-center gap-2 mb-2">
-        <div class="h-5 w-5 rounded-md bg-indigo-500/15 flex items-center justify-center">
-          <svg class="h-3 w-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        </div>
-        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Reverse DCF</span>
-      </div>
-
-      <!-- Mode CAGR -->
-      <p v-if="growthMode === 'cagr'" class="text-sm text-gray-300 leading-relaxed">
-        Le marché anticipe une croissance du CA de
-        <span class="font-bold" :class="reverseDCF.impliedGrowth > growth ? 'text-amber-400' : 'text-emerald-400'">
-          {{ formatPercent(reverseDCF.impliedGrowth) }}/an
-        </span>
-        sur 5 ans pour justifier le cours actuel de
-        <span class="font-semibold text-white">{{ formatMoney(stock.current_price ?? 0) }}</span>.
-        <span v-if="reverseDCF.impliedGrowth > growth" class="text-amber-400/80 text-xs ml-1">
-          ⚠ Supérieur à votre hypothèse ({{ formatPercent(growth) }})
-        </span>
-        <span v-else class="text-emerald-400/80 text-xs ml-1">
-          ✓ Inférieur à votre hypothèse ({{ formatPercent(growth) }})
-        </span>
-      </p>
-
-      <!-- Mode Explicit -->
-      <p v-else class="text-sm text-gray-300 leading-relaxed">
-        En conservant g₁ à <span class="font-semibold text-emerald-400">{{ formatPercent(growthY1) }}</span> (Guidance NTM), le marché exige une croissance moyenne de
-        <span class="font-bold" :class="(reverseDCF.impliedGrowthY2Y5 ?? 0) > growthY2 ? 'text-amber-400' : 'text-emerald-400'">
-          {{ formatPercent(reverseDCF.impliedGrowthY2Y5 ?? 0) }}/an
-        </span>
-        sur les années 2 à 5 pour justifier le cours actuel de
-        <span class="font-semibold text-white">{{ formatMoney(stock.current_price ?? 0) }}</span>.
-      </p>
-
-      <div class="mt-3 grid grid-cols-3 gap-3 text-center">
-        <div>
-          <span class="text-[10px] text-gray-500 uppercase">CA Requis 5Y</span>
-          <p class="font-mono text-xs font-semibold text-gray-300 mt-0.5">{{ formatLargeNumber(reverseDCF.revenue5YMarket) }}</p>
-        </div>
-        <div>
-          <span class="text-[10px] text-gray-500 uppercase">Earnings Requis</span>
-          <p class="font-mono text-xs font-semibold text-gray-300 mt-0.5">{{ formatLargeNumber(reverseDCF.earnings5YMarket) }}</p>
-        </div>
-        <div>
-          <span class="text-[10px] text-gray-500 uppercase">Prix Cible 5Y</span>
-          <p class="font-mono text-xs font-semibold text-gray-300 mt-0.5">{{ formatMoney(reverseDCF.targetPrice5YMarket) }}</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Sliders Réactifs & Selector de Mode -->
-    <div class="space-y-4 pt-1">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800/80 pb-3">
-        <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2">
-          <svg class="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-          </svg>
-          Hypothèses de Valorisation
-        </h4>
-
-        <!-- Toggle Mode CAGR vs Explicit -->
-        <div class="inline-flex rounded-lg bg-gray-950 p-1 border border-gray-800">
-          <button
-            type="button"
-            class="px-3 py-1 text-xs font-medium rounded-md transition"
-            :class="growthMode === 'cagr' ? 'bg-gray-800 text-white shadow-sm font-semibold' : 'text-gray-400 hover:text-white'"
-            @click="growthMode = 'cagr'"
-          >
-            Mode Lissé (CAGR)
-          </button>
-          <button
-            type="button"
-            class="px-3 py-1 text-xs font-medium rounded-md transition"
-            :class="growthMode === 'explicit' ? 'bg-emerald-600 text-white shadow-sm font-semibold' : 'text-gray-400 hover:text-white'"
-            @click="growthMode = 'explicit'"
-          >
-            Mode Sur-Mesure (5 Ans)
-          </button>
+        <div class="scenario-cell scenario-cell--bull">
+          <span class="scenario-label text-emerald-400/70">Bull Case (+{{ formatPercent(riskSpread) }})</span>
+          <span class="scenario-value">{{ formatMoney(scenarios.bull.fairValue) }}</span>
+          <span class="scenario-mos" :class="scenarios.bull.marginOfSafety >= 0 ? 'text-emerald-400/60' : 'text-red-400/60'">
+            {{ formatMOS(scenarios.bull.marginOfSafety) }}
+          </span>
         </div>
       </div>
 
-      <!-- Mode CAGR : Single Slider -->
-      <div v-if="growthMode === 'cagr'" class="slider-group">
-        <div class="slider-header">
-          <div class="flex items-center gap-2 flex-wrap">
-            <label class="slider-label">Croissance CA / an (CAGR 5Y)</label>
-            <span
-              v-if="stock.growth_source"
-              class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+      <!-- Reverse DCF -->
+      <div class="reverse-dcf-section">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="h-5 w-5 rounded-md bg-indigo-500/15 flex items-center justify-center">
+            <svg class="h-3 w-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Reverse DCF</span>
+        </div>
+
+        <p v-if="growthMode === 'cagr'" class="text-sm text-gray-300 leading-relaxed">
+          Le marché anticipe une croissance du CA de
+          <span class="font-bold" :class="reverseDCF.impliedGrowth > growth ? 'text-amber-400' : 'text-emerald-400'">
+            {{ formatPercent(reverseDCF.impliedGrowth) }}/an
+          </span>
+          sur 5 ans pour justifier le cours actuel de
+          <span class="font-semibold text-white">{{ formatMoney(stock.current_price ?? 0) }}</span>.
+        </p>
+
+        <p v-else class="text-sm text-gray-300 leading-relaxed">
+          En conservant g₁ à <span class="font-semibold text-emerald-400">{{ formatPercent(growthY1) }}</span> (Guidance NTM), le marché exige une croissance moyenne de
+          <span class="font-bold" :class="(reverseDCF.impliedGrowthY2Y5 ?? 0) > growthY2 ? 'text-amber-400' : 'text-emerald-400'">
+            {{ formatPercent(reverseDCF.impliedGrowthY2Y5 ?? 0) }}/an
+          </span>
+          sur les années 2 à 5 pour justifier le cours actuel.
+        </p>
+
+        <div class="mt-3 grid grid-cols-3 gap-3 text-center">
+          <div>
+            <span class="text-[10px] text-gray-500 uppercase">CA Requis 5Y</span>
+            <p class="font-mono text-xs font-semibold text-gray-300 mt-0.5">{{ formatLargeNumber(reverseDCF.revenue5YMarket) }}</p>
+          </div>
+          <div>
+            <span class="text-[10px] text-gray-500 uppercase">Earnings Requis</span>
+            <p class="font-mono text-xs font-semibold text-gray-300 mt-0.5">{{ formatLargeNumber(reverseDCF.earnings5YMarket) }}</p>
+          </div>
+          <div>
+            <span class="text-[10px] text-gray-500 uppercase">Prix Cible 5Y</span>
+            <p class="font-mono text-xs font-semibold text-gray-300 mt-0.5">{{ formatMoney(reverseDCF.targetPrice5YMarket) }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sliders Réactifs & Selector de Mode -->
+      <div class="space-y-4 pt-1">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800/80 pb-3">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+            <svg class="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            Hypothèses de Valorisation
+          </h4>
+
+          <div class="inline-flex rounded-lg bg-gray-950 p-1 border border-gray-800">
+            <button
+              type="button"
+              class="px-3 py-1 text-xs font-medium rounded-md transition"
+              :class="growthMode === 'cagr' ? 'bg-gray-800 text-white shadow-sm font-semibold' : 'text-gray-400 hover:text-white'"
+              @click="growthMode = 'cagr'"
             >
+              Mode Lissé (CAGR)
+            </button>
+            <button
+              type="button"
+              class="px-3 py-1 text-xs font-medium rounded-md transition"
+              :class="growthMode === 'explicit' ? 'bg-emerald-600 text-white shadow-sm font-semibold' : 'text-gray-400 hover:text-white'"
+              @click="growthMode = 'explicit'"
+            >
+              Mode Sur-Mesure (5 Ans)
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode CAGR -->
+        <div v-if="growthMode === 'cagr'" class="slider-group">
+          <div class="slider-header">
+            <div class="flex items-center gap-2 flex-wrap">
+              <label class="slider-label">Croissance CA / an (CAGR 5Y)</label>
+              <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                {{ stock.growth_source }}
+              </span>
+            </div>
+            <span class="slider-value text-emerald-400">{{ formatPercent(growth) }}</span>
+          </div>
+          <input
+            v-model.number="growth"
+            type="range"
+            min="-0.3"
+            max="1.0"
+            step="0.005"
+            class="slider slider--emerald"
+          >
+          <div class="slider-bounds">
+            <span>-30%</span>
+            <span>100%</span>
+          </div>
+        </div>
+
+        <!-- Mode Explicit -->
+        <div v-else class="space-y-4 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+              Trajectoire Sur-Mesure sur 5 Ans (Liaison % / CA)
+            </span>
+            <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
               {{ stock.growth_source }}
             </span>
           </div>
-          <span class="slider-value text-emerald-400">{{ formatPercent(growth) }}</span>
-        </div>
-        <input
-          v-model.number="growth"
-          type="range"
-          min="-0.3"
-          max="1.0"
-          step="0.005"
-          class="slider slider--emerald"
-        >
-        <div class="slider-bounds">
-          <span>-30%</span>
-          <span>100%</span>
-        </div>
-      </div>
 
-      <!-- Mode Explicit : 5 Mini-Sliders & CA en Dur Bidirectionnel -->
-      <div v-else class="space-y-4 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-            Trajectoire Sur-Mesure sur 5 Ans (Liaison % / CA)
-          </span>
-          <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-            {{ stock.growth_source }}
-          </span>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
-          <!-- An 1 -->
-          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-gray-400 font-semibold">An 1 (NTM)</span>
-              <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY1) }}</span>
-            </div>
-            <input
-              v-model.number="growthY1"
-              type="range"
-              min="-0.3"
-              max="3.0"
-              step="0.01"
-              class="slider slider--emerald"
-            >
-            <div class="pt-1">
-              <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An 1)</label>
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <div v-for="i in 5" :key="i" class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-gray-400 font-semibold">An {{ i }} {{ i === 1 ? '(NTM)' : '' }}</span>
+                <span class="font-mono font-bold text-emerald-400">
+                  {{ formatPercent(i === 1 ? growthY1 : i === 2 ? growthY2 : i === 3 ? growthY3 : i === 4 ? growthY4 : growthY5) }}
+                </span>
+              </div>
               <input
-                :value="yearRevenues[0]"
-                type="number"
-                step="1000000"
-                class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
-                @input="updateGrowthFromRevenue(1, ($event.target as HTMLInputElement).value)"
+                v-if="i === 1"
+                v-model.number="growthY1"
+                type="range"
+                min="-0.3"
+                max="3.0"
+                step="0.01"
+                class="slider slider--emerald"
               >
-              <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[0]) }}</span>
+              <input
+                v-else-if="i === 2"
+                v-model.number="growthY2"
+                type="range"
+                min="-0.3"
+                max="1.5"
+                step="0.01"
+                class="slider slider--emerald"
+              >
+              <input
+                v-else-if="i === 3"
+                v-model.number="growthY3"
+                type="range"
+                min="-0.3"
+                max="1.0"
+                step="0.01"
+                class="slider slider--emerald"
+              >
+              <input
+                v-else-if="i === 4"
+                v-model.number="growthY4"
+                type="range"
+                min="-0.3"
+                max="0.8"
+                step="0.01"
+                class="slider slider--emerald"
+              >
+              <input
+                v-else
+                v-model.number="growthY5"
+                type="range"
+                min="-0.3"
+                max="0.6"
+                step="0.01"
+                class="slider slider--emerald"
+              >
+              <div class="pt-1">
+                <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An {{ i }})</label>
+                <input
+                  :value="yearRevenues[i-1]"
+                  type="number"
+                  step="1000000"
+                  class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
+                  @input="updateGrowthFromRevenue(i, ($event.target as HTMLInputElement).value)"
+                >
+                <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[i-1]) }}</span>
+              </div>
             </div>
           </div>
 
-          <!-- An 2 -->
-          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-gray-400 font-semibold">An 2</span>
-              <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY2) }}</span>
-            </div>
-            <input
-              v-model.number="growthY2"
-              type="range"
-              min="-0.3"
-              max="1.5"
-              step="0.01"
-              class="slider slider--emerald"
-            >
-            <div class="pt-1">
-              <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An 2)</label>
-              <input
-                :value="yearRevenues[1]"
-                type="number"
-                step="1000000"
-                class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
-                @input="updateGrowthFromRevenue(2, ($event.target as HTMLInputElement).value)"
-              >
-              <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[1]) }}</span>
-            </div>
-          </div>
-
-          <!-- An 3 -->
-          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-gray-400 font-semibold">An 3</span>
-              <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY3) }}</span>
-            </div>
-            <input
-              v-model.number="growthY3"
-              type="range"
-              min="-0.3"
-              max="1.0"
-              step="0.01"
-              class="slider slider--emerald"
-            >
-            <div class="pt-1">
-              <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An 3)</label>
-              <input
-                :value="yearRevenues[2]"
-                type="number"
-                step="1000000"
-                class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
-                @input="updateGrowthFromRevenue(3, ($event.target as HTMLInputElement).value)"
-              >
-              <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[2]) }}</span>
-            </div>
-          </div>
-
-          <!-- An 4 -->
-          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-gray-400 font-semibold">An 4</span>
-              <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY4) }}</span>
-            </div>
-            <input
-              v-model.number="growthY4"
-              type="range"
-              min="-0.3"
-              max="0.8"
-              step="0.01"
-              class="slider slider--emerald"
-            >
-            <div class="pt-1">
-              <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An 4)</label>
-              <input
-                :value="yearRevenues[3]"
-                type="number"
-                step="1000000"
-                class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
-                @input="updateGrowthFromRevenue(4, ($event.target as HTMLInputElement).value)"
-              >
-              <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[3]) }}</span>
-            </div>
-          </div>
-
-          <!-- An 5 -->
-          <div class="slider-group rounded-lg bg-gray-950/80 p-2.5 border border-gray-800 space-y-2">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-gray-400 font-semibold">An 5</span>
-              <span class="font-mono font-bold text-emerald-400">{{ formatPercent(growthY5) }}</span>
-            </div>
-            <input
-              v-model.number="growthY5"
-              type="range"
-              min="-0.3"
-              max="0.6"
-              step="0.01"
-              class="slider slider--emerald"
-            >
-            <div class="pt-1">
-              <label class="block text-[10px] text-gray-500 uppercase mb-0.5">CA Projeté (An 5)</label>
-              <input
-                :value="yearRevenues[4]"
-                type="number"
-                step="1000000"
-                class="w-full rounded border border-gray-800 bg-gray-900 px-2 py-1 font-mono text-[11px] text-white focus:border-emerald-500 focus:outline-none"
-                @input="updateGrowthFromRevenue(5, ($event.target as HTMLInputElement).value)"
-              >
-              <span class="block text-[10px] font-mono text-gray-400 mt-0.5">{{ formatLargeNumber(yearRevenues[4]) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Block CA Final Cible Année 5 -->
-        <div class="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-4 text-center space-y-1 shadow-md">
-          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-            🎯 Chiffre d'Affaires Final Cible (Année 5)
-          </span>
-          <p class="font-mono text-2xl font-extrabold text-white">
-            {{ formatLargeNumber(scenarios.base.revenue5Y) }}
-          </p>
-          <p class="text-xs text-gray-400">
-            soit un CAGR équivalent lissé de <span class="font-bold text-emerald-400">{{ formatPercent(scenarios.base.equivalentCAGR) }}/an</span> sur 5 ans
-          </p>
-        </div>
-      </div>
-
-      <!-- Marge & Toggle Nature de Marge -->
-      <div class="slider-group">
-        <div class="slider-header">
-          <div class="flex items-center gap-2 flex-wrap">
-            <label class="slider-label">
-              {{ marginType === 'net_income' ? 'Marge Nette (Net Income)' : 'Marge FCF (Free Cash Flow)' }}
-            </label>
-
-            <!-- Toggle Nature Marge -->
-            <div class="inline-flex rounded-md bg-gray-950 p-0.5 border border-gray-800">
-              <button
-                type="button"
-                class="px-2 py-0.5 text-[10px] font-medium rounded transition"
-                :class="marginType === 'net_income' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
-                @click="marginType = 'net_income'"
-              >
-                Marge Nette (P/E)
-              </button>
-              <button
-                type="button"
-                class="px-2 py-0.5 text-[10px] font-medium rounded transition"
-                :class="marginType === 'fcf' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
-                @click="marginType = 'fcf'"
-              >
-                Marge FCF (P/FCF)
-              </button>
-            </div>
-
-            <span
-              v-if="stock.margin_source"
-              class="source-pill bg-sky-500/10 text-sky-400 border-sky-500/20"
-            >
-              {{ stock.margin_source }}
+          <div class="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-4 text-center space-y-1 shadow-md">
+            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+              🎯 Chiffre d'Affaires Final Cible (Année 5)
             </span>
+            <p class="font-mono text-2xl font-extrabold text-white">
+              {{ formatLargeNumber(scenarios.base.revenue5Y) }}
+            </p>
+            <p class="text-xs text-gray-400">
+              soit un CAGR équivalent lissé de <span class="font-bold text-emerald-400">{{ formatPercent(scenarios.base.equivalentCAGR) }}/an</span> sur 5 ans
+            </p>
           </div>
-          <span class="slider-value text-sky-400">{{ formatPercent(margin) }}</span>
         </div>
-        <input
-          v-model.number="margin"
-          type="range"
-          min="0"
-          max="0.6"
-          step="0.005"
-          class="slider slider--sky"
-        >
-        <div class="slider-bounds">
-          <span>0%</span>
-          <span>60%</span>
+
+        <!-- Marge -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <div class="flex items-center gap-2 flex-wrap">
+              <label class="slider-label">
+                {{ marginType === 'net_income' ? 'Marge Nette (Net Income)' : 'Marge FCF (Free Cash Flow)' }}
+              </label>
+
+              <div class="inline-flex rounded-md bg-gray-950 p-0.5 border border-gray-800">
+                <button
+                  type="button"
+                  class="px-2 py-0.5 text-[10px] font-medium rounded transition"
+                  :class="marginType === 'net_income' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
+                  @click="marginType = 'net_income'"
+                >
+                  Marge Nette (P/E)
+                </button>
+                <button
+                  type="button"
+                  class="px-2 py-0.5 text-[10px] font-medium rounded transition"
+                  :class="marginType === 'fcf' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
+                  @click="marginType = 'fcf'"
+                >
+                  Marge FCF (P/FCF)
+                </button>
+              </div>
+
+              <span v-if="stock.margin_source" class="source-pill bg-sky-500/10 text-sky-400 border-sky-500/20">
+                {{ stock.margin_source }}
+              </span>
+            </div>
+            <span class="slider-value text-sky-400">{{ formatPercent(margin) }}</span>
+          </div>
+          <input
+            v-model.number="margin"
+            type="range"
+            min="0"
+            max="0.6"
+            step="0.005"
+            class="slider slider--sky"
+          >
+          <div class="slider-bounds">
+            <span>0%</span>
+            <span>60%</span>
+          </div>
+        </div>
+
+        <!-- Multiple -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <div class="flex items-center gap-2 flex-wrap">
+              <label class="slider-label">
+                Multiple de Sortie ({{ marginType === 'net_income' ? 'P/E' : 'P/FCF' }})
+              </label>
+              <span v-if="stock.pe_source" class="source-pill bg-violet-500/10 text-violet-400 border-violet-500/20">
+                {{ stock.pe_source }}
+              </span>
+            </div>
+            <span class="slider-value text-violet-400">{{ targetMultiple.toFixed(1) }}x</span>
+          </div>
+          <input
+            v-model.number="targetMultiple"
+            type="range"
+            min="5"
+            max="120"
+            step="0.5"
+            class="slider slider--violet"
+          >
+          <div class="slider-bounds">
+            <span>5x</span>
+            <span>120x</span>
+          </div>
+        </div>
+
+        <!-- Taux actualisation -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <label class="slider-label">Taux d'Actualisation</label>
+            <span class="slider-value text-amber-400">{{ formatPercent(discountRate) }}</span>
+          </div>
+          <input
+            v-model.number="discountRate"
+            type="range"
+            min="0.05"
+            max="0.25"
+            step="0.005"
+            class="slider slider--amber"
+          >
+          <div class="slider-bounds">
+            <span>5%</span>
+            <span>25%</span>
+          </div>
+        </div>
+
+        <!-- Contrôle de Risque / Volatilité (risk_spread) -->
+        <div class="slider-group rounded-xl border border-indigo-500/20 bg-indigo-950/10 p-4 space-y-2">
+          <div class="slider-header">
+            <div class="flex items-center gap-2 flex-wrap">
+              <label class="slider-label text-indigo-300 font-semibold">Incertitude & Risque Bear / Bull (±%)</label>
+              <span class="source-pill bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+                Basé sur Bêta ({{ stock.beta ?? 1.0 }})
+              </span>
+            </div>
+            <span class="slider-value text-indigo-400">±{{ formatPercent(riskSpread) }}</span>
+          </div>
+          <input
+            v-model.number="riskSpread"
+            type="range"
+            min="0.10"
+            max="0.50"
+            step="0.01"
+            class="slider slider--violet"
+          >
+          <div class="slider-bounds">
+            <span>±10% (Stable)</span>
+            <span>±50% (Haute Volatilité)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VUE 2 : SOURCING & FONDAMENTAUX BRUTS -->
+    <div v-else class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Panneau 1 : Multiples & Devises -->
+        <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+            📊 Multiples & Devises (Yahoo Finance)
+          </h4>
+          <div class="space-y-2 text-xs">
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Market Cap :</span>
+              <span class="font-mono font-bold text-white">{{ formatLargeNumber(stock.market_cap) }}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">P/E Trailing (Brut) :</span>
+              <span class="font-mono font-semibold text-gray-200">{{ stock.pe_trailing_raw ? `${stock.pe_trailing_raw.toFixed(1)}x` : 'N/A' }}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">P/E Forward (Consensus) :</span>
+              <span class="font-mono font-semibold text-gray-200">{{ stock.pe_forward_raw ? `${stock.pe_forward_raw.toFixed(1)}x` : 'N/A' }}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Bêta Yahoo :</span>
+              <span class="font-mono font-semibold text-gray-200">{{ stock.beta ?? 1.0 }}</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-gray-400">Devise de Cotation :</span>
+              <span class="font-mono font-semibold text-emerald-400">{{ stock.currency || 'USD' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panneau 2 : Marges Réelles TTM -->
+        <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-2">
+            📈 Marges Financières Réelles (TTM)
+          </h4>
+          <div class="space-y-2 text-xs">
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Marge Brute :</span>
+              <span class="font-mono font-semibold text-gray-200">{{ formatPercent(stock.margin_gross_raw) }}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Marge Opératoire :</span>
+              <span class="font-mono font-semibold text-gray-200">{{ formatPercent(stock.margin_operating_raw) }}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Marge Nette (Net Income) :</span>
+              <span class="font-mono font-semibold text-gray-200">{{ formatPercent(stock.margin_net_raw) }}</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-gray-400">Marge FCF (Free Cash Flow) :</span>
+              <span class="font-mono font-semibold text-sky-400">{{ formatPercent(stock.margin_fcf_raw) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panneau 3 : Bilan & Trésorerie -->
+        <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+            💰 Bilan & Cash Flow TTM
+          </h4>
+          <div class="space-y-2 text-xs">
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Trésorerie Totale (Cash) :</span>
+              <span class="font-mono font-semibold text-emerald-400">{{ formatLargeNumber(stock.total_cash) }}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Dette Totale :</span>
+              <span class="font-mono font-semibold text-red-400">{{ formatLargeNumber(stock.total_debt) }}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Free Cash Flow TTM :</span>
+              <span class="font-mono font-semibold text-white">{{ formatLargeNumber(stock.free_cash_flow_raw) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panneau 4 : Benchmark Wall Street -->
+        <div class="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-3">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+            🎯 Consensus & Benchmark Analystes Wall Street
+          </h4>
+          <div class="space-y-2 text-xs">
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Target Price 12M Analystes :</span>
+              <span class="font-mono font-bold text-white">{{ formatMoney(stock.analyst_target_price) }}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-850">
+              <span class="text-gray-400">Potentiel Analystes vs Cours :</span>
+              <span
+                v-if="stock.analyst_target_price && stock.current_price"
+                class="font-mono font-semibold"
+                :class="stock.analyst_target_price > stock.current_price ? 'text-emerald-400' : 'text-red-400'"
+              >
+                {{ formatMOS(((stock.analyst_target_price - stock.current_price) / stock.current_price) * 100) }}
+              </span>
+              <span v-else class="text-gray-500">N/A</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-gray-400">Consensus Croissance CA NTM :</span>
+              <span class="font-mono font-semibold text-amber-400">{{ formatPercent(stock.analyst_growth_estimate) }}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Multiple Cible (P/E ou P/FCF selon marginType) -->
-      <div class="slider-group">
-        <div class="slider-header">
-          <div class="flex items-center gap-2 flex-wrap">
-            <label class="slider-label">
-              Multiple de Sortie ({{ marginType === 'net_income' ? 'P/E' : 'P/FCF' }})
-            </label>
-            <span
-              v-if="stock.pe_source"
-              class="source-pill bg-violet-500/10 text-violet-400 border-violet-500/20"
-            >
-              {{ stock.pe_source }}
-            </span>
-          </div>
-          <span class="slider-value text-violet-400">{{ targetMultiple.toFixed(1) }}x</span>
-        </div>
-        <input
-          v-model.number="targetMultiple"
-          type="range"
-          min="5"
-          max="120"
-          step="0.5"
-          class="slider slider--violet"
-        >
-        <div class="slider-bounds">
-          <span>5x</span>
-          <span>120x</span>
-        </div>
-      </div>
-
-      <!-- Taux d'actualisation -->
-      <div class="slider-group">
-        <div class="slider-header">
-          <label class="slider-label">Taux d'Actualisation</label>
-          <span class="slider-value text-amber-400">{{ formatPercent(discountRate) }}</span>
-        </div>
-        <input
-          v-model.number="discountRate"
-          type="range"
-          min="0.05"
-          max="0.25"
-          step="0.005"
-          class="slider slider--amber"
-        >
-        <div class="slider-bounds">
-          <span>5%</span>
-          <span>25%</span>
-        </div>
-      </div>
-
-      <!-- Contrôle de Risque / Volatilité (risk_spread) -->
-      <div class="slider-group rounded-xl border border-indigo-500/20 bg-indigo-950/10 p-4 space-y-2">
-        <div class="slider-header">
-          <div class="flex items-center gap-2 flex-wrap">
-            <label class="slider-label text-indigo-300 font-semibold">Incertitude & Risque Bear / Bull (±%)</label>
-            <span class="source-pill bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
-              Basé sur Bêta ({{ stock.beta ?? 1.0 }})
-            </span>
-          </div>
-          <span class="slider-value text-indigo-400">±{{ formatPercent(riskSpread) }}</span>
-        </div>
-        <input
-          v-model.number="riskSpread"
-          type="range"
-          min="0.10"
-          max="0.50"
-          step="0.01"
-          class="slider slider--violet"
-        >
-        <div class="slider-bounds">
-          <span>±10% (Stable)</span>
-          <span>±50% (Haute Volatilité)</span>
+      <!-- Panneau 5 : Table de Provenance des Valeurs par Défaut -->
+      <div class="rounded-xl border border-gray-800 bg-gray-950/80 p-4 space-y-3">
+        <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-2">
+          🔍 Explication du Sourcing des Paramètres Initiaux
+        </h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-gray-300">
+            <thead class="border-b border-gray-800 text-[11px] uppercase tracking-wider text-gray-500 bg-gray-900/50">
+              <tr>
+                <th class="px-3 py-2">Paramètre</th>
+                <th class="px-3 py-2">Valeur de Départ</th>
+                <th class="px-3 py-2">Source / Règle d'Auto-Fill</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800/60">
+              <tr>
+                <td class="px-3 py-2.5 font-medium text-white">Croissance (Growth)</td>
+                <td class="px-3 py-2.5 font-mono text-emerald-400">{{ formatPercent(stock.projected_growth) }}</td>
+                <td class="px-3 py-2.5 text-gray-400">{{ stock.growth_source || 'Consensus NTM / Historique TTM' }}</td>
+              </tr>
+              <tr>
+                <td class="px-3 py-2.5 font-medium text-white">Marge Cible</td>
+                <td class="px-3 py-2.5 font-mono text-sky-400">{{ formatPercent(stock.projected_margin) }} ({{ stock.margin_type === 'fcf' ? 'FCF' : 'Nette' }})</td>
+                <td class="px-3 py-2.5 text-gray-400">{{ stock.margin_source || 'Marge FCF / Opératoire / Nette TTM' }}</td>
+              </tr>
+              <tr>
+                <td class="px-3 py-2.5 font-medium text-white">Multiple Cible</td>
+                <td class="px-3 py-2.5 font-mono text-violet-400">{{ stock.target_multiple.toFixed(1) }}x ({{ stock.margin_type === 'fcf' ? 'P/FCF' : 'P/E' }})</td>
+                <td class="px-3 py-2.5 text-gray-400">{{ stock.pe_source || 'P/E Forward / Trailing' }}</td>
+              </tr>
+              <tr>
+                <td class="px-3 py-2.5 font-medium text-white">Incertitude Bear/Bull</td>
+                <td class="px-3 py-2.5 font-mono text-indigo-400">±{{ formatPercent(stock.risk_spread) }}</td>
+                <td class="px-3 py-2.5 text-gray-400">Formule `Clamp(0.20 × Bêta, 0.10, 0.50)` basée sur Bêta {{ stock.beta ?? 1.0 }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -30,6 +30,18 @@ export interface Stock {
   target_multiple: number
   discount_rate: number
   risk_spread: number
+  market_cap: number | null
+  pe_trailing_raw: number | null
+  pe_forward_raw: number | null
+  margin_gross_raw: number | null
+  margin_operating_raw: number | null
+  margin_net_raw: number | null
+  margin_fcf_raw: number | null
+  total_cash: number | null
+  total_debt: number | null
+  free_cash_flow_raw: number | null
+  analyst_target_price: number | null
+  analyst_growth_estimate: number | null
   thesis: string | null
   created_at: string
   updated_at: string

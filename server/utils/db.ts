@@ -44,6 +44,18 @@ export function getDb(): Database.Database {
         target_multiple REAL DEFAULT 20.0,
         discount_rate REAL DEFAULT 0.10,
         risk_spread REAL DEFAULT 0.20,
+        market_cap REAL,
+        pe_trailing_raw REAL,
+        pe_forward_raw REAL,
+        margin_gross_raw REAL,
+        margin_operating_raw REAL,
+        margin_net_raw REAL,
+        margin_fcf_raw REAL,
+        total_cash REAL,
+        total_debt REAL,
+        free_cash_flow_raw REAL,
+        analyst_target_price REAL,
+        analyst_growth_estimate REAL,
         thesis TEXT,
         created_at TEXT,
         updated_at TEXT
@@ -73,6 +85,18 @@ export function getDb(): Database.Database {
     safeAddColumn('revenue_y5', 'REAL')
     safeAddColumn('target_multiple', 'REAL DEFAULT 20.0')
     safeAddColumn('risk_spread', 'REAL DEFAULT 0.20')
+    safeAddColumn('market_cap', 'REAL')
+    safeAddColumn('pe_trailing_raw', 'REAL')
+    safeAddColumn('pe_forward_raw', 'REAL')
+    safeAddColumn('margin_gross_raw', 'REAL')
+    safeAddColumn('margin_operating_raw', 'REAL')
+    safeAddColumn('margin_net_raw', 'REAL')
+    safeAddColumn('margin_fcf_raw', 'REAL')
+    safeAddColumn('total_cash', 'REAL')
+    safeAddColumn('total_debt', 'REAL')
+    safeAddColumn('free_cash_flow_raw', 'REAL')
+    safeAddColumn('analyst_target_price', 'REAL')
+    safeAddColumn('analyst_growth_estimate', 'REAL')
   }
 
   return _db

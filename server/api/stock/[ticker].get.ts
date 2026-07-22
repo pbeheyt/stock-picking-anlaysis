@@ -59,6 +59,19 @@ export default defineEventHandler(async (event) => {
     const beta = typeof rawBeta === 'number' && isFinite(rawBeta) && rawBeta > 0 ? parseFloat(rawBeta.toFixed(2)) : 1.0
     const defaultRiskSpread = parseFloat(clamp(0.20 * beta, 0.10, 0.50).toFixed(2))
 
+    // Raw metrics pour le Sourcing & Transparence
+    const marketCap = quote.marketCap ?? summaryDetail.marketCap ?? null
+    const peTrailingRaw = quote.trailingPE ?? summaryDetail.trailingPE ?? keyStats.trailingPE ?? null
+    const peForwardRaw = summaryDetail.forwardPE ?? keyStats.forwardPE ?? quote.forwardPE ?? null
+    const marginGrossRaw = financialData.grossMargins ?? null
+    const marginOperatingRaw = financialData.operatingMargins ?? null
+    const marginNetRaw = financialData.profitMargins ?? null
+    const freeCashFlowRaw = financialData.freeCashflow ?? null
+    const marginFcfRaw = (revenueTTM && freeCashFlowRaw && revenueTTM > 0) ? (freeCashFlowRaw / revenueTTM) : null
+    const totalCash = financialData.totalCash ?? null
+    const totalDebt = financialData.totalDebt ?? null
+    const analystTargetPrice = financialData.targetMeanPrice ?? summaryDetail.targetMeanPrice ?? null
+
     // 1. Croissance CA & Mode explicit vs CAGR
     let defaultGrowth = 0.10
     let growthSource = 'Modèle Standard (10%)'
@@ -73,6 +86,7 @@ export default defineEventHandler(async (event) => {
     const trend1y = earningsTrend.find((t: any) => t.period === '+1y')
     const trend5y = earningsTrend.find((t: any) => t.period === '+5y')
     const analystGrowth = trend1y?.revenueEstimate?.growth ?? trend1y?.growth ?? trend5y?.growth
+    const analystGrowthEstimate = typeof analystGrowth === 'number' && isFinite(analystGrowth) ? analystGrowth : null
 
     if (typeof analystGrowth === 'number' && isFinite(analystGrowth) && analystGrowth !== 0) {
       defaultGrowth = analystGrowth
@@ -125,8 +139,8 @@ export default defineEventHandler(async (event) => {
     let defaultTargetMultiple = 20.0
     let peSource = 'Modèle Standard (20x)'
 
-    const forwardPE = summaryDetail.forwardPE ?? keyStats.forwardPE ?? quote.forwardPE
-    const trailingPE = quote.trailingPE ?? summaryDetail.trailingPE ?? keyStats.trailingPE
+    const forwardPE = peForwardRaw
+    const trailingPE = peTrailingRaw
 
     if (typeof forwardPE === 'number' && isFinite(forwardPE) && forwardPE > 0) {
       defaultTargetMultiple = clamp(forwardPE, 5, 120)
@@ -151,25 +165,18 @@ export default defineEventHandler(async (event) => {
     let marginSource = 'Modèle Standard (20%)'
     let defaultMarginType: 'net_income' | 'fcf' = 'net_income'
 
-    const totalRev = revenueTTM
-    const fcf = financialData.freeCashflow
-    const fcfMargin = (totalRev && fcf && totalRev > 0) ? (fcf / totalRev) : null
-    const opMargin = financialData.operatingMargins
-    const netMargin = financialData.profitMargins
-    const grossMargin = financialData.grossMargins
-
-    if (fcfMargin !== null && isFinite(fcfMargin) && fcfMargin > 0) {
-      defaultMargin = clamp(fcfMargin, 0.01, 0.60)
+    if (marginFcfRaw !== null && isFinite(marginFcfRaw) && marginFcfRaw > 0) {
+      defaultMargin = clamp(marginFcfRaw, 0.01, 0.60)
       marginSource = 'Marge FCF TTM'
       defaultMarginType = 'fcf'
-    } else if (typeof opMargin === 'number' && isFinite(opMargin) && opMargin > 0) {
-      defaultMargin = clamp(opMargin, 0.01, 0.60)
+    } else if (typeof marginOperatingRaw === 'number' && isFinite(marginOperatingRaw) && marginOperatingRaw > 0) {
+      defaultMargin = clamp(marginOperatingRaw, 0.01, 0.60)
       marginSource = 'Marge Opératoire TTM'
-    } else if (typeof netMargin === 'number' && isFinite(netMargin) && netMargin > 0 && (opMargin === undefined || opMargin >= 0)) {
-      defaultMargin = clamp(netMargin, 0.01, 0.60)
+    } else if (typeof marginNetRaw === 'number' && isFinite(marginNetRaw) && marginNetRaw > 0 && (marginOperatingRaw === null || marginOperatingRaw >= 0)) {
+      defaultMargin = clamp(marginNetRaw, 0.01, 0.60)
       marginSource = 'Marge Nette TTM'
-    } else if (typeof grossMargin === 'number' && isFinite(grossMargin) && grossMargin > 0) {
-      defaultMargin = clamp(grossMargin * 0.45, 0.05, 0.50)
+    } else if (typeof marginGrossRaw === 'number' && isFinite(marginGrossRaw) && marginGrossRaw > 0) {
+      defaultMargin = clamp(marginGrossRaw * 0.45, 0.05, 0.50)
       marginSource = 'Cible Maturité (45% Marge Brute)'
     }
 
@@ -199,6 +206,18 @@ export default defineEventHandler(async (event) => {
       pe_source: peSource,
       default_discount_rate: defaultDiscountRate,
       default_risk_spread: defaultRiskSpread,
+      market_cap: marketCap,
+      pe_trailing_raw: peTrailingRaw,
+      pe_forward_raw: peForwardRaw,
+      margin_gross_raw: marginGrossRaw,
+      margin_operating_raw: marginOperatingRaw,
+      margin_net_raw: marginNetRaw,
+      margin_fcf_raw: marginFcfRaw,
+      total_cash: totalCash,
+      total_debt: totalDebt,
+      free_cash_flow_raw: freeCashFlowRaw,
+      analyst_target_price: analystTargetPrice,
+      analyst_growth_estimate: analystGrowthEstimate,
     }
   } catch (error: any) {
     if (error && typeof error === 'object' && error.statusCode && error.statusMessage && !error.response) {
