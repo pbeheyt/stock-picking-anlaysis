@@ -152,23 +152,52 @@ const currencySymbol = computed(() => {
   return code
 })
 
-// Calcul bidirectionnel des CA bruts par année
+// Calcul bidirectionnel des CA bruts par année selon le mode actif
 const yearRevenues = computed(() => {
   const r0 = props.stock.revenue_ttm ?? 0
-  const r1 = r0 * (1 + growthY1.value)
-  const r2 = r1 * (1 + growthY2.value)
-  const r3 = r2 * (1 + growthY3.value)
-  const r4 = r3 * (1 + growthY4.value)
-  const r5 = r4 * (1 + growthY5.value)
-  return [r1, r2, r3, r4, r5]
+  if (growthMode.value === 'cagr') {
+    const g = growth.value
+    const r1 = r0 * (1 + g)
+    const r2 = r1 * (1 + g)
+    const r3 = r2 * (1 + g)
+    const r4 = r3 * (1 + g)
+    const r5 = r4 * (1 + g)
+    return [r1, r2, r3, r4, r5]
+  } else {
+    const r1 = r0 * (1 + growthY1.value)
+    const r2 = r1 * (1 + growthY2.value)
+    const r3 = r2 * (1 + growthY3.value)
+    const r4 = r3 * (1 + growthY4.value)
+    const r5 = r4 * (1 + growthY5.value)
+    return [r1, r2, r3, r4, r5]
+  }
 })
+
+function getYearGrowth(yearIndex: number): number {
+  if (growthMode.value === 'cagr') {
+    return growth.value
+  }
+  if (yearIndex === 1) return growthY1.value
+  if (yearIndex === 2) return growthY2.value
+  if (yearIndex === 3) return growthY3.value
+  if (yearIndex === 4) return growthY4.value
+  return growthY5.value
+}
 
 function getScaledRevenue(yearIndex: number): number {
   const raw = yearRevenues.value[yearIndex - 1] ?? 0
   return Number((raw / scaleConfig.value.divisor).toFixed(2))
 }
 
+function formatScaledRevenue(rawAmount: number): string {
+  if (!rawAmount || isNaN(rawAmount)) return 'N/A'
+  const scaled = rawAmount / scaleConfig.value.divisor
+  return `${scaled.toFixed(2)} ${scaleConfig.value.label} ${currencySymbol.value}`
+}
+
 function updateGrowthFromScaledRevenue(yearIndex: number, newScaledValStr: string) {
+  if (growthMode.value === 'cagr') return
+
   const newScaledVal = parseFloat(newScaledValStr)
   if (isNaN(newScaledVal) || newScaledVal <= 0) return
 
@@ -429,7 +458,7 @@ function formatPercent(num: number | null): string {
         <div class="flex items-center gap-2 mb-2">
           <div class="h-5 w-5 rounded-md bg-indigo-500/15 flex items-center justify-center">
             <svg class="h-3 w-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
           <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Reverse DCF</span>
@@ -494,39 +523,12 @@ function formatPercent(num: number | null): string {
           </div>
         </div>
 
-        <!-- Mode CAGR -->
-        <div v-if="growthMode === 'cagr'" class="slider-group">
-          <div class="slider-header">
-            <div class="flex items-center gap-2 flex-wrap">
-              <label class="slider-label">Croissance CA / an (CAGR 5Y)</label>
-              <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                {{ stock.growth_source }}
-              </span>
-              <span v-if="isGrowthFallback" class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                [⚠️ DEFAULT]
-              </span>
-            </div>
-            <SmartValue :value="growth" type="percent" />
-          </div>
-          <input
-            v-model.number="growth"
-            type="range"
-            min="-0.3"
-            max="1.0"
-            step="0.005"
-            class="slider slider--emerald"
-          >
-          <div class="slider-bounds">
-            <span>-30%</span>
-            <span>100%</span>
-          </div>
-        </div>
-
-        <!-- Mode Explicit : Panneau Unifié (Grille 5Y & Synthèse Inférieure) -->
-        <div v-else class="space-y-4 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4">
+        <!-- SECTION HYPOTHÈSES CA (TOUJOURS VISIBLE AVEC PROJECTION DYNAMIQUE) -->
+        <div class="space-y-4 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4">
+          <!-- Header Source & Badge Fallback -->
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-              Trajectoire Sur-Mesure sur 5 Ans (Liaison % / CA Scalé)
+              {{ growthMode === 'cagr' ? 'Trajectory & Projection CA (Mode Lissé)' : 'Trajectoire Sur-Mesure sur 5 Ans' }}
             </span>
             <div class="flex items-center gap-2">
               <span v-if="stock.growth_source" class="source-pill bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
@@ -538,80 +540,114 @@ function formatPercent(num: number | null): string {
             </div>
           </div>
 
-          <!-- Grille 5 Ans (An 1 à An 5) -->
-          <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
-            <div v-for="i in 5" :key="i" class="rounded-xl border border-gray-800 bg-gray-950/80 p-3 space-y-3">
-              <!-- Header Année & % SmartValue -->
+          <!-- Mode Lissé : Slider Unique Principal -->
+          <div v-if="growthMode === 'cagr'" class="slider-group">
+            <div class="slider-header">
+              <label class="slider-label">Croissance CA / an (CAGR 5Y)</label>
+              <SmartValue :value="growth" type="percent" />
+            </div>
+            <input
+              v-model.number="growth"
+              type="range"
+              min="-0.3"
+              max="1.0"
+              step="0.005"
+              class="slider slider--emerald"
+            >
+            <div class="slider-bounds">
+              <span>-30%</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Aperçu / Modification des 5 Années (Toujours Visible) -->
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-1">
+            <div v-for="i in 5" :key="i" class="rounded-xl border border-gray-800 bg-gray-950/80 p-3 space-y-2">
+              <!-- Header Année & Badge % SmartValue -->
               <div class="flex items-center justify-between">
                 <span class="text-xs font-semibold text-gray-300">An {{ i }} {{ i === 1 ? '(NTM)' : '' }}</span>
-                <SmartValue :value="i === 1 ? growthY1 : i === 2 ? growthY2 : i === 3 ? growthY3 : i === 4 ? growthY4 : growthY5" type="percent" class="text-xs" />
+                <SmartValue :value="getYearGrowth(i)" type="percent" class="text-xs" />
               </div>
 
-              <!-- Slider Croissance -->
-              <input
-                v-if="i === 1"
-                v-model.number="growthY1"
-                type="range"
-                min="-0.3"
-                max="3.0"
-                step="0.005"
-                class="slider slider--emerald"
-              >
-              <input
-                v-else-if="i === 2"
-                v-model.number="growthY2"
-                type="range"
-                min="-0.3"
-                max="1.5"
-                step="0.005"
-                class="slider slider--emerald"
-              >
-              <input
-                v-else-if="i === 3"
-                v-model.number="growthY3"
-                type="range"
-                min="-0.3"
-                max="1.0"
-                step="0.005"
-                class="slider slider--emerald"
-              >
-              <input
-                v-else-if="i === 4"
-                v-model.number="growthY4"
-                type="range"
-                min="-0.3"
-                max="0.8"
-                step="0.005"
-                class="slider slider--emerald"
-              >
-              <input
-                v-else
-                v-model.number="growthY5"
-                type="range"
-                min="-0.3"
-                max="0.6"
-                step="0.005"
-                class="slider slider--emerald"
-              >
+              <!-- Mode Sur-Mesure : Slider Individuel -->
+              <template v-if="growthMode === 'explicit'">
+                <input
+                  v-if="i === 1"
+                  v-model.number="growthY1"
+                  type="range"
+                  min="-0.3"
+                  max="3.0"
+                  step="0.005"
+                  class="slider slider--emerald my-1"
+                >
+                <input
+                  v-else-if="i === 2"
+                  v-model.number="growthY2"
+                  type="range"
+                  min="-0.3"
+                  max="1.5"
+                  step="0.005"
+                  class="slider slider--emerald my-1"
+                >
+                <input
+                  v-else-if="i === 3"
+                  v-model.number="growthY3"
+                  type="range"
+                  min="-0.3"
+                  max="1.0"
+                  step="0.005"
+                  class="slider slider--emerald my-1"
+                >
+                <input
+                  v-else-if="i === 4"
+                  v-model.number="growthY4"
+                  type="range"
+                  min="-0.3"
+                  max="0.8"
+                  step="0.005"
+                  class="slider slider--emerald my-1"
+                >
+                <input
+                  v-else
+                  v-model.number="growthY5"
+                  type="range"
+                  min="-0.3"
+                  max="0.6"
+                  step="0.005"
+                  class="slider slider--emerald my-1"
+                >
 
-              <!-- Input CA Scalé & Propre -->
-              <div class="space-y-1">
-                <label class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-                  CA Projeté
-                </label>
-                <div class="relative flex items-center rounded-lg border border-gray-800 bg-gray-900 px-2.5 py-1.5 focus-within:border-emerald-500">
-                  <input
-                    :value="getScaledRevenue(i)"
-                    type="number"
-                    step="0.1"
-                    class="w-full bg-transparent font-mono text-xs font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    @input="updateGrowthFromScaledRevenue(i, ($event.target as HTMLInputElement).value)"
-                  >
-                  <span class="ml-1 select-none font-mono text-xs font-semibold text-gray-500 shrink-0">
-                    {{ scaleConfig.label }} {{ currencySymbol }}
-                  </span>
+                <!-- Input CA Scalé (Éditable en Mode Sur-Mesure) -->
+                <div class="space-y-1">
+                  <label class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+                    CA Projeté
+                  </label>
+                  <div class="relative flex items-center rounded-lg border border-gray-800 bg-gray-900 px-2.5 py-1.5 focus-within:border-emerald-500">
+                    <input
+                      :value="getScaledRevenue(i)"
+                      type="number"
+                      step="0.1"
+                      class="w-full bg-transparent font-mono text-xs font-bold text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      @input="updateGrowthFromScaledRevenue(i, ($event.target as HTMLInputElement).value)"
+                    >
+                    <span class="ml-1 select-none font-mono text-xs font-semibold text-gray-500 shrink-0">
+                      {{ scaleConfig.label }} {{ currencySymbol }}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </template>
+
+              <!-- Mode Lissé : Read-only Scaled Revenue Display -->
+              <template v-else>
+                <div class="pt-1 space-y-1">
+                  <span class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+                    CA Projeté
+                  </span>
+                  <div class="font-mono text-xs font-bold text-white">
+                    {{ formatScaledRevenue(yearRevenues[i - 1]) }}
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
 
@@ -623,7 +659,7 @@ function formatPercent(num: number | null): string {
                   🎯 Chiffre d'Affaires Final Cible (An 5)
                 </span>
                 <p class="font-mono text-2xl font-extrabold text-white mt-1">
-                  {{ formatLargeNumber(scenarios.base.revenue5Y) }}
+                  {{ formatScaledRevenue(yearRevenues[4]) }}
                 </p>
               </div>
               <div>
