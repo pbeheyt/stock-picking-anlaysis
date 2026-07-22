@@ -135,60 +135,42 @@ export default defineEventHandler(async (event) => {
       g5 = defaultGrowth
     }
 
-    // 2. Determination de la Nature de Marge (margin_type) FIRST
-    let defaultMargin = 0.20
-    let marginSource = 'Modèle Standard (20%)'
-    let defaultMarginType: 'net_income' | 'fcf' = 'net_income'
+    // 2. Extraction Marge Nette (profitMargins)
+    let defaultMargin = 0.15
+    let marginSource = 'Modèle Standard (15%)'
+    const defaultMarginType = 'net_income'
 
-    if (marginFcfRaw !== null && isFinite(marginFcfRaw) && marginFcfRaw > 0) {
-      defaultMargin = clamp(marginFcfRaw, 0.01, 0.60)
-      marginSource = 'Marge FCF TTM'
-      defaultMarginType = 'fcf'
+    if (typeof marginNetRaw === 'number' && isFinite(marginNetRaw) && marginNetRaw > 0) {
+      defaultMargin = clamp(marginNetRaw, 0.01, 0.60)
+      marginSource = 'Marge Nette TTM'
     } else if (typeof marginOperatingRaw === 'number' && isFinite(marginOperatingRaw) && marginOperatingRaw > 0) {
       defaultMargin = clamp(marginOperatingRaw, 0.01, 0.60)
       marginSource = 'Marge Opératoire TTM'
-    } else if (typeof marginNetRaw === 'number' && isFinite(marginNetRaw) && marginNetRaw > 0) {
-      defaultMargin = clamp(marginNetRaw, 0.01, 0.60)
-      marginSource = 'Marge Nette TTM'
     } else if (typeof marginGrossRaw === 'number' && isFinite(marginGrossRaw) && marginGrossRaw > 0) {
       defaultMargin = clamp(marginGrossRaw * 0.45, 0.05, 0.50)
       marginSource = 'Cible Maturité (45% Marge Brute)'
     }
 
-    // 3. Selection du Multiple Cible STRICTEMENT Cohérent avec defaultMarginType
+    // 3. Multiple P/E (Forward P/E ou Trailing P/E)
     let defaultTargetMultiple = 20.0
     let peSource = 'Modèle Standard (20x)'
 
-    if (defaultMarginType === 'fcf') {
-      // En mode FCF: on exige un ratio P/FCF (MarketCap / FCF TTM)
-      if (typeof marketCap === 'number' && marketCap > 0 && typeof freeCashFlowRaw === 'number' && freeCashFlowRaw > 0) {
-        const realPFCF = marketCap / freeCashFlowRaw
-        defaultTargetMultiple = clamp(realPFCF, 5, 120)
-        peSource = 'Ratio P/FCF TTM Réel (MarketCap / FCF)'
-      } else {
-        const gComp = growthMode === 'explicit' ? g1 : defaultGrowth
-        defaultTargetMultiple = gComp > 0.30 ? 35.0 : 25.0
-        peSource = 'Multiple P/FCF Cible (Non rentable)'
-      }
+    if (typeof peForwardRaw === 'number' && isFinite(peForwardRaw) && peForwardRaw > 0) {
+      defaultTargetMultiple = clamp(peForwardRaw, 5, 120)
+      peSource = 'Consensus P/E Forward'
+    } else if (typeof peTrailingRaw === 'number' && isFinite(peTrailingRaw) && peTrailingRaw > 0) {
+      defaultTargetMultiple = clamp(peTrailingRaw, 5, 120)
+      peSource = 'P/E Trailing (TTM)'
     } else {
-      // En mode Net Income: P/E Forward ou P/E Trailing
-      if (typeof peForwardRaw === 'number' && isFinite(peForwardRaw) && peForwardRaw > 0) {
-        defaultTargetMultiple = clamp(peForwardRaw, 5, 120)
-        peSource = 'Consensus P/E Forward'
-      } else if (typeof peTrailingRaw === 'number' && isFinite(peTrailingRaw) && peTrailingRaw > 0) {
-        defaultTargetMultiple = clamp(peTrailingRaw, 5, 120)
-        peSource = 'P/E Trailing (TTM)'
+      const gComp = growthMode === 'explicit' ? g1 : defaultGrowth
+      if (gComp > 0.30) {
+        defaultTargetMultiple = 35.0
+      } else if (gComp > 0.15) {
+        defaultTargetMultiple = 25.0
       } else {
-        const gComp = growthMode === 'explicit' ? g1 : defaultGrowth
-        if (gComp > 0.30) {
-          defaultTargetMultiple = 35.0
-        } else if (gComp > 0.15) {
-          defaultTargetMultiple = 25.0
-        } else {
-          defaultTargetMultiple = 18.0
-        }
-        peSource = 'Profil de Croissance (Non rentable)'
+        defaultTargetMultiple = 18.0
       }
+      peSource = 'Profil de Croissance (Non rentable)'
     }
 
     const defaultDiscountRate = 0.10

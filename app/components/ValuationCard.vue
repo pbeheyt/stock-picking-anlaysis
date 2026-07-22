@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Stock, GrowthMode, MarginType } from '~/types/database.types'
+import type { Stock, GrowthMode } from '~/types/database.types'
 import {
   computeScenarios,
   computeReverseDCF,
@@ -26,7 +26,6 @@ const growthY2 = ref(props.stock.growth_y2 ?? 0.10)
 const growthY3 = ref(props.stock.growth_y3 ?? 0.10)
 const growthY4 = ref(props.stock.growth_y4 ?? 0.10)
 const growthY5 = ref(props.stock.growth_y5 ?? 0.10)
-const marginType = ref<MarginType>(props.stock.margin_type || 'net_income')
 const margin = ref(props.stock.projected_margin ?? 0.20)
 const targetMultiple = ref(props.stock.target_multiple ?? 20.0)
 const discountRate = ref(props.stock.discount_rate ?? 0.10)
@@ -40,7 +39,6 @@ watch(() => props.stock, (newStock) => {
   growthY3.value = newStock.growth_y3 ?? 0.10
   growthY4.value = newStock.growth_y4 ?? 0.10
   growthY5.value = newStock.growth_y5 ?? 0.10
-  marginType.value = newStock.margin_type || 'net_income'
   margin.value = newStock.projected_margin ?? 0.20
   targetMultiple.value = newStock.target_multiple ?? 20.0
   discountRate.value = newStock.discount_rate ?? 0.10
@@ -58,7 +56,7 @@ const valuationInputs = computed<ValuationInputs>(() => ({
   growthY3: growthY3.value,
   growthY4: growthY4.value,
   growthY5: growthY5.value,
-  marginType: marginType.value,
+  marginType: 'net_income',
   margin: margin.value,
   targetMultiple: targetMultiple.value,
   discountRate: discountRate.value,
@@ -150,7 +148,7 @@ function debouncedSave() {
       revenue_y3: yearRevenues.value[2],
       revenue_y4: yearRevenues.value[3],
       revenue_y5: yearRevenues.value[4],
-      margin_type: marginType.value,
+      margin_type: 'net_income',
       projected_margin: margin.value,
       target_multiple: targetMultiple.value,
       discount_rate: discountRate.value,
@@ -160,7 +158,7 @@ function debouncedSave() {
   }, 800)
 }
 
-watch([growthMode, growth, growthY1, growthY2, growthY3, growthY4, growthY5, marginType, margin, targetMultiple, discountRate, riskSpread], () => {
+watch([growthMode, growth, growthY1, growthY2, growthY3, growthY4, growthY5, margin, targetMultiple, discountRate, riskSpread], () => {
   debouncedSave()
 })
 
@@ -223,7 +221,7 @@ function formatMOS(num: number): string {
           <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
-          Sourcing & Fondamentaux Bruts
+          Sourcing & Données Brutes
         </button>
       </div>
 
@@ -381,7 +379,7 @@ function formatMOS(num: number): string {
         <div class="flex items-center gap-2 mb-2">
           <div class="h-5 w-5 rounded-md bg-indigo-500/15 flex items-center justify-center">
             <svg class="h-3 w-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
           <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Reverse DCF</span>
@@ -566,33 +564,11 @@ function formatMOS(num: number): string {
           </div>
         </div>
 
-        <!-- Marge -->
+        <!-- Marge Nette Cible (%) -->
         <div class="slider-group">
           <div class="slider-header">
             <div class="flex items-center gap-2 flex-wrap">
-              <label class="slider-label">
-                {{ marginType === 'net_income' ? 'Marge Nette (Net Income)' : 'Marge FCF (Free Cash Flow)' }}
-              </label>
-
-              <div class="inline-flex rounded-md bg-gray-950 p-0.5 border border-gray-800">
-                <button
-                  type="button"
-                  class="px-2 py-0.5 text-[10px] font-medium rounded transition"
-                  :class="marginType === 'net_income' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
-                  @click="marginType = 'net_income'"
-                >
-                  Marge Nette (P/E)
-                </button>
-                <button
-                  type="button"
-                  class="px-2 py-0.5 text-[10px] font-medium rounded transition"
-                  :class="marginType === 'fcf' ? 'bg-sky-600 text-white font-semibold' : 'text-gray-400 hover:text-white'"
-                  @click="marginType = 'fcf'"
-                >
-                  Marge FCF (P/FCF)
-                </button>
-              </div>
-
+              <label class="slider-label">Marge Nette Cible (%)</label>
               <span v-if="stock.margin_source" class="source-pill bg-sky-500/10 text-sky-400 border-sky-500/20">
                 {{ stock.margin_source }}
               </span>
@@ -613,13 +589,11 @@ function formatMOS(num: number): string {
           </div>
         </div>
 
-        <!-- Multiple -->
+        <!-- Multiple de Sortie (P/E) -->
         <div class="slider-group">
           <div class="slider-header">
             <div class="flex items-center gap-2 flex-wrap">
-              <label class="slider-label">
-                Multiple de Sortie ({{ marginType === 'net_income' ? 'P/E' : 'P/FCF' }})
-              </label>
+              <label class="slider-label">Multiple de Sortie (P/E)</label>
               <span v-if="stock.pe_source" class="source-pill bg-violet-500/10 text-violet-400 border-violet-500/20">
                 {{ stock.pe_source }}
               </span>
@@ -815,14 +789,14 @@ function formatMOS(num: number): string {
                 <td class="px-3 py-2.5 text-gray-400">{{ stock.growth_source || 'Consensus NTM / Historique TTM' }}</td>
               </tr>
               <tr>
-                <td class="px-3 py-2.5 font-medium text-white">Marge Cible</td>
-                <td class="px-3 py-2.5 font-mono text-sky-400">{{ formatPercent(stock.projected_margin) }} ({{ stock.margin_type === 'fcf' ? 'FCF' : 'Nette' }})</td>
-                <td class="px-3 py-2.5 text-gray-400">{{ stock.margin_source || 'Marge FCF / Opératoire / Nette TTM' }}</td>
+                <td class="px-3 py-2.5 font-medium text-white">Marge Nette Cible</td>
+                <td class="px-3 py-2.5 font-mono text-sky-400">{{ formatPercent(stock.projected_margin) }}</td>
+                <td class="px-3 py-2.5 text-gray-400">{{ stock.margin_source || 'Marge Nette TTM' }}</td>
               </tr>
               <tr>
-                <td class="px-3 py-2.5 font-medium text-white">Multiple Cible</td>
-                <td class="px-3 py-2.5 font-mono text-violet-400">{{ stock.target_multiple.toFixed(1) }}x ({{ stock.margin_type === 'fcf' ? 'P/FCF' : 'P/E' }})</td>
-                <td class="px-3 py-2.5 text-gray-400">{{ stock.pe_source || 'P/E Forward / Trailing' }}</td>
+                <td class="px-3 py-2.5 font-medium text-white">Multiple Cible (P/E)</td>
+                <td class="px-3 py-2.5 font-mono text-violet-400">{{ stock.target_multiple.toFixed(1) }}x</td>
+                <td class="px-3 py-2.5 text-gray-400">{{ stock.pe_source || 'Consensus P/E Forward / Trailing' }}</td>
               </tr>
               <tr>
                 <td class="px-3 py-2.5 font-medium text-white">Incertitude Bear/Bull</td>
