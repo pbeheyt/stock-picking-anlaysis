@@ -24,4 +24,4 @@ logs
 !.env.example
 
 # Ignore codebase markdown files
-codebase_*.md
+codebase*.md
