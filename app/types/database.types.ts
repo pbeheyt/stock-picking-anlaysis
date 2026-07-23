@@ -21,6 +21,35 @@ export interface AuditData {
   discount_rate?: AuditCategory
 }
 
+export interface QualitativeFact {
+  text: string
+  sentiment: 'positive' | 'negative'
+  source_name: string | null
+  source_url: string | null
+  score: number
+  reasoning: string
+}
+
+export interface BrickEvaluation {
+  score: number
+  justification: string
+  key_takeaways: string[]
+}
+
+
+export interface QualitativeData {
+  raw_report: string
+  analyzed_at: string
+  evaluations: {
+    moat: BrickEvaluation
+    growth: BrickEvaluation
+    financials: BrickEvaluation
+    management: BrickEvaluation
+  }
+  quality_score: number
+  tier: 'S' | 'A' | 'B' | 'C' | 'F'
+}
+
 export interface Stock {
   id: string
   ticker: string
@@ -66,6 +95,8 @@ export interface Stock {
   analyst_growth_estimate: number | null
   analyst_count?: number | null
   audit_data?: AuditData | string | null
+  qualitative_data?: QualitativeData | string | null
+  regression_fair_price?: number | null
   thesis: string | null
   created_at: string
   updated_at: string
@@ -73,3 +104,5 @@ export interface Stock {
   margin_source?: string
   pe_source?: string
 }
+
+

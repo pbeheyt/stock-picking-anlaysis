@@ -107,6 +107,10 @@ export function getDb(): Database.Database {
     safeAddColumn('analyst_growth_estimate', 'REAL')
     safeAddColumn('analyst_count', 'INTEGER')
     safeAddColumn('audit_data', 'TEXT')
+    safeAddColumn('qualitative_data', 'TEXT')
+    safeAddColumn('regression_fair_price', 'REAL')
+
+
 
     try {
       _db?.exec("UPDATE stocks SET status = 'watchlist' WHERE status IS NULL OR status NOT IN ('watchlist', 'portfolio')")

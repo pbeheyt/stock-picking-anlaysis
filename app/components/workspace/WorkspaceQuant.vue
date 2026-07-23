@@ -15,6 +15,7 @@ const props = defineProps<{
   ticker: string
   currency?: string
   currentPrice?: number | null
+  stockId?: string
 }>()
 
 const isLoading = ref(true)
@@ -27,6 +28,24 @@ const dividendRate = ref<number | null>(null)
 const minIndex = ref(0)
 const maxIndex = ref(0)
 const activePreset = ref<'1Y' | '3Y' | '5Y' | '10Y' | 'ALL'>('ALL')
+
+let saveTimer: NodeJS.Timeout | null = null
+
+const saveRegressionPriceToDb = (price: number) => {
+  if (!props.stockId || !price || price <= 0) return
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(async () => {
+    try {
+      await $fetch(`/api/stocks/${props.stockId}`, {
+        method: 'PUT',
+        body: { regression_fair_price: price },
+      })
+    } catch (err) {
+      console.error('Erreur sauvegarde regression_fair_price:', err)
+    }
+  }, 600)
+}
+
 
 const chartRef = ref<HTMLDivElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
@@ -84,6 +103,17 @@ const quantResult = computed<QuantAnalysisResult | null>(() => {
   if (!filteredHistory.value.length) return null
   return calculateQuantAnalysis(filteredHistory.value, rawHistory.value)
 })
+
+watch(
+  () => quantResult.value?.theoreticalPrice,
+  (newPrice) => {
+    if (newPrice && newPrice > 0) {
+      saveRegressionPriceToDb(newPrice)
+    }
+  },
+  { immediate: true }
+)
+
 
 const findClosestDateIndex = (dateStr: string): number => {
   if (!rawHistory.value.length || !dateStr) return 0

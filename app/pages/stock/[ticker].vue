@@ -859,41 +859,21 @@ const parsedAuditData = computed<AuditData | null>(() => {
             :ticker="stock.ticker"
             :currency="stock.currency"
             :current-price="stock.current_price"
+            :stock-id="stock.id"
           />
         </div>
 
 
+
         <!-- TAB 3: DEEP RESEARCH QUALITATIVE -->
-        <div v-else-if="activeTab === 'research'" class="space-y-6">
-          <div class="rounded-2xl border border-dashed border-gray-800 bg-gray-950/50 p-12 text-center space-y-6">
-            <div class="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-2xl font-bold">
-              🧠
-            </div>
-
-            <div class="max-w-md mx-auto space-y-2">
-              <span class="inline-flex items-center rounded-full bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-400 border border-purple-500/30">
-                Phase 3 — En développement
-              </span>
-              <h3 class="text-xl font-bold text-white">Deep Research Qualitative & AI Agent</h3>
-              <p class="text-xs text-gray-400 leading-relaxed">
-                Parsing automatique des rapports SEC 10-K/10-Q, évaluation du Moat concurrentiel, sentiment analysis du management et matrice de risques qualitative.
-              </p>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-2 max-w-4xl mx-auto pt-6 opacity-40">
-              <div class="h-40 rounded-xl bg-gray-900 border border-gray-800 animate-pulse p-5 space-y-4">
-                <div class="h-4 w-1/3 bg-gray-800 rounded" />
-                <div class="h-3 w-full bg-gray-800 rounded" />
-                <div class="h-3 w-4/5 bg-gray-800 rounded" />
-              </div>
-              <div class="h-40 rounded-xl bg-gray-900 border border-gray-800 animate-pulse p-5 space-y-4">
-                <div class="h-4 w-1/3 bg-gray-800 rounded" />
-                <div class="h-3 w-full bg-gray-800 rounded" />
-                <div class="h-3 w-4/5 bg-gray-800 rounded" />
-              </div>
-            </div>
-          </div>
+        <div v-else-if="activeTab === 'research'">
+          <WorkspaceResearch
+            :ticker="tickerParam"
+            :stock-name="stock.name || stock.ticker"
+            :stock-id="stock.id"
+          />
         </div>
+
 
         <!-- TAB 4: SOURCING & AUDIT TRAIL -->
         <div v-else-if="activeTab === 'sourcing'" class="space-y-8">

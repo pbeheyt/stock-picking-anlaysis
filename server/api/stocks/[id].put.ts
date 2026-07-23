@@ -50,6 +50,7 @@ export default defineEventHandler(async (event) => {
       risk_spread = ?,
       thesis = ?,
       status = ?,
+      regression_fair_price = ?,
       updated_at = ?
     WHERE id = ?
   `)
@@ -76,9 +77,11 @@ export default defineEventHandler(async (event) => {
     body.risk_spread ?? existing.risk_spread,
     body.thesis ?? existing.thesis,
     body.status ?? existing.status,
+    body.regression_fair_price ?? existing.regression_fair_price,
     now,
     id
   )
+
 
   return db.prepare('SELECT * FROM stocks WHERE id = ?').get(id)
 })
