@@ -43,18 +43,21 @@ GRILLE DE NOTATION RUBRIC (Entiers de 0 à 10) :
 POUR CHAQUE DIMENSION, FOURNIS :
 1. "score" : Un nombre ENTIER de 0 à 10 (sans aucune décimale, ex: 7, 8, 5, 9) basé STRICTEMENT sur la grille d'ancrage.
 2. "justification" : Un PARAGRAPHE D'ANALYSE INSTITUTIONNEL DÉTAILLÉ (4 à 6 phrases riches en français). Explique de manière approfondie et nuancée les forces, les chiffres clés, et les réserves qui justifient cette note.
-3. "key_takeaways" : 4 à 7 faits ou métriques clés majeurs extraits du texte (reprends les chiffres clés et sources si mentionnés).
+3. "key_takeaways" : 4 à 7 faits ou métriques clés majeurs extraits du texte.
+   - Précède CHAQUE fait par [+] s'il s'agit d'un point fort/opportunité, ou [-] s'il s'agit d'un risque/faiblesse.
+   - CONSERVE STRICTEMENT les liens markdown d'origine de type [Nom Source](http...) associés au fait si présents dans le rapport brut.
 
 FORMAT JSON EXCLUSIF ATTENDU :
 {
   "moat": {
     "score": 7,
-    "justification": "La société dispose d'un fort pricing power sur son marché de niche grâce à sa technologie propriétaire de refroidissement liquide. Toutefois, l'absence de brevets bloquants au niveau mondial et la concurrence d'acteurs de plus grande taille incitent à la prudence quant à la pérennité séculaire de cette douve.",
+    "justification": "La société dispose d'un fort pricing power sur son marché de niche...",
     "key_takeaways": [
-      "Technologie de refroidissement liquide propriétaire brevetée en Europe",
-      "Forte dépendance à un petit nombre de clients grands comptes"
+      "[+] Technologie de refroidissement liquide brevetée. [Boursorama](https://boursorama.com)",
+      "[-] Forte dépendance à un petit nombre de clients grands comptes. [TradingSat](https://tradingsat.com)"
     ]
   },
+
   "growth": {
     "score": 8,
     "justification": "...",

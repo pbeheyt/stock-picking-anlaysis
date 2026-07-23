@@ -133,7 +133,21 @@ const activeTierConfig = computed(() => {
   if (!data.value) return null
   return getTierConfig(data.value.tier)
 })
+
+const isPositiveTakeaway = (text: string) => text.trim().startsWith('[+]')
+const isNegativeTakeaway = (text: string) => text.trim().startsWith('[-]')
+
+const formatTakeawayHtml = (text: string) => {
+  let str = text.replace(/^\[\+\]\s*/, '').replace(/^\[-\]\s*/, '').trim()
+  // Remplacer [Nom Source](url) par un vrai lien cliquable HTML
+  str = str.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 text-emerald-400 hover:underline font-mono text-[11px] ml-1 font-semibold">🔗 $1</a>'
+  )
+  return str
+}
 </script>
+
 
 <template>
   <div class="space-y-8 relative">
@@ -395,17 +409,33 @@ const activeTierConfig = computed(() => {
         <!-- Key Takeaways (Points Clés Saillants) -->
         <div v-if="data.evaluations[key]?.key_takeaways?.length" class="space-y-2">
           <div class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Faits Clés Saillants</div>
-          <ul class="space-y-1.5 pl-2">
+          <ul class="space-y-2 pl-1">
             <li
               v-for="(takeaway, idx) in data.evaluations[key].key_takeaways"
               :key="idx"
-              class="text-xs text-gray-200 flex items-start gap-2"
+              class="text-xs text-gray-200 flex items-start gap-2.5"
             >
-              <span class="text-emerald-400 shrink-0 mt-0.5">•</span>
-              <span>{{ takeaway }}</span>
+              <!-- Pastille / Badge Sentiment -->
+              <span
+                v-if="isPositiveTakeaway(takeaway)"
+                class="rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold px-1.5 py-0.5 shrink-0 mt-0.5"
+              >
+                +
+              </span>
+              <span
+                v-else-if="isNegativeTakeaway(takeaway)"
+                class="rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-mono font-bold px-1.5 py-0.5 shrink-0 mt-0.5"
+              >
+                -
+              </span>
+              <span v-else class="text-gray-500 shrink-0 mt-0.5">•</span>
+
+              <!-- Texte avec liens cliquables 🔗 -->
+              <span class="leading-relaxed" v-html="formatTakeawayHtml(takeaway)"></span>
             </li>
           </ul>
         </div>
+
 
         <!-- Paragraphe d'Analyse Institutionnel -->
         <div class="rounded-xl border border-gray-800/80 bg-gray-900/60 p-4 space-y-2">
