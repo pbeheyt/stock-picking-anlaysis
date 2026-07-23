@@ -5,7 +5,8 @@ export default defineEventHandler(async (event) => {
   const ticker = getRouterParam(event, 'ticker')?.toUpperCase()
   if (!ticker) throw createError({ statusCode: 400, statusMessage: 'Ticker requis' })
 
-  const body = await readBody<{ raw_report: string; model?: 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'moonshotai/kimi-k3' }>(event)
+  const body = await readBody<{ raw_report: string; model?: 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'qwen/qwen3.7-plus' | string }>(event)
+
   if (!body?.raw_report?.trim()) {
     throw createError({ statusCode: 400, statusMessage: 'Rapport brut requis' })
   }

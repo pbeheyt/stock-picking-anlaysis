@@ -23,7 +23,8 @@ const copyFeedback = ref(false)
 
 const showImportDrawer = ref(false)
 const rawReportInput = ref('')
-const selectedModel = ref<'deepseek-v4-flash' | 'moonshotai/kimi-k3'>('deepseek-v4-flash')
+const selectedModel = ref<'deepseek-v4-flash' | 'qwen/qwen3.7-plus'>('deepseek-v4-flash')
+
 
 const data = ref<QualitativeData | null>(null)
 
@@ -294,14 +295,15 @@ const activeTierConfig = computed(() => {
           <button
             type="button"
             class="flex items-center justify-center gap-2 rounded-xl p-3 text-xs font-bold border transition cursor-pointer"
-            :class="selectedModel === 'moonshotai/kimi-k3'
+            :class="selectedModel === 'qwen/qwen3.7-plus'
               ? 'bg-purple-950/80 border-purple-500 text-purple-300 shadow-md'
               : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'"
-            @click="selectedModel = 'moonshotai/kimi-k3'"
+            @click="selectedModel = 'qwen/qwen3.7-plus'"
           >
-            <span>🌙</span>
-            <span>Kimi K3 (OpenRouter)</span>
+            <span>🌐</span>
+            <span>Qwen 3.7 Plus (OpenRouter)</span>
           </button>
+
         </div>
       </div>
 

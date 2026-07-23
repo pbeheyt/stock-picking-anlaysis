@@ -6,12 +6,13 @@ interface AiMessage {
 }
 
 interface AiCompletionOptions {
-  model: 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'moonshotai/kimi-k3'
+  model: 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'qwen/qwen3.7-plus' | string
   messages: AiMessage[]
   temperature?: number
   max_tokens?: number
   response_format?: { type: 'json_object' }
 }
+
 
 export function repairJson(jsonString: string): string {
   let str = (jsonString || '').trim()
@@ -88,8 +89,8 @@ export function parseAiJson<T = any>(text: string): T {
 export async function aiComplete(options: AiCompletionOptions): Promise<string> {
   const { model, messages, temperature = 0.0, max_tokens = 8192, response_format } = options
 
-  // Si le modèle est Kimi K3 (via OpenRouter)
-  if (model === 'moonshotai/kimi-k3') {
+  // Si le modèle est sur OpenRouter (ex: qwen/qwen3.7-plus)
+  if (model.includes('/') || model.startsWith('qwen')) {
     const apiKey = process.env.OPENROUTER_API_KEY
     if (!apiKey) throw new Error('OPENROUTER_API_KEY non configurée dans .env')
 
@@ -101,7 +102,7 @@ export async function aiComplete(options: AiCompletionOptions): Promise<string> 
         'Content-Type': 'application/json',
       },
       body: {
-        model: 'moonshotai/kimi-k3',
+        model,
         messages,
         temperature,
         max_tokens,
@@ -110,6 +111,7 @@ export async function aiComplete(options: AiCompletionOptions): Promise<string> 
     })
     return res.choices?.[0]?.message?.content || ''
   }
+
 
   // Modèles DeepSeek API directe
   const apiKey = process.env.DEEPSEEK_API_KEY
