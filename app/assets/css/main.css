@@ -216,3 +216,18 @@
 .slider:focus-visible::-moz-range-thumb {
   @apply outline-2 outline-offset-2 outline-white;
 }
+
+/* ═══════════════════════════════════════════
+   Number Inputs Reset (No Spinners)
+   ═══════════════════════════════════════════ */
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

@@ -102,40 +102,44 @@ export function computeScenarios(inputs: ValuationInputs): ScenarioResults {
   const base = computeValuation(inputs)
   const spread = inputs.riskSpread
 
+  // Facteur ajusté pour éviter la sur-composition sur 5 ans ((1-spread)^6)
+  const growthFactor = spread / 5
+  const multipleFactor = spread / 2
+
   let bearInputs: ValuationInputs
   let bullInputs: ValuationInputs
 
   if (inputs.growthMode === 'explicit') {
     bearInputs = {
       ...inputs,
-      growthY1: inputs.growthY1 * (1 - spread),
-      growthY2: inputs.growthY2 * (1 - spread),
-      growthY3: inputs.growthY3 * (1 - spread),
-      growthY4: inputs.growthY4 * (1 - spread),
-      growthY5: inputs.growthY5 * (1 - spread),
-      targetMultiple: inputs.targetMultiple * (1 - spread),
+      growthY1: inputs.growthY1 * (1 - growthFactor),
+      growthY2: inputs.growthY2 * (1 - growthFactor),
+      growthY3: inputs.growthY3 * (1 - growthFactor),
+      growthY4: inputs.growthY4 * (1 - growthFactor),
+      growthY5: inputs.growthY5 * (1 - growthFactor),
+      targetMultiple: inputs.targetMultiple * (1 - multipleFactor),
     }
 
     bullInputs = {
       ...inputs,
-      growthY1: inputs.growthY1 * (1 + spread),
-      growthY2: inputs.growthY2 * (1 + spread),
-      growthY3: inputs.growthY3 * (1 + spread),
-      growthY4: inputs.growthY4 * (1 + spread),
-      growthY5: inputs.growthY5 * (1 + spread),
-      targetMultiple: inputs.targetMultiple * (1 + spread),
+      growthY1: inputs.growthY1 * (1 + growthFactor),
+      growthY2: inputs.growthY2 * (1 + growthFactor),
+      growthY3: inputs.growthY3 * (1 + growthFactor),
+      growthY4: inputs.growthY4 * (1 + growthFactor),
+      growthY5: inputs.growthY5 * (1 + growthFactor),
+      targetMultiple: inputs.targetMultiple * (1 + multipleFactor),
     }
   } else {
     bearInputs = {
       ...inputs,
-      growth: inputs.growth * (1 - spread),
-      targetMultiple: inputs.targetMultiple * (1 - spread),
+      growth: inputs.growth * (1 - growthFactor),
+      targetMultiple: inputs.targetMultiple * (1 - multipleFactor),
     }
 
     bullInputs = {
       ...inputs,
-      growth: inputs.growth * (1 + spread),
-      targetMultiple: inputs.targetMultiple * (1 + spread),
+      growth: inputs.growth * (1 + growthFactor),
+      targetMultiple: inputs.targetMultiple * (1 + multipleFactor),
     }
   }
 

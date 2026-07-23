@@ -237,6 +237,48 @@ const revenueProjections = computed(() => {
   }
 })
 
+// Handlers d'édition bidirectionnelle CA ($) <-> Croissance (%)
+const updateGrowthY = (yearIndex: number, newRate: number) => {
+  if (growthMode.value === 'cagr') {
+    growth.value = newRate
+  } else {
+    if (yearIndex === 0) growthY1.value = newRate
+    else if (yearIndex === 1) growthY2.value = newRate
+    else if (yearIndex === 2) growthY3.value = newRate
+    else if (yearIndex === 3) growthY4.value = newRate
+    else if (yearIndex === 4) growthY5.value = newRate
+  }
+}
+
+const updateRevenueForYear = (yearIndex: number, newRevenueVal: number) => {
+  const baseRev = stock.value?.revenue_ttm ?? 0
+  if (newRevenueVal <= 0 || isNaN(newRevenueVal)) return
+
+  let prevRev = baseRev
+  if (yearIndex > 0) {
+    const currentProjections = revenueProjections.value
+    if (currentProjections[yearIndex - 1]) {
+      prevRev = currentProjections[yearIndex - 1].revenue
+    }
+  }
+
+  if (prevRev > 0) {
+    const impliedGrowth = (newRevenueVal / prevRev) - 1
+    if (growthMode.value === 'cagr') {
+      if (baseRev > 0) {
+        const impliedCagr = Math.pow(newRevenueVal / baseRev, 1 / (yearIndex + 1)) - 1
+        growth.value = impliedCagr
+      }
+    } else {
+      if (yearIndex === 0) growthY1.value = impliedGrowth
+      else if (yearIndex === 1) growthY2.value = impliedGrowth
+      else if (yearIndex === 2) growthY3.value = impliedGrowth
+      else if (yearIndex === 3) growthY4.value = impliedGrowth
+      else if (yearIndex === 4) growthY5.value = impliedGrowth
+    }
+  }
+}
+
 // Dual-Track Spectrum Axis Calculations
 const spectrumData = computed(() => {
   const price = stock.value?.current_price ?? 0
@@ -469,47 +511,89 @@ const parsedAuditData = computed<AuditData | null>(() => {
               </label>
             </div>
 
-            <!-- Sliders Croissance -->
+            <!-- Sliders Croissance & EditableValue -->
             <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
               <div v-if="growthMode === 'cagr'" class="col-span-full space-y-2 max-w-xl">
-                <div class="flex justify-between text-xs">
+                <div class="flex items-center justify-between text-xs">
                   <span class="font-medium text-gray-400">Taux de Croissance Annuel CAGR (g)</span>
-                  <span class="font-bold text-emerald-400">{{ (growth * 100).toFixed(1) }}%</span>
+                  <EditableValue v-model="growth" type="percent" :is-decimal="true" :step="0.1" />
                 </div>
-                <input v-model.number="growth" type="range" min="-0.20" max="0.60" step="0.005" class="w-full accent-emerald-500" />
+                <input v-model.number="growth" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
               </div>
 
               <template v-else>
                 <div class="space-y-2">
-                  <div class="flex justify-between text-xs"><span class="text-gray-400">Année 1</span><span class="font-bold text-emerald-400">{{ (growthY1 * 100).toFixed(1) }}%</span></div>
-                  <input v-model.number="growthY1" type="range" min="-0.20" max="0.60" step="0.005" class="w-full accent-emerald-500" />
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-gray-400 font-medium">Année 1</span>
+                    <EditableValue v-model="growthY1" type="percent" :is-decimal="true" :step="0.1" />
+                  </div>
+                  <input v-model.number="growthY1" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
                 </div>
+
                 <div class="space-y-2">
-                  <div class="flex justify-between text-xs"><span class="text-gray-400">Année 2</span><span class="font-bold text-emerald-400">{{ (growthY2 * 100).toFixed(1) }}%</span></div>
-                  <input v-model.number="growthY2" type="range" min="-0.20" max="0.60" step="0.005" class="w-full accent-emerald-500" />
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-gray-400 font-medium">Année 2</span>
+                    <EditableValue v-model="growthY2" type="percent" :is-decimal="true" :step="0.1" />
+                  </div>
+                  <input v-model.number="growthY2" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
                 </div>
+
                 <div class="space-y-2">
-                  <div class="flex justify-between text-xs"><span class="text-gray-400">Année 3</span><span class="font-bold text-emerald-400">{{ (growthY3 * 100).toFixed(1) }}%</span></div>
-                  <input v-model.number="growthY3" type="range" min="-0.20" max="0.60" step="0.005" class="w-full accent-emerald-500" />
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-gray-400 font-medium">Année 3</span>
+                    <EditableValue v-model="growthY3" type="percent" :is-decimal="true" :step="0.1" />
+                  </div>
+                  <input v-model.number="growthY3" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
                 </div>
+
                 <div class="space-y-2">
-                  <div class="flex justify-between text-xs"><span class="text-gray-400">Année 4</span><span class="font-bold text-emerald-400">{{ (growthY4 * 100).toFixed(1) }}%</span></div>
-                  <input v-model.number="growthY4" type="range" min="-0.20" max="0.60" step="0.005" class="w-full accent-emerald-500" />
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-gray-400 font-medium">Année 4</span>
+                    <EditableValue v-model="growthY4" type="percent" :is-decimal="true" :step="0.1" />
+                  </div>
+                  <input v-model.number="growthY4" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
                 </div>
+
                 <div class="space-y-2">
-                  <div class="flex justify-between text-xs"><span class="text-gray-400">Année 5</span><span class="font-bold text-emerald-400">{{ (growthY5 * 100).toFixed(1) }}%</span></div>
-                  <input v-model.number="growthY5" type="range" min="-0.20" max="0.60" step="0.005" class="w-full accent-emerald-500" />
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-gray-400 font-medium">Année 5</span>
+                    <EditableValue v-model="growthY5" type="percent" :is-decimal="true" :step="0.1" />
+                  </div>
+                  <input v-model.number="growthY5" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
                 </div>
               </template>
             </div>
 
-            <!-- Grille d'évolution des CA sur 5 ans -->
+            <!-- Grille d'évolution des CA sur 5 ans (Édition Manuelle Interactive) -->
             <div class="space-y-3 pt-2 border-t border-gray-800/60">
-              <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-400">Projection Annuelle du Chiffre d'Affaires</h3>
-              <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                <div v-for="item in revenueProjections" :key="item.year" class="p-3 bg-gray-900 rounded-xl border border-gray-800 space-y-1 text-center">
-                  <div class="text-[11px] font-mono text-gray-400">Année {{ item.year }} ({{ formatPercent(item.growth, true) }})</div>
-                  <div class="text-sm font-bold text-white">{{ formatScaledCurrency(item.revenue, stock.currency) }}</div>
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-400">Projection Annuelle du Chiffre d'Affaires (Cliquer pour éditer)</h3>
+                <span class="text-[11px] text-gray-500 hidden sm:inline">Cliquer sur n'importe quel chiffre pour le modifier</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                <div v-for="item in revenueProjections" :key="item.year" class="p-3 bg-gray-900 rounded-xl border border-gray-800 space-y-2 text-center group">
+                  <div class="flex items-center justify-between text-[11px] font-mono text-gray-400 border-b border-gray-800/80 pb-1.5">
+                    <span>Année {{ item.year }}</span>
+                    <EditableValue
+                      :model-value="item.growth"
+                      type="percent"
+                      :is-decimal="true"
+                      :step="0.1"
+                      @change="v => updateGrowthY(item.year - 1, v)"
+                    />
+                  </div>
+
+                  <div class="py-1">
+                    <EditableValue
+                      :model-value="item.revenue"
+                      type="scaledCurrency"
+                      :currency="stock?.currency || 'USD'"
+                      :is-decimal="false"
+                      :step="1000000"
+                      @change="v => updateRevenueForYear(item.year - 1, v)"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -536,38 +620,41 @@ const parsedAuditData = computed<AuditData | null>(() => {
             <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               <!-- Marge Nette (m) -->
               <div class="space-y-2">
-                <div class="flex justify-between text-xs">
+                <div class="flex items-center justify-between text-xs">
                   <span class="font-medium text-gray-400">Marge Nette Cible (m)</span>
-                  <span class="font-bold text-emerald-400">{{ (margin * 100).toFixed(1) }}%</span>
+                  <EditableValue v-model="margin" type="percent" :is-decimal="true" :step="0.5" />
                 </div>
                 <input v-model.number="margin" type="range" min="0.00" max="0.80" step="0.005" class="w-full accent-emerald-500" />
               </div>
 
               <!-- Multiple Exit (P/E) -->
               <div class="space-y-2">
-                <div class="flex justify-between text-xs">
+                <div class="flex items-center justify-between text-xs">
                   <span class="font-medium text-gray-400">Multiple Exit (P/E)</span>
-                  <span class="font-bold text-emerald-400">{{ targetMultiple.toFixed(1) }}x</span>
+                  <EditableValue v-model="targetMultiple" type="multiple" :is-decimal="false" :step="0.5" />
                 </div>
                 <input v-model.number="targetMultiple" type="range" min="5" max="120" step="0.5" class="w-full accent-emerald-500" />
               </div>
 
               <!-- Taux d'Actualisation (r) -->
               <div class="space-y-2">
-                <div class="flex justify-between text-xs">
+                <div class="flex items-center justify-between text-xs">
                   <span class="font-medium text-gray-400">Taux Actualisation (r)</span>
-                  <span class="font-bold text-emerald-400">{{ (discountRate * 100).toFixed(1) }}%</span>
+                  <EditableValue v-model="discountRate" type="percent" :is-decimal="true" :step="0.25" :digits="2" />
                 </div>
-                <input v-model.number="discountRate" type="range" min="0.05" max="0.15" step="0.0025" class="w-full accent-emerald-500" />
+                <input v-model.number="discountRate" type="range" min="0.05" max="0.20" step="0.0025" class="w-full accent-emerald-500" />
               </div>
 
               <!-- Risk Spread -->
               <div class="space-y-2">
-                <div class="flex justify-between text-xs">
+                <div class="flex items-center justify-between text-xs">
                   <span class="font-medium text-gray-400">Spread Bêta / Scénarios</span>
-                  <span class="font-bold text-emerald-400">±{{ (riskSpread * 100).toFixed(0) }}%</span>
+                  <div class="flex items-center gap-1">
+                    <span class="text-gray-400">±</span>
+                    <EditableValue v-model="riskSpread" type="percent" :is-decimal="true" :step="1" :digits="0" />
+                  </div>
                 </div>
-                <input v-model.number="riskSpread" type="range" min="0.10" max="0.25" step="0.01" class="w-full accent-emerald-500" />
+                <input v-model.number="riskSpread" type="range" min="0.05" max="0.50" step="0.01" class="w-full accent-emerald-500" />
               </div>
             </div>
           </div>
