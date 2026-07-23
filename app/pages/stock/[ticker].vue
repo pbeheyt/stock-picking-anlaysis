@@ -855,37 +855,13 @@ const parsedAuditData = computed<AuditData | null>(() => {
 
         <!-- TAB 2: QUANT & REGRESSION -->
         <div v-else-if="activeTab === 'quant'" class="space-y-6">
-          <div class="rounded-2xl border border-dashed border-gray-800 bg-gray-950/50 p-12 text-center space-y-6">
-            <div class="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-2xl font-bold">
-              📊
-            </div>
-
-            <div class="max-w-md mx-auto space-y-2">
-              <span class="inline-flex items-center rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-400 border border-indigo-500/30">
-                Phase 2 — En développement
-              </span>
-              <h3 class="text-xl font-bold text-white">Moteur Quantitatif & Factors Regression</h3>
-              <p class="text-xs text-gray-400 leading-relaxed">
-                Analyse quantitative multi-facteurs (Fama-French), régression linéaire du Bêta glissant, simulations Monte Carlo et calcul du Sharpe/Sortino ratio.
-              </p>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-3 max-w-4xl mx-auto pt-6 opacity-40">
-              <div class="h-32 rounded-xl bg-gray-900 border border-gray-800 animate-pulse p-4 space-y-3">
-                <div class="h-4 w-1/2 bg-gray-800 rounded" />
-                <div class="h-8 w-3/4 bg-gray-800 rounded" />
-              </div>
-              <div class="h-32 rounded-xl bg-gray-900 border border-gray-800 animate-pulse p-4 space-y-3">
-                <div class="h-4 w-1/2 bg-gray-800 rounded" />
-                <div class="h-8 w-3/4 bg-gray-800 rounded" />
-              </div>
-              <div class="h-32 rounded-xl bg-gray-900 border border-gray-800 animate-pulse p-4 space-y-3">
-                <div class="h-4 w-1/2 bg-gray-800 rounded" />
-                <div class="h-8 w-3/4 bg-gray-800 rounded" />
-              </div>
-            </div>
-          </div>
+          <WorkspaceQuant
+            :ticker="stock.ticker"
+            :currency="stock.currency"
+            :current-price="stock.current_price"
+          />
         </div>
+
 
         <!-- TAB 3: DEEP RESEARCH QUALITATIVE -->
         <div v-else-if="activeTab === 'research'" class="space-y-6">
