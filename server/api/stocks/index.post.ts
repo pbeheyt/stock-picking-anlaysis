@@ -151,7 +151,7 @@ export default defineEventHandler(async (event) => {
       body.shares_outstanding ?? null,
       body.beta ?? 1.0,
       body.fetched_at ?? now,
-      body.status ?? 'research',
+      body.status ?? 'watchlist',
       body.margin_type ?? 'net_income',
       body.growth_mode ?? 'cagr',
       body.projected_growth ?? 0.10,

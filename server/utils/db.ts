@@ -26,7 +26,7 @@ export function getDb(): Database.Database {
         shares_outstanding REAL,
         beta REAL DEFAULT 1.0,
         fetched_at TEXT,
-        status TEXT DEFAULT 'research',
+        status TEXT DEFAULT 'watchlist',
         margin_type TEXT DEFAULT 'net_income',
         growth_mode TEXT DEFAULT 'cagr',
         projected_growth REAL DEFAULT 0.10,
@@ -107,6 +107,10 @@ export function getDb(): Database.Database {
     safeAddColumn('analyst_growth_estimate', 'REAL')
     safeAddColumn('analyst_count', 'INTEGER')
     safeAddColumn('audit_data', 'TEXT')
+
+    try {
+      _db?.exec("UPDATE stocks SET status = 'watchlist' WHERE status IS NULL OR status NOT IN ('watchlist', 'portfolio')")
+    } catch {}
   }
 
   return _db

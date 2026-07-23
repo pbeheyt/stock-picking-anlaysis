@@ -1,4 +1,4 @@
-export type StockStatus = 'research' | 'watchlist' | 'portfolio'
+export type StockStatus = 'portfolio' | 'watchlist'
 export type GrowthMode = 'cagr' | 'explicit'
 export type MarginType = 'net_income' | 'fcf'
 
