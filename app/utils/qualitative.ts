@@ -43,20 +43,21 @@ export function getTierConfig(tier: QualitativeData['tier']) {
 }
 
 export function getGradientLabel(score: number): string {
-  if (score >= 9.0) return 'Exceptionnel'
-  if (score >= 7.5) return 'Très Solide'
-  if (score >= 5.5) return 'Correct'
-  if (score >= 3.5) return 'Fragile'
+  if (score >= 9) return 'Exceptionnel'
+  if (score >= 7) return 'Très Solide'
+  if (score >= 5) return 'Correct'
+  if (score >= 3) return 'Fragile'
   return 'Danger Critique'
 }
 
 export function getGradientColor(score: number): string {
-  if (score >= 9.0) return 'emerald-400 font-bold'
-  if (score >= 7.5) return 'emerald-400'
-  if (score >= 5.5) return 'sky-400'
-  if (score >= 3.5) return 'amber-400'
+  if (score >= 9) return 'emerald-400 font-bold'
+  if (score >= 7) return 'emerald-400'
+  if (score >= 5) return 'sky-400'
+  if (score >= 3) return 'amber-400'
   return 'rose-500'
 }
+
 
 export function generateDeepResearchPrompt(ticker: string, companyName: string): string {
   return `**RÔLE :**

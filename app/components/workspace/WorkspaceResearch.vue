@@ -250,7 +250,8 @@ const activeTierConfig = computed(() => {
               <span>{{ BRICK_META[key].label.split('&')[0] }}</span>
             </div>
             <div class="text-base font-mono font-black text-white">
-              {{ (data.evaluations[key]?.score ?? 5.0).toFixed(1) }}/10
+              {{ Math.round(data.evaluations[key]?.score ?? 5) }}/10
+
             </div>
             <div class="text-[10px] font-semibold text-gray-500">
               Poids : {{ (BRICK_WEIGHTS[key] * 100) }}%
@@ -385,7 +386,8 @@ const activeTierConfig = computed(() => {
               {{ getGradientLabel(data.evaluations[key]?.score ?? 5.0) }}
             </span>
             <span class="rounded-xl bg-gray-900 border border-gray-800 px-3 py-1 text-sm font-mono font-black text-emerald-400">
-              {{ (data.evaluations[key]?.score ?? 5.0).toFixed(1) }}/10
+              {{ Math.round(data.evaluations[key]?.score ?? 5) }}/10
+
             </span>
           </div>
         </div>

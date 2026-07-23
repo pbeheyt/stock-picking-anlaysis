@@ -33,23 +33,22 @@ Pour chacune des 4 dimensions suivantes :
 3. "financials" (Santé Financière & Cash)
 4. "management" (Réputation & Qualité du Management)
 
-GRILLE DE NOTATION RUBRIC (0.0 à 10.0) :
-- [9.0 - 10.0] Exceptionnel : Dominance rare / Pricing power absolu / Trésorerie forteresse / Hyper-croissance / CEO fondateur génial.
-- [7.5 - 8.9] Très Solide : Avantage concurrentiel fort / Croissance supérieure au secteur / Bilan très sain / Skin in the game élevé.
-- [5.5 - 7.4] Correct / Moyenne : Positionnement standard / Croissance modérée / Endettement maîtrisé / Management professionnel sans distinction particulière.
-- [3.5 - 5.4] Fragile / Préoccupant : Marge sous pression / Dépendance forte / Endettement significatif / Dilutions passées / Incertitudes.
-- [0.0 - 3.4] Danger Critique : Absence totale de douve / Cash burn intense / Perte de marché majeure / Risque de faillite / Conflits d'intérêts.
+GRILLE DE NOTATION RUBRIC (Entiers de 0 à 10) :
+- [9 - 10] Exceptionnel : Dominance rare / Pricing power absolu / Trésorerie forteresse / Hyper-croissance / CEO fondateur génial.
+- [7 - 8] Très Solide : Avantage concurrentiel fort / Croissance supérieure au secteur / Bilan très sain / Skin in the game élevé.
+- [5 - 6] Correct / Moyenne : Positionnement standard / Croissance modérée / Endettement maîtrisé / Management professionnel sans distinction particulière.
+- [3 - 4] Fragile / Préoccupant : Marge sous pression / Dépendance forte / Endettement significatif / Dilutions passées / Incertitudes.
+- [0 - 2] Danger Critique : Absence totale de douve / Cash burn intense / Perte de marché majeure / Risque de faillite / Conflits d'intérêts.
 
 POUR CHAQUE DIMENSION, FOURNIS :
-1. "score" : Une note de 0.0 à 10.0 (arrondie à 1 décimale) basée STRICTEMENT sur la grille d'ancrage.
+1. "score" : Un nombre ENTIER de 0 à 10 (sans aucune décimale, ex: 7, 8, 5, 9) basé STRICTEMENT sur la grille d'ancrage.
 2. "justification" : Un PARAGRAPHE D'ANALYSE INSTITUTIONNEL DÉTAILLÉ (4 à 6 phrases riches en français). Explique de manière approfondie et nuancée les forces, les chiffres clés, et les réserves qui justifient cette note.
 3. "key_takeaways" : 4 à 7 faits ou métriques clés majeurs extraits du texte (reprends les chiffres clés et sources si mentionnés).
-
 
 FORMAT JSON EXCLUSIF ATTENDU :
 {
   "moat": {
-    "score": 7.5,
+    "score": 7,
     "justification": "La société dispose d'un fort pricing power sur son marché de niche grâce à sa technologie propriétaire de refroidissement liquide. Toutefois, l'absence de brevets bloquants au niveau mondial et la concurrence d'acteurs de plus grande taille incitent à la prudence quant à la pérennité séculaire de cette douve.",
     "key_takeaways": [
       "Technologie de refroidissement liquide propriétaire brevetée en Europe",
@@ -57,17 +56,17 @@ FORMAT JSON EXCLUSIF ATTENDU :
     ]
   },
   "growth": {
-    "score": 8.0,
+    "score": 8,
     "justification": "...",
     "key_takeaways": ["..."]
   },
   "financials": {
-    "score": 6.5,
+    "score": 6,
     "justification": "...",
     "key_takeaways": ["..."]
   },
   "management": {
-    "score": 7.0,
+    "score": 7,
     "justification": "...",
     "key_takeaways": ["..."]
   }
@@ -84,7 +83,6 @@ FORMAT JSON EXCLUSIF ATTENDU :
         { role: 'user', content: body.raw_report },
       ],
     })
-
   } catch (err: any) {
     throw createError({ statusCode: 502, statusMessage: `Erreur API DeepSeek : ${err.message}` })
   }
@@ -111,7 +109,7 @@ FORMAT JSON EXCLUSIF ATTENDU :
 
   for (const key of brickKeys) {
     const bData = extractedData[key] || {}
-    const score = Math.max(0, Math.min(10, Math.round(Number(bData.score || 5.0) * 10) / 10))
+    const score = Math.max(0, Math.min(10, Math.round(Number(bData.score || 5))))
     const justification = String(bData.justification || 'Analyse effectuée par l\'IA.')
     const rawTakeaways = Array.isArray(bData.key_takeaways) ? bData.key_takeaways : []
     const key_takeaways = rawTakeaways.map((t: any) => String(t))
@@ -124,6 +122,7 @@ FORMAT JSON EXCLUSIF ATTENDU :
 
     totalScore += score * WEIGHTS[key]
   }
+
 
   const qualityScore = Math.round(totalScore * 10)
 
