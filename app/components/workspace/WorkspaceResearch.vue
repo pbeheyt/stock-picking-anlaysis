@@ -415,20 +415,19 @@ const formatTakeawayHtml = (text: string) => {
               :key="idx"
               class="text-xs text-gray-200 flex items-start gap-2.5"
             >
-              <!-- Pastille / Badge Sentiment -->
+              <!-- Pastilles de Couleur -->
               <span
                 v-if="isPositiveTakeaway(takeaway)"
-                class="rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold px-1.5 py-0.5 shrink-0 mt-0.5"
-              >
-                +
-              </span>
+                class="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)] shrink-0 mt-1.5"
+                title="Fait Positif"
+              ></span>
               <span
                 v-else-if="isNegativeTakeaway(takeaway)"
-                class="rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-mono font-bold px-1.5 py-0.5 shrink-0 mt-0.5"
-              >
-                -
-              </span>
-              <span v-else class="text-gray-500 shrink-0 mt-0.5">•</span>
+                class="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] shrink-0 mt-1.5"
+                title="Fait Négatif / Risque"
+              ></span>
+              <span v-else class="h-2 w-2 rounded-full bg-gray-500 shrink-0 mt-1.5"></span>
+
 
               <!-- Texte avec liens cliquables 🔗 -->
               <span class="leading-relaxed" v-html="formatTakeawayHtml(takeaway)"></span>
