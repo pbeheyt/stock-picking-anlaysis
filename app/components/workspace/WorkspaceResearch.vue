@@ -23,8 +23,10 @@ const copyFeedback = ref(false)
 
 const showImportDrawer = ref(false)
 const rawReportInput = ref('')
+const selectedModel = ref<'deepseek-v4-flash' | 'moonshotai/kimi-k3'>('deepseek-v4-flash')
 
 const data = ref<QualitativeData | null>(null)
+
 
 // Animation & Timer
 const elapsedSeconds = ref(0)
@@ -94,7 +96,11 @@ const runAnalysis = async () => {
   try {
     const result = await $fetch<QualitativeData>(`/api/stock/${encodeURIComponent(props.ticker)}/qualitative`, {
       method: 'POST',
-      body: { raw_report: rawReportInput.value },
+      body: {
+        raw_report: rawReportInput.value,
+        model: selectedModel.value,
+      },
+
       signal: currentAbortController.signal,
     })
     data.value = result
@@ -269,9 +275,40 @@ const activeTierConfig = computed(() => {
         </button>
       </div>
 
+      <!-- Sélecteur de Modèle AI -->
+      <div class="space-y-1.5">
+        <label class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Modèle IA d'Analyse :</label>
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            class="flex items-center justify-center gap-2 rounded-xl p-3 text-xs font-bold border transition cursor-pointer"
+            :class="selectedModel === 'deepseek-v4-flash'
+              ? 'bg-emerald-950/80 border-emerald-500 text-emerald-400 shadow-md'
+              : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'"
+            @click="selectedModel = 'deepseek-v4-flash'"
+          >
+            <span>⚡</span>
+            <span>DeepSeek V4 Flash</span>
+          </button>
+
+          <button
+            type="button"
+            class="flex items-center justify-center gap-2 rounded-xl p-3 text-xs font-bold border transition cursor-pointer"
+            :class="selectedModel === 'moonshotai/kimi-k3'
+              ? 'bg-purple-950/80 border-purple-500 text-purple-300 shadow-md'
+              : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'"
+            @click="selectedModel = 'moonshotai/kimi-k3'"
+          >
+            <span>🌙</span>
+            <span>Kimi K3 (OpenRouter)</span>
+          </button>
+        </div>
+      </div>
+
       <p class="text-xs text-gray-400">
         Collez ici la réponse textuelle brute issue de ChatGPT, Claude ou Gemini générée avec le prompt standardisé.
       </p>
+
 
       <textarea
         v-model="rawReportInput"

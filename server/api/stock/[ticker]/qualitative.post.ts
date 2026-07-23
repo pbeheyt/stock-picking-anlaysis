@@ -5,19 +5,22 @@ export default defineEventHandler(async (event) => {
   const ticker = getRouterParam(event, 'ticker')?.toUpperCase()
   if (!ticker) throw createError({ statusCode: 400, statusMessage: 'Ticker requis' })
 
-  const body = await readBody<{ raw_report: string }>(event)
+  const body = await readBody<{ raw_report: string; model?: 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'moonshotai/kimi-k3' }>(event)
   if (!body?.raw_report?.trim()) {
     throw createError({ statusCode: 400, statusMessage: 'Rapport brut requis' })
   }
+
+  const targetAiModel = body.model || 'deepseek-v4-flash'
 
   const db = getDb()
   const stock = db.prepare('SELECT * FROM stocks WHERE ticker = ?').get(ticker) as any
   if (!stock) throw createError({ statusCode: 404, statusMessage: 'Stock non trouvé' })
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  PIPELINE RUBRIC INSTITUTIONNEL (DeepSeek V4 Flash)
+  //  PIPELINE RUBRIC INSTITUTIONNEL (Single-Pass)
   //  Évaluation holistique 0-10, paragraphes dialectiques & key takeaways
   // ═══════════════════════════════════════════════════════════════════════════
+
 
   const rubricSystemPrompt = `Tu es un analyste financier Senior Hedge Fund spécialisé en Quality Investing.
 On te fournit le rapport de recherche fondamentale brut d'une entreprise (${ticker}).
@@ -72,7 +75,7 @@ FORMAT JSON EXCLUSIF ATTENDU :
   let rawResult = ''
   try {
     rawResult = await aiComplete({
-      model: 'deepseek-v4-flash',
+      model: targetAiModel,
       temperature: 0.0,
       response_format: { type: 'json_object' },
       messages: [
@@ -80,6 +83,7 @@ FORMAT JSON EXCLUSIF ATTENDU :
         { role: 'user', content: body.raw_report },
       ],
     })
+
   } catch (err: any) {
     throw createError({ statusCode: 502, statusMessage: `Erreur API DeepSeek : ${err.message}` })
   }
