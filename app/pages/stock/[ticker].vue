@@ -165,18 +165,15 @@ const toggleStatus = async () => {
   }
 }
 
-const saveHypotheses = async () => {
+const saveHypotheses = async (quiet = false) => {
   if (!stock.value) return
-  isSaving.value = true
-  successMessage.value = null
+  if (!quiet) isSaving.value = true
   try {
-    const updated = await $fetch<Stock>(`/api/stocks/${stock.value.id}`, {
+    const updated = await $fetch(`/api/stocks/${stock.value.id}`, {
       method: 'PUT',
       body: {
-        currency: stock.value.currency,
-        beta: Number(stock.value.beta),
+        growth_rate: Number(growth.value),
         growth_mode: growthMode.value,
-        projected_growth: Number(growth.value),
         growth_y1: Number(growthY1.value),
         growth_y2: Number(growthY2.value),
         growth_y3: Number(growthY3.value),
@@ -196,22 +193,16 @@ const saveHypotheses = async () => {
       },
     })
     stock.value = { ...stock.value, ...updated }
-    successMessage.value = 'Hypothèses de valorisation sauvegardées en SQLite.'
-    setTimeout(() => { successMessage.value = null }, 4000)
+    if (!quiet) {
+      successMessage.value = 'Hypothèses de valorisation sauvegardées.'
+      setTimeout(() => { successMessage.value = null }, 4000)
+    }
   } catch (err: any) {
     console.error('Erreur sauvegarde hypothèses:', err)
   } finally {
-    isSaving.value = false
+    if (!quiet) isSaving.value = false
   }
 }
-
-const projectionMode = computed<'global' | 'explicit'>({
-  get: () => (growthMode.value === 'explicit' || marginMode.value === 'explicit' ? 'explicit' : 'global'),
-  set: (val: 'global' | 'explicit') => {
-    growthMode.value = val === 'explicit' ? 'explicit' : 'cagr'
-    marginMode.value = val === 'explicit' ? 'explicit' : 'constant'
-  },
-})
 
 // Valuation Computation Inputs
 const valuationInputs = computed<ValuationInputs>(() => ({
@@ -237,6 +228,16 @@ const valuationInputs = computed<ValuationInputs>(() => ({
   discountRate: discountRate.value,
   riskSpread: riskSpread.value,
 }))
+
+// Auto-save debounced (1200ms) sur les modifications d'hypothèses
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(valuationInputs, () => {
+  if (autoSaveTimer) clearTimeout(autoSaveTimer)
+  autoSaveTimer = setTimeout(() => {
+    saveHypotheses(true)
+  }, 1200)
+}, { deep: true })
 
 const scenarios = computed<ScenarioResults>(() => computeScenarios(valuationInputs.value))
 const reverseDCF = computed<ReverseDCFResult>(() => computeReverseDCF(valuationInputs.value))
@@ -691,22 +692,12 @@ const parsedAuditData = computed<AuditData | null>(() => {
           <!-- Section 1 : 📊 Modèle Financier P&L Unifié (5Y) — Layout 2 colonnes -->
           <div class="rounded-2xl border border-gray-800 bg-gray-950/70 shadow-xl backdrop-blur overflow-hidden">
             <!-- Header -->
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-800 p-6 pb-4">
-              <div>
-                <h2 class="text-base font-bold text-white flex items-center gap-2">
-                  <span>📊</span>
-                  <span>Modèle Financier P&L Unifié (5Y)</span>
-                </h2>
-                <p class="text-xs text-gray-400 mt-1">Cliquez une cellule pour l'éditer dans l'inspecteur à droite. Modifications en temps réel.</p>
-              </div>
-              <button
-                type="button"
-                class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-md disabled:opacity-50 self-start sm:self-auto"
-                :disabled="isSaving"
-                @click="saveHypotheses"
-              >
-                <span>{{ isSaving ? 'Sauvegarde...' : 'Sauvegarder Hypothèses' }}</span>
-              </button>
+            <div class="border-b border-gray-800 p-5">
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <span>📊</span>
+                <span>Modèle Financier P&L Unifié (5Y)</span>
+              </h2>
+              <p class="text-xs text-gray-400 mt-0.5">Cliquez une cellule pour l'éditer dans l'inspecteur à droite. Modifications recalculées en temps réel.</p>
             </div>
 
             <!-- Body : Table + Inspector -->
