@@ -34,6 +34,10 @@ export interface QuantAnalysisResult {
   annualizedVolatility: number
   maxDrawdown: number
   isDamped: boolean
+  dampedAnnualRate1Y: number
+  dampedAnnualRate3Y: number
+  dampedAnnualRate5Y: number
+  dampedAnnualRate10Y: number
   chartData: {
     dates: string[]
     closes: (number | null)[]
@@ -115,6 +119,10 @@ export function calculateQuantAnalysis(
       annualizedVolatility: 0,
       maxDrawdown: 0,
       isDamped: false,
+      dampedAnnualRate1Y: 0,
+      dampedAnnualRate3Y: 0,
+      dampedAnnualRate5Y: 0,
+      dampedAnnualRate10Y: 0,
       chartData: {
         dates: [],
         closes: [],
@@ -339,6 +347,10 @@ export function calculateQuantAnalysis(
     annualizedVolatility,
     maxDrawdown,
     isDamped,
+    dampedAnnualRate1Y: getGrowthAtYear(1),
+    dampedAnnualRate3Y: getGrowthAtYear(3),
+    dampedAnnualRate5Y: getGrowthAtYear(5),
+    dampedAnnualRate10Y: getGrowthAtYear(10),
     chartData: {
       dates,
       closes,
