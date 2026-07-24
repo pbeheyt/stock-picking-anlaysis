@@ -80,8 +80,13 @@ const handleAnalyzeQuant = async (rawReport: string, model: string) => {
       body: { raw_report: rawReport, model },
     })
     quantAiResult.value = res
+
+    // Auto-injecter les hypothèses extraites dans le DCF 5Y & fermer la modal
+    injectAICopilotProjections()
+    saveHypotheses(true)
   } catch (err: any) {
-    quantAiErrorMessage.value = err.data?.statusMessage || err.message || 'Erreur lors de l\'analyse par DeepSeek.'
+    console.error('Erreur analyse quanti AI:', err)
+    quantAiErrorMessage.value = err?.data?.statusMessage || err?.response?._data?.statusMessage || err?.message || 'Erreur lors de l\'analyse par DeepSeek.'
   } finally {
     isAnalyzingQuant.value = false
   }
@@ -116,7 +121,7 @@ const injectAICopilotProjections = () => {
 
   isAiModalOpen.value = false
   isAuditDrawerOpen.value = false
-  successMessage.value = 'Hypothèses de l\'IA injectées avec succès dans le DCF !'
+  successMessage.value = 'Hypothèses de l\'IA extraites et injectées avec succès dans le DCF 5Y !'
   setTimeout(() => { successMessage.value = null }, 4000)
 }
 
@@ -227,6 +232,14 @@ const loadStockData = async () => {
     }
 
     stock.value = found
+    if (found.quanti_ai_data) {
+      try {
+        quantAiResult.value = typeof found.quanti_ai_data === 'string'
+          ? JSON.parse(found.quanti_ai_data)
+          : found.quanti_ai_data
+      } catch {}
+    }
+
     initFormValues(found)
   } catch (err: any) {
     errorMessage.value = err.data?.statusMessage || err.message || `Impossible de charger ${tickerParam.value}`
