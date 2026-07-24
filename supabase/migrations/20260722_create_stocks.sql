@@ -1,3 +1,9 @@
+-- ==============================================================================
+-- MIGRATION SUPABASE (PRODUCTION)
+-- Préservé pour le déploiement cloud Supabase en production (auth & RLS).
+-- En développement local, la base SQLite (.data/stocks.db) est utilisée.
+-- ==============================================================================
+
 -- Create stock_status enum
 CREATE TYPE public.stock_status AS ENUM ('research', 'watchlist', 'portfolio');
 

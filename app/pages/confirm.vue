@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Préservé pour la confirmation d'email Supabase Auth en production.
+// Redirection temporaire en dev local sans authentification.
 definePageMeta({
   layout: false,
 })

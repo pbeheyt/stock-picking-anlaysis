@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Préservé pour l'authentification Supabase en production.
+// Redirection temporaire en dev local sans authentification.
 definePageMeta({
   layout: false,
 })

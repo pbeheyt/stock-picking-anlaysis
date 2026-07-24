@@ -76,29 +76,6 @@ export function formatNumber(val: number | null | undefined, decimals = 2): stri
   }).format(val)
 }
 
-export function formatDurationYearsMonths(startDateStr: string, endDateStr: string): string {
-  if (!startDateStr || !endDateStr) return '-'
-  const d1 = new Date(startDateStr)
-  const d2 = new Date(endDateStr)
-  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return '-'
-
-  let years = d2.getFullYear() - d1.getFullYear()
-  let months = d2.getMonth() - d1.getMonth()
-  if (d2.getDate() < d1.getDate()) {
-    months -= 1
-  }
-  if (months < 0) {
-    years -= 1
-    months += 12
-  }
-
-  const parts: string[] = []
-  if (years > 0) parts.push(`${years} ${years > 1 ? 'ans' : 'an'}`)
-  if (months > 0) parts.push(`${months} mois`)
-  if (parts.length === 0) return '< 1 mois'
-  return parts.join(' et ')
-}
-
 export function formatDurationYearsDecimal(startDateStr: string, endDateStr: string): string {
   if (!startDateStr || !endDateStr) return '-'
   const d1 = new Date(startDateStr)
