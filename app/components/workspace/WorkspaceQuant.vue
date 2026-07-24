@@ -12,6 +12,17 @@ import {
   formatNumber,
   formatDurationYearsDecimal,
 } from '~/utils/format'
+import {
+  getTrendColorClass,
+  getProjectionColorClass,
+  getR2ColorClass,
+  getVolatilityColorClass,
+  getZScoreColorClass,
+  getCagrGaugeStroke,
+  getR2GaugeStroke,
+  getVolatilityGaugeStroke,
+  getZScoreGaugeStroke,
+} from '~/utils/quantColor'
 
 const props = defineProps<{
   ticker: string
@@ -571,7 +582,12 @@ const getGaugeArc = (valRatio: number) => {
           <div class="space-y-2 text-xs">
             <div class="flex justify-between">
               <span class="text-gray-400">Prix théorique +5 Ans</span>
-              <span class="font-bold text-emerald-400 font-mono text-sm">{{ formatCurrency(quantResult.projectedPrice5Y, currency) }}</span>
+              <span
+                class="font-bold font-mono text-sm"
+                :class="getProjectionColorClass(quantResult.projectedPrice5Y, quantResult.currentPrice)"
+              >
+                {{ formatCurrency(quantResult.projectedPrice5Y, currency) }}
+              </span>
             </div>
 
             <div class="flex justify-between">
@@ -583,7 +599,7 @@ const getGaugeArc = (valRatio: number) => {
               <span class="text-gray-400">Perf passée 12M</span>
               <span
                 class="font-bold font-mono"
-                :class="(quantResult.perf12M ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                :class="getTrendColorClass(quantResult.perf12M)"
               >
                 {{ formatPercent(quantResult.perf12M, true) }}
               </span>
@@ -593,7 +609,7 @@ const getGaugeArc = (valRatio: number) => {
               <span class="text-gray-400">Perf passée 5 Ans</span>
               <span
                 class="font-bold font-mono"
-                :class="(quantResult.perf5Y ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                :class="getTrendColorClass(quantResult.perf5Y)"
               >
                 {{ formatPercent(quantResult.perf5Y, true) }}
               </span>
@@ -612,7 +628,7 @@ const getGaugeArc = (valRatio: number) => {
               <span class="text-gray-400">Volatilité Annualisée</span>
               <span
                 class="font-bold font-mono"
-                :class="quantResult.annualizedVolatility <= 0.25 ? 'text-emerald-400' : quantResult.annualizedVolatility <= 0.45 ? 'text-amber-400' : 'text-rose-400'"
+                :class="getVolatilityColorClass(quantResult.annualizedVolatility)"
               >
                 ±{{ formatPercent(quantResult.annualizedVolatility, true, 1, false) }}
               </span>
@@ -648,7 +664,7 @@ const getGaugeArc = (valRatio: number) => {
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
-                  stroke="#34d399"
+                  :stroke="getCagrGaugeStroke(quantResult.cagrHistorical)"
                   stroke-width="8"
                   stroke-linecap="round"
                   stroke-dasharray="125.66"
@@ -657,7 +673,9 @@ const getGaugeArc = (valRatio: number) => {
                 <circle :cx="getGaugeArc((quantResult.cagrHistorical + 0.1) / 0.5).cx" :cy="getGaugeArc((quantResult.cagrHistorical + 0.1) / 0.5).cy" r="4" fill="#ffffff" />
               </svg>
             </div>
-            <div class="font-mono text-sm font-bold text-emerald-400">{{ formatPercent(quantResult.cagrHistorical, true) }}</div>
+            <div class="font-mono text-sm font-bold" :class="getTrendColorClass(quantResult.cagrHistorical)">
+              {{ formatPercent(quantResult.cagrHistorical, true) }}
+            </div>
           </div>
 
           <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
@@ -668,7 +686,7 @@ const getGaugeArc = (valRatio: number) => {
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
-                  :stroke="quantResult.r2 >= 0.8 ? '#34d399' : quantResult.r2 >= 0.5 ? '#fbbf24' : '#ef4444'"
+                  :stroke="getR2GaugeStroke(quantResult.r2)"
                   stroke-width="8"
                   stroke-linecap="round"
                   stroke-dasharray="125.66"
@@ -677,7 +695,9 @@ const getGaugeArc = (valRatio: number) => {
                 <circle :cx="getGaugeArc(quantResult.r2).cx" :cy="getGaugeArc(quantResult.r2).cy" r="4" fill="#ffffff" />
               </svg>
             </div>
-            <div class="font-mono text-sm font-bold text-white">{{ quantResult.r2.toFixed(2) }} / 1.0</div>
+            <div class="font-mono text-sm font-bold" :class="getR2ColorClass(quantResult.r2)">
+              {{ quantResult.r2.toFixed(2) }} / 1.0
+            </div>
           </div>
 
           <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
@@ -688,7 +708,7 @@ const getGaugeArc = (valRatio: number) => {
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
-                  :stroke="quantResult.annualizedVolatility <= 0.25 ? '#34d399' : quantResult.annualizedVolatility <= 0.45 ? '#fbbf24' : '#ef4444'"
+                  :stroke="getVolatilityGaugeStroke(quantResult.annualizedVolatility)"
                   stroke-width="8"
                   stroke-linecap="round"
                   stroke-dasharray="125.66"
@@ -699,7 +719,7 @@ const getGaugeArc = (valRatio: number) => {
             </div>
             <div
               class="font-mono text-sm font-bold font-mono"
-              :class="quantResult.annualizedVolatility <= 0.25 ? 'text-emerald-400' : quantResult.annualizedVolatility <= 0.45 ? 'text-amber-400' : 'text-rose-400'"
+              :class="getVolatilityColorClass(quantResult.annualizedVolatility)"
             >
               ±{{ formatPercent(quantResult.annualizedVolatility, true, 1, false) }}
             </div>
@@ -713,7 +733,7 @@ const getGaugeArc = (valRatio: number) => {
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
-                  :stroke="quantResult.zScore <= -1 ? '#34d399' : quantResult.zScore >= 1 ? '#ef4444' : '#fbbf24'"
+                  :stroke="getZScoreGaugeStroke(quantResult.zScore)"
                   stroke-width="8"
                   stroke-linecap="round"
                   stroke-dasharray="125.66"
@@ -722,7 +742,7 @@ const getGaugeArc = (valRatio: number) => {
                 <circle :cx="getGaugeArc((quantResult.zScore + 2.5) / 5.0).cx" :cy="getGaugeArc((quantResult.zScore + 2.5) / 5.0).cy" r="4" fill="#ffffff" />
               </svg>
             </div>
-            <div class="font-mono text-sm font-bold" :class="quantResult.zScore <= -1 ? 'text-emerald-400' : quantResult.zScore >= 1 ? 'text-rose-400' : 'text-amber-400'">
+            <div class="font-mono text-sm font-bold" :class="getZScoreColorClass(quantResult.zScore)">
               {{ quantResult.zScore > 0 ? '+' : '' }}{{ quantResult.zScore.toFixed(2) }}σ
             </div>
           </div>
