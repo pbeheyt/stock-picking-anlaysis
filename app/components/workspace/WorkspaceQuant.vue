@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as echarts from 'echarts'
+import InfoTooltip from '~/components/ui/InfoTooltip.vue'
 import {
   calculateQuantAnalysis,
   findMaxR2Period,
@@ -18,10 +19,12 @@ import {
   getR2ColorClass,
   getVolatilityColorClass,
   getZScoreColorClass,
+  getMaxDrawdownColorClass,
   getCagrGaugeStroke,
   getR2GaugeStroke,
   getVolatilityGaugeStroke,
   getZScoreGaugeStroke,
+  getMaxDrawdownGaugeStroke,
 } from '~/utils/quantColor'
 
 const props = defineProps<{
@@ -510,31 +513,44 @@ const getGaugeArc = (valRatio: number) => {
           </div>
 
           <div class="space-y-2 text-xs">
-            <div class="flex justify-between">
+            <div class="flex justify-between items-center">
               <span class="text-gray-400">Cours actuel (P₀)</span>
               <span class="font-bold text-white font-mono">{{ formatCurrency(quantResult.currentPrice, currency) }}</span>
             </div>
 
-            <div class="flex justify-between">
-              <span class="text-gray-400">Valeur théorique (Régression)</span>
-              <span class="font-bold text-gray-200 font-mono">{{ formatCurrency(quantResult.theoreticalPrice, currency) }}</span>
-            </div>
-
             <div class="flex justify-between items-center">
-              <span class="text-gray-400">Écart vs Régression</span>
+              <span class="text-gray-400 flex items-center gap-1">
+                <span>Écart vs Régression</span>
+                <InfoTooltip text="Écart en % entre le cours actuel et la médiane théorique du canal. Négatif = Le cours est sous sa moyenne historique (Décote relative)." />
+              </span>
               <span
-                class="font-bold font-mono px-2 py-0.5 rounded text-xs"
-                :class="quantResult.gapPercent <= 0 ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'"
+                class="font-bold font-mono"
+                :class="quantResult.gapPercent <= 0 ? 'text-emerald-400' : 'text-rose-400'"
               >
                 {{ formatPercent(quantResult.gapPercent, true) }}
               </span>
             </div>
 
-            <div v-if="dividendYield && dividendYield > 0" class="flex justify-between border-t border-gray-800/80 pt-2">
-              <span class="text-gray-400">Rendement Dividende</span>
-              <span class="font-bold text-white font-mono">
-                {{ formatPercent(dividendYield, true, 1, false) }}
-              </span>
+            <div v-if="dividendYield && dividendYield > 0" class="space-y-2 border-t border-gray-800/80 pt-2">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-400">Rendement Dividende</span>
+                <span class="font-bold text-white font-mono">
+                  {{ formatPercent(dividendYield, true, 1, false) }}
+                </span>
+              </div>
+
+              <div class="flex justify-between items-center">
+                <span class="text-gray-400 flex items-center gap-1">
+                  <span>Total Return Estimé</span>
+                  <InfoTooltip text="Rendement annuel global estimé combinant la croissance du cours (CAGR) et les dividendes perçus." />
+                </span>
+                <span
+                  class="font-bold font-mono"
+                  :class="getTrendColorClass((quantResult.cagrHistorical ?? 0) + (dividendYield ?? 0))"
+                >
+                  {{ formatPercent((quantResult.cagrHistorical ?? 0) + (dividendYield ?? 0), true) }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -543,11 +559,12 @@ const getGaugeArc = (valRatio: number) => {
           <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
             <span>📊</span>
             <span>Analyse du Canal (σ)</span>
+            <InfoTooltip text="Canaux statistiques de variabilité. ±2σ encadre environ 95% des variations historiques du cours." />
           </div>
 
           <div class="space-y-1 text-xs font-mono">
             <div class="flex justify-between">
-              <span class="text-gray-400 font-sans">Borne +2σ (Sur-achat)</span>
+              <span class="text-gray-400 font-sans">Borne +2σ</span>
               <span class="text-rose-400 font-bold">{{ formatCurrency(quantResult.plus2Sigma, currency) }}</span>
             </div>
 
@@ -557,7 +574,7 @@ const getGaugeArc = (valRatio: number) => {
             </div>
 
             <div class="flex justify-between border-y border-gray-800/80 py-1 font-mono">
-              <span class="text-gray-300 font-sans">Prix Théorique (Centre)</span>
+              <span class="text-gray-300 font-sans">Médiane (0σ)</span>
               <span class="text-white font-bold">{{ formatCurrency(quantResult.theoreticalPrice, currency) }}</span>
             </div>
 
@@ -567,7 +584,7 @@ const getGaugeArc = (valRatio: number) => {
             </div>
 
             <div class="flex justify-between">
-              <span class="text-gray-400 font-sans">Borne -2σ (Opportunité)</span>
+              <span class="text-gray-400 font-sans">Borne -2σ</span>
               <span class="text-emerald-400 font-bold">{{ formatCurrency(quantResult.minus2Sigma, currency) }}</span>
             </div>
           </div>
@@ -576,77 +593,102 @@ const getGaugeArc = (valRatio: number) => {
         <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
           <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
             <span>🔮</span>
-            <span>Prévisions & Perf</span>
+            <span>Prévisions Cibles</span>
+            <InfoTooltip text="Extrapolations théoriques du canal de régression log-linéaire aux horizons 1, 3, 5 et 10 ans." />
           </div>
 
           <div class="space-y-2 text-xs">
-            <div class="flex justify-between">
-              <span class="text-gray-400">Prix théorique +5 Ans</span>
-              <span
-                class="font-bold font-mono text-sm"
-                :class="getProjectionColorClass(quantResult.projectedPrice5Y, quantResult.currentPrice)"
-              >
-                {{ formatCurrency(quantResult.projectedPrice5Y, currency) }}
-              </span>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">1 An</span>
+              <div class="flex items-center gap-1.5 font-mono">
+                <span class="font-bold text-white">{{ formatCurrency(quantResult.projectedPrice1Y, currency) }}</span>
+                <span class="text-gray-600 font-sans">·</span>
+                <span class="font-bold text-xs" :class="getTrendColorClass(quantResult.projectedReturn1Y)">
+                  {{ formatPercent(quantResult.projectedReturn1Y, true) }}
+                </span>
+              </div>
             </div>
 
-            <div class="flex justify-between">
-              <span class="text-gray-400">Date cible projection</span>
-              <span class="font-bold text-gray-300 capitalize">{{ quantResult.targetDate5Y }}</span>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">3 Ans</span>
+              <div class="flex items-center gap-1.5 font-mono">
+                <span class="font-bold text-white">{{ formatCurrency(quantResult.projectedPrice3Y, currency) }}</span>
+                <span class="text-gray-600 font-sans">·</span>
+                <span class="font-bold text-xs" :class="getTrendColorClass(quantResult.projectedReturn3Y)">
+                  {{ formatPercent(quantResult.projectedReturn3Y, true) }}
+                </span>
+              </div>
             </div>
 
-            <div class="flex justify-between border-t border-gray-800/80 pt-2">
-              <span class="text-gray-400">Perf passée 12M</span>
-              <span
-                class="font-bold font-mono"
-                :class="getTrendColorClass(quantResult.perf12M)"
-              >
-                {{ formatPercent(quantResult.perf12M, true) }}
-              </span>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">5 Ans</span>
+              <div class="flex items-center gap-1.5 font-mono">
+                <span class="font-bold text-white">{{ formatCurrency(quantResult.projectedPrice5Y, currency) }}</span>
+                <span class="text-gray-600 font-sans">·</span>
+                <span class="font-bold text-xs" :class="getTrendColorClass(quantResult.projectedReturn5Y)">
+                  {{ formatPercent(quantResult.projectedReturn5Y, true) }}
+                </span>
+              </div>
             </div>
 
-            <div class="flex justify-between">
-              <span class="text-gray-400">Perf passée 5 Ans</span>
-              <span
-                class="font-bold font-mono"
-                :class="getTrendColorClass(quantResult.perf5Y)"
-              >
-                {{ formatPercent(quantResult.perf5Y, true) }}
-              </span>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">10 Ans</span>
+              <div class="flex items-center gap-1.5 font-mono">
+                <span class="font-bold text-white">{{ formatCurrency(quantResult.projectedPrice10Y, currency) }}</span>
+                <span class="text-gray-600 font-sans">·</span>
+                <span class="font-bold text-xs" :class="getTrendColorClass(quantResult.projectedReturn10Y)">
+                  {{ formatPercent(quantResult.projectedReturn10Y, true) }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
           <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
-            <span>🛡️</span>
-            <span>Risque & Stabilité</span>
+            <span>📜</span>
+            <span>Perfs Historiques</span>
           </div>
 
           <div class="space-y-2 text-xs">
-            <div class="flex justify-between">
-              <span class="text-gray-400">Volatilité Annualisée</span>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">1 An</span>
               <span
                 class="font-bold font-mono"
-                :class="getVolatilityColorClass(quantResult.annualizedVolatility)"
+                :class="getTrendColorClass(quantResult.perf12M)"
               >
-                ±{{ formatPercent(quantResult.annualizedVolatility, true, 1, false) }}
+                {{ quantResult.perf12M !== null ? formatPercent(quantResult.perf12M, true) : '-' }}
               </span>
             </div>
 
-            <div class="flex justify-between">
-              <span class="text-gray-400">Max Drawdown (Période)</span>
-              <span class="font-bold text-rose-400 font-mono">{{ formatPercent(quantResult.maxDrawdown, true) }}</span>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">3 Ans</span>
+              <span
+                class="font-bold font-mono"
+                :class="getTrendColorClass(quantResult.perf3Y)"
+              >
+                {{ quantResult.perf3Y !== null ? formatPercent(quantResult.perf3Y, true) : '-' }}
+              </span>
             </div>
 
-            <div class="flex justify-between border-t border-gray-800/80 pt-2">
-              <span class="text-gray-400">Durée observée</span>
-              <span class="font-bold text-white font-mono">{{ formatDurationYearsDecimal(quantResult.startDate, quantResult.endDate) }}</span>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">5 Ans</span>
+              <span
+                class="font-bold font-mono"
+                :class="getTrendColorClass(quantResult.perf5Y)"
+              >
+                {{ quantResult.perf5Y !== null ? formatPercent(quantResult.perf5Y, true) : '-' }}
+              </span>
             </div>
 
-            <div class="flex justify-between">
-              <span class="text-gray-400">Échantillon</span>
-              <span class="font-bold text-gray-300 font-mono">{{ quantResult.sampleSize }} sem.</span>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">10 Ans</span>
+              <span
+                class="font-bold font-mono"
+                :class="getTrendColorClass(quantResult.perf10Y)"
+              >
+                {{ quantResult.perf10Y !== null ? formatPercent(quantResult.perf10Y, true) : '-' }}
+              </span>
             </div>
           </div>
         </div>
@@ -655,9 +697,12 @@ const getGaugeArc = (valRatio: number) => {
       <div class="rounded-2xl border border-gray-800 bg-gray-950/80 p-5 space-y-4 shadow-xl">
         <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">Indicateurs Majeurs de Régression & Risque</h3>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase">CAGR Annuel</div>
+            <div class="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+              <span>CAGR Annuel</span>
+              <InfoTooltip text="Taux de croissance annuel composé moyen du cours sur la période observée." />
+            </div>
             <div class="relative h-16 w-32">
               <svg viewBox="0 0 100 55" class="w-full h-full">
                 <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
@@ -679,7 +724,10 @@ const getGaugeArc = (valRatio: number) => {
           </div>
 
           <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase">R² (Qualité)</div>
+            <div class="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+              <span>R² (Qualité)</span>
+              <InfoTooltip text="Coefficient de détermination (0 à 1). Mesure la fidélité et la régularité du cours au canal de régression." />
+            </div>
             <div class="relative h-16 w-32">
               <svg viewBox="0 0 100 55" class="w-full h-full">
                 <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
@@ -701,7 +749,35 @@ const getGaugeArc = (valRatio: number) => {
           </div>
 
           <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase">Volatilité Annuelle</div>
+            <div class="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+              <span>Position (σ)</span>
+              <InfoTooltip text="Position actuelle du cours dans le canal exprimée en déviations standard (Z-score). < -1σ = Zone opportunité, > +1σ = Zone sur-achat." />
+            </div>
+            <div class="relative h-16 w-32">
+              <svg viewBox="0 0 100 55" class="w-full h-full">
+                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
+                <path
+                  d="M 10 50 A 40 40 0 0 1 90 50"
+                  fill="none"
+                  :stroke="getZScoreGaugeStroke(quantResult.zScore)"
+                  stroke-width="8"
+                  stroke-linecap="round"
+                  stroke-dasharray="125.66"
+                  :stroke-dashoffset="getGaugeArc((quantResult.zScore + 2.5) / 5.0).strokeDashoffset"
+                />
+                <circle :cx="getGaugeArc((quantResult.zScore + 2.5) / 5.0).cx" :cy="getGaugeArc((quantResult.zScore + 2.5) / 5.0).cy" r="4" fill="#ffffff" />
+              </svg>
+            </div>
+            <div class="font-mono text-sm font-bold" :class="getZScoreColorClass(quantResult.zScore)">
+              {{ quantResult.zScore > 0 ? '+' : '' }}{{ quantResult.zScore.toFixed(2) }}σ
+            </div>
+          </div>
+
+          <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
+            <div class="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+              <span>Volatilité Annuelle</span>
+              <InfoTooltip text="Amplitude des fluctuations hebdomadaires rapportée à l'année (1σ)." />
+            </div>
             <div class="relative h-16 w-32">
               <svg viewBox="0 0 100 55" class="w-full h-full">
                 <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
@@ -726,24 +802,27 @@ const getGaugeArc = (valRatio: number) => {
           </div>
 
           <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase">Position (σ)</div>
+            <div class="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+              <span>Max Drawdown</span>
+              <InfoTooltip text="Pire chute maximale subie entre un sommet absolu et un creux historique sur la période observée." />
+            </div>
             <div class="relative h-16 w-32">
               <svg viewBox="0 0 100 55" class="w-full h-full">
                 <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
-                  :stroke="getZScoreGaugeStroke(quantResult.zScore)"
+                  :stroke="getMaxDrawdownGaugeStroke(quantResult.maxDrawdown)"
                   stroke-width="8"
                   stroke-linecap="round"
                   stroke-dasharray="125.66"
-                  :stroke-dashoffset="getGaugeArc((quantResult.zScore + 2.5) / 5.0).strokeDashoffset"
+                  :stroke-dashoffset="getGaugeArc(Math.min(1, Math.abs(quantResult.maxDrawdown) / 0.5)).strokeDashoffset"
                 />
-                <circle :cx="getGaugeArc((quantResult.zScore + 2.5) / 5.0).cx" :cy="getGaugeArc((quantResult.zScore + 2.5) / 5.0).cy" r="4" fill="#ffffff" />
+                <circle :cx="getGaugeArc(Math.min(1, Math.abs(quantResult.maxDrawdown) / 0.5)).cx" :cy="getGaugeArc(Math.min(1, Math.abs(quantResult.maxDrawdown) / 0.5)).cy" r="4" fill="#ffffff" />
               </svg>
             </div>
-            <div class="font-mono text-sm font-bold" :class="getZScoreColorClass(quantResult.zScore)">
-              {{ quantResult.zScore > 0 ? '+' : '' }}{{ quantResult.zScore.toFixed(2) }}σ
+            <div class="font-mono text-sm font-bold font-mono" :class="getMaxDrawdownColorClass(quantResult.maxDrawdown)">
+              {{ formatPercent(quantResult.maxDrawdown, true) }}
             </div>
           </div>
         </div>

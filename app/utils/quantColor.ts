@@ -71,3 +71,19 @@ export function getZScoreGaugeStroke(z: number | null | undefined): string {
   if (z >= 1.0) return '#f43f5e'
   return '#fbbf24'
 }
+
+export function getMaxDrawdownColorClass(mdd: number | null | undefined): string {
+  if (mdd === null || mdd === undefined || isNaN(mdd)) return 'text-gray-300'
+  const absMdd = Math.abs(mdd)
+  if (absMdd <= 0.20) return 'text-emerald-400'
+  if (absMdd <= 0.40) return 'text-amber-400'
+  return 'text-rose-400'
+}
+
+export function getMaxDrawdownGaugeStroke(mdd: number | null | undefined): string {
+  if (mdd === null || mdd === undefined || isNaN(mdd)) return '#9ca3af'
+  const absMdd = Math.abs(mdd)
+  if (absMdd <= 0.20) return '#34d399'
+  if (absMdd <= 0.40) return '#fbbf24'
+  return '#f43f5e'
+}

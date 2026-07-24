@@ -18,10 +18,19 @@ export interface QuantAnalysisResult {
   plus1Sigma: number
   minus1Sigma: number
   minus2Sigma: number
+  projectedPrice1Y: number
+  projectedPrice3Y: number
   projectedPrice5Y: number
+  projectedPrice10Y: number
+  projectedReturn1Y: number
+  projectedReturn3Y: number
+  projectedReturn5Y: number
+  projectedReturn10Y: number
   targetDate5Y: string
   perf12M: number | null
+  perf3Y: number | null
   perf5Y: number | null
+  perf10Y: number | null
   annualizedVolatility: number
   maxDrawdown: number
   chartData: {
@@ -59,6 +68,9 @@ function computePerf(fullHistory: HistoryPoint[], targetDaysAgo: number): number
     }
   }
 
+  // Ne pas renvoyer de perf si la donnée historique n'est pas suffisamment ancienne (max 60 jours d'écart)
+  if (minDiff > 60 * 86400 * 1000) return null
+
   if (closestPoint.close <= 0 || lastPoint.close <= 0) return null
   return (lastPoint.close - closestPoint.close) / closestPoint.close
 }
@@ -86,10 +98,19 @@ export function calculateQuantAnalysis(
       plus1Sigma: 0,
       minus1Sigma: 0,
       minus2Sigma: 0,
+      projectedPrice1Y: 0,
+      projectedPrice3Y: 0,
       projectedPrice5Y: 0,
+      projectedPrice10Y: 0,
+      projectedReturn1Y: 0,
+      projectedReturn3Y: 0,
+      projectedReturn5Y: 0,
+      projectedReturn10Y: 0,
       targetDate5Y: '',
       perf12M: null,
+      perf3Y: null,
       perf5Y: null,
+      perf10Y: null,
       annualizedVolatility: 0,
       maxDrawdown: 0,
       chartData: {
@@ -155,8 +176,15 @@ export function calculateQuantAnalysis(
   const minus1Sigma = Math.exp(logTheoryLast - sigma)
   const minus2Sigma = Math.exp(logTheoryLast - 2 * sigma)
 
-  const tFuture = tLast + 260
-  const projectedPrice5Y = Math.exp(alpha + beta * tFuture)
+  const projectedPrice1Y = Math.exp(alpha + beta * (tLast + 52))
+  const projectedPrice3Y = Math.exp(alpha + beta * (tLast + 156))
+  const projectedPrice5Y = Math.exp(alpha + beta * (tLast + 260))
+  const projectedPrice10Y = Math.exp(alpha + beta * (tLast + 520))
+
+  const projectedReturn1Y = currentPrice > 0 ? (projectedPrice1Y - currentPrice) / currentPrice : 0
+  const projectedReturn3Y = currentPrice > 0 ? (projectedPrice3Y - currentPrice) / currentPrice : 0
+  const projectedReturn5Y = currentPrice > 0 ? (projectedPrice5Y - currentPrice) / currentPrice : 0
+  const projectedReturn10Y = currentPrice > 0 ? (projectedPrice10Y - currentPrice) / currentPrice : 0
 
   const lastDateObj = new Date(validHistory[tLast].date)
   const targetDateObj = new Date(lastDateObj.getTime() + 5 * 365 * 86400 * 1000)
@@ -201,7 +229,9 @@ export function calculateQuantAnalysis(
   }
 
   const perf12M = computePerf(fullHistory, 365)
+  const perf3Y = computePerf(fullHistory, 3 * 365)
   const perf5Y = computePerf(fullHistory, 5 * 365)
+  const perf10Y = computePerf(fullHistory, 10 * 365)
 
   // Calculate weekly returns & annualized volatility
   const weeklyReturns: number[] = []
@@ -250,10 +280,19 @@ export function calculateQuantAnalysis(
     plus1Sigma,
     minus1Sigma,
     minus2Sigma,
+    projectedPrice1Y,
+    projectedPrice3Y,
     projectedPrice5Y,
+    projectedPrice10Y,
+    projectedReturn1Y,
+    projectedReturn3Y,
+    projectedReturn5Y,
+    projectedReturn10Y,
     targetDate5Y,
     perf12M,
+    perf3Y,
     perf5Y,
+    perf10Y,
     annualizedVolatility,
     maxDrawdown,
     chartData: {
