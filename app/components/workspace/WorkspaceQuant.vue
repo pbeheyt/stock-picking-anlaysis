@@ -165,62 +165,112 @@ const handleResize = () => {
   }
 }
 
+let isUpdatingFromChart = false
+
+const onDataZoom = (params: any) => {
+  if (!rawHistory.value.length || isUpdatingFromChart) return
+
+  const payload = params.batch ? params.batch[0] : params
+  const totalHist = rawHistory.value.length
+  let startIdx = minIndex.value
+  let endIdx = maxIndex.value
+
+  if (typeof payload.startValue === 'number' && typeof payload.endValue === 'number') {
+    startIdx = Math.max(0, Math.min(payload.startValue, totalHist - 1))
+    endIdx = Math.max(0, Math.min(payload.endValue, totalHist - 1))
+  } else if (typeof payload.start === 'number' && typeof payload.end === 'number') {
+    const totalAll = totalHist + (quantResult.value?.chartData.futureDates.length || 260)
+    startIdx = Math.round((payload.start / 100) * (totalAll - 1))
+    endIdx = Math.round((payload.end / 100) * (totalAll - 1))
+    startIdx = Math.max(0, Math.min(startIdx, totalHist - 1))
+    endIdx = Math.max(0, Math.min(endIdx, totalHist - 1))
+  }
+
+  if (startIdx >= endIdx) {
+    endIdx = Math.min(totalHist - 1, startIdx + 1)
+  }
+
+  if (startIdx !== minIndex.value || endIdx !== maxIndex.value) {
+    isUpdatingFromChart = true
+    minIndex.value = startIdx
+    maxIndex.value = endIdx
+    activePreset.value = '' as any
+    nextTick(() => {
+      isUpdatingFromChart = false
+    })
+  }
+}
+
 const renderChart = () => {
   if (!chartRef.value || !quantResult.value) return
 
   if (!chartInstance) {
     chartInstance = echarts.init(chartRef.value)
+    chartInstance.on('datazoom', onDataZoom)
   }
 
   const { chartData } = quantResult.value
-  const histLen = chartData.dates.length
+  const totalHist = rawHistory.value.length
   const futLen = chartData.futureDates.length
 
-  const allDates = [...chartData.dates, ...chartData.futureDates]
+  const allDates = [
+    ...rawHistory.value.map(h => h.date),
+    ...chartData.futureDates,
+  ]
 
   const closesExtended = [
-    ...chartData.closes,
+    ...rawHistory.value.map(h => h.close),
     ...Array(futLen).fill(null),
   ]
 
   const regHistExtended = [
+    ...Array(minIndex.value).fill(null),
     ...chartData.regressionLine,
+    ...Array(Math.max(0, totalHist - 1 - maxIndex.value)).fill(null),
     ...Array(futLen).fill(null),
   ]
 
   const plus1HistExtended = [
+    ...Array(minIndex.value).fill(null),
     ...chartData.plus1SigmaLine,
+    ...Array(Math.max(0, totalHist - 1 - maxIndex.value)).fill(null),
     ...Array(futLen).fill(null),
   ]
 
   const plus2HistExtended = [
+    ...Array(minIndex.value).fill(null),
     ...chartData.plus2SigmaLine,
+    ...Array(Math.max(0, totalHist - 1 - maxIndex.value)).fill(null),
     ...Array(futLen).fill(null),
   ]
 
   const minus1HistExtended = [
+    ...Array(minIndex.value).fill(null),
     ...chartData.minus1SigmaLine,
+    ...Array(Math.max(0, totalHist - 1 - maxIndex.value)).fill(null),
     ...Array(futLen).fill(null),
   ]
 
   const minus2HistExtended = [
+    ...Array(minIndex.value).fill(null),
     ...chartData.minus2SigmaLine,
+    ...Array(Math.max(0, totalHist - 1 - maxIndex.value)).fill(null),
     ...Array(futLen).fill(null),
   ]
 
   const futRegExtended = [
-    ...Array(histLen - 1).fill(null),
-    chartData.regressionLine[histLen - 1],
+    ...Array(maxIndex.value).fill(null),
+    chartData.regressionLine[chartData.regressionLine.length - 1],
     ...chartData.futureRegressionLine,
   ]
 
-  const todayIndex = histLen - 1
+  const todayIndex = totalHist - 1
 
   const curr = props.currency || 'USD'
   const symbol = curr === 'EUR' ? '€' : '$'
 
   const allVals = [
-    ...chartData.closes.filter((v): v is number => v !== null && v > 0),
+    ...rawHistory.value.map(h => h.close).filter((v): v is number => v !== null && v > 0),
     ...chartData.minus2SigmaLine.filter((v): v is number => v !== null && v > 0),
     ...chartData.plus2SigmaLine.filter((v): v is number => v !== null && v > 0),
   ]
@@ -234,7 +284,7 @@ const renderChart = () => {
     grid: {
       top: 20,
       right: 25,
-      bottom: 40,
+      bottom: 65,
       left: 60,
       containLabel: false,
     },
@@ -261,6 +311,34 @@ const renderChart = () => {
         return html
       },
     },
+    dataZoom: [
+      {
+        type: 'slider',
+        xAxisIndex: 0,
+        bottom: 10,
+        height: 26,
+        backgroundColor: '#111827',
+        borderColor: '#374151',
+        fillerColor: 'rgba(16, 185, 129, 0.18)',
+        handleStyle: {
+          color: '#10b981',
+          borderColor: '#059669',
+          shadowBlur: 6,
+          shadowColor: 'rgba(0, 0, 0, 0.6)',
+        },
+        moveHandleStyle: {
+          color: '#10b981',
+        },
+        selectedDataBackground: {
+          lineStyle: { color: '#10b981' },
+          areaStyle: { color: 'rgba(16, 185, 129, 0.2)' },
+        },
+        textStyle: { color: '#9ca3af', fontSize: 10 },
+        startValue: minIndex.value,
+        endValue: maxIndex.value,
+        minValueSpan: 4,
+      },
+    ],
     xAxis: {
       type: 'category',
       data: allDates,
@@ -405,52 +483,6 @@ const getGaugeArc = (valRatio: number) => {
     </div>
 
     <div v-else-if="quantResult" class="space-y-6">
-      <div class="rounded-2xl border border-gray-800 bg-gray-950/80 p-5 space-y-4 shadow-xl backdrop-blur">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Presets :</span>
-            <div class="flex items-center gap-1 rounded-lg bg-gray-900 p-1 border border-gray-800">
-              <button
-                v-for="p in (['1Y', '3Y', '5Y', '10Y', 'ALL'] as const)"
-                :key="p"
-                type="button"
-                class="rounded-md px-2.5 py-1 text-xs font-bold transition"
-                :class="activePreset === p
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'text-gray-400 hover:text-gray-200'"
-                @click="setPreset(p)"
-              >
-                {{ p }}
-              </button>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-3 text-xs">
-            <div class="flex items-center gap-1.5">
-              <span class="text-gray-400 font-medium">Début :</span>
-              <input
-                v-model="startDateInput"
-                type="date"
-                :min="rawHistory[0]?.date"
-                :max="endDateInput"
-                class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none transition"
-              >
-            </div>
-            <span class="text-gray-500 font-bold">→</span>
-            <div class="flex items-center gap-1.5">
-              <span class="text-gray-400 font-medium">Fin :</span>
-              <input
-                v-model="endDateInput"
-                type="date"
-                :min="startDateInput"
-                :max="rawHistory[rawHistory.length - 1]?.date"
-                class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none transition"
-              >
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="grid gap-4 md:grid-cols-3">
         <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
           <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
@@ -681,10 +713,54 @@ const getGaugeArc = (valRatio: number) => {
             <span>📈</span>
             <span>Canal de Régression Log-Linéaire & Extrapolation</span>
           </h3>
-          <span class="text-xs text-gray-500 font-mono">Axe Y : Logarithmique</span>
+          <span class="text-xs text-gray-400 font-mono">Axe Y : Logarithmique | Utilisez le slider sous le graphique pour ajuster la plage</span>
         </div>
 
-        <div ref="chartRef" class="h-[420px] w-full" />
+        <div ref="chartRef" class="h-[430px] w-full" />
+
+        <div class="pt-3 border-t border-gray-800/80 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Presets :</span>
+            <div class="flex items-center gap-1 rounded-lg bg-gray-900 p-1 border border-gray-800">
+              <button
+                v-for="p in (['1Y', '3Y', '5Y', '10Y', 'ALL'] as const)"
+                :key="p"
+                type="button"
+                class="rounded-md px-2.5 py-1 text-xs font-bold transition"
+                :class="activePreset === p
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'text-gray-400 hover:text-gray-200'"
+                @click="setPreset(p)"
+              >
+                {{ p }}
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-gray-400 font-medium">Début :</span>
+              <input
+                v-model="startDateInput"
+                type="date"
+                :min="rawHistory[0]?.date"
+                :max="endDateInput"
+                class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none transition"
+              >
+            </div>
+            <span class="text-gray-500 font-bold">→</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-gray-400 font-medium">Fin :</span>
+              <input
+                v-model="endDateInput"
+                type="date"
+                :min="startDateInput"
+                :max="rawHistory[rawHistory.length - 1]?.date"
+                class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none transition"
+              >
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
