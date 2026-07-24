@@ -42,7 +42,7 @@ export function formatCurrency(val: number | null | undefined, curr = 'USD', dec
 export function formatCompactCurrency(val: number | null | undefined, curr = 'USD'): string {
   if (val === null || val === undefined || isNaN(val)) return '-'
   const abs = Math.abs(val)
-  if (abs >= 100000) {
+  if (abs >= 1000) {
     return formatScaledCurrency(val, curr, 2)
   }
   return formatCurrency(val, curr, 2)

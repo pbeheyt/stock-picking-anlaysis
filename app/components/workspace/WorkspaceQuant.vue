@@ -622,17 +622,16 @@ const getGaugeArc = (valRatio: number) => {
         </div>
 
         <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
-          <div class="flex items-center justify-between border-b border-gray-800 pb-2">
-            <div class="flex items-center gap-2 text-sm font-bold text-white">
-              <span>🔮</span>
-              <span>Prévisions Cibles</span>
-              <InfoTooltip text="Extrapolations théoriques du canal de régression aux horizons 1, 3, 5 et 10 ans." />
-            </div>
+          <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
+            <span>🔮</span>
+            <span>Prévisions Cibles</span>
+            <InfoTooltip text="Extrapolations théoriques du canal de régression aux horizons 1, 3, 5 et 10 ans." />
             <span
               v-if="quantResult.isDamped"
-              class="rounded bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-semibold text-amber-300 flex items-center gap-1"
+              class="text-amber-400 flex items-center gap-0.5 ml-1"
+              title="Convergence Damodaran active (CAGR > 20%)"
             >
-              <span>⚡ Convergence Damodaran</span>
+              <span>⚡</span>
               <InfoTooltip text="Modèle d'Aswath Damodaran (NYU Stern / McKinsey) : En raison d'un CAGR historique exceptionnel (>20%), les projections à 3, 5 et 10 ans intègrent une décélération progressive (demi-vie de 3 ans) vers le taux terminal de 5%." />
             </span>
           </div>
