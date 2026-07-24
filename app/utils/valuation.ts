@@ -1,4 +1,5 @@
 export type GrowthMode = 'cagr' | 'explicit'
+export type MarginMode = 'constant' | 'explicit'
 export type MarginType = 'net_income' | 'fcf'
 
 export interface ValuationInputs {
@@ -13,7 +14,13 @@ export interface ValuationInputs {
   growthY4: number
   growthY5: number
   marginType: MarginType
+  marginMode?: MarginMode
   margin: number
+  marginY1?: number
+  marginY2?: number
+  marginY3?: number
+  marginY4?: number
+  marginY5?: number
   targetMultiple: number
   discountRate: number
   riskSpread: number
@@ -54,7 +61,9 @@ export function computeValuation(inputs: ValuationInputs): ValuationResult {
     growthY3,
     growthY4,
     growthY5,
+    marginMode,
     margin,
+    marginY5,
     targetMultiple,
     discountRate,
     currentPrice,
@@ -79,7 +88,8 @@ export function computeValuation(inputs: ValuationInputs): ValuationResult {
     equivalentCAGR = growth
   }
 
-  const earnings5Y = revenue5Y * margin
+  const effectiveMargin5Y = (marginMode === 'explicit' && marginY5 !== undefined) ? marginY5 : margin
+  const earnings5Y = revenue5Y * effectiveMargin5Y
   const marketCap5Y = earnings5Y * targetMultiple
   const targetPrice5Y = sharesOutstanding > 0 ? marketCap5Y / sharesOutstanding : 0
   const fairValue = targetPrice5Y / Math.pow(1 + discountRate, 5)
@@ -151,12 +161,13 @@ export function computeScenarios(inputs: ValuationInputs): ScenarioResults {
 }
 
 export function computeReverseDCF(inputs: ValuationInputs): ReverseDCFResult {
-  const { currentPrice, discountRate, sharesOutstanding, targetMultiple, margin, revenueTTM, growthMode, growthY1 } = inputs
+  const { currentPrice, discountRate, sharesOutstanding, targetMultiple, marginMode, margin, marginY5, revenueTTM, growthMode, growthY1 } = inputs
 
   const targetPrice5YMarket = currentPrice * Math.pow(1 + discountRate, 5)
   const marketCap5Y = targetPrice5YMarket * sharesOutstanding
   const earnings5YMarket = targetMultiple > 0 ? marketCap5Y / targetMultiple : 0
-  const revenue5YMarket = margin !== 0 ? earnings5YMarket / margin : 0
+  const effectiveMargin = (marginMode === 'explicit' && marginY5 !== undefined) ? marginY5 : margin
+  const revenue5YMarket = effectiveMargin !== 0 ? earnings5YMarket / effectiveMargin : 0
 
   if (growthMode === 'explicit') {
     const revY1 = revenueTTM * (1 + growthY1)

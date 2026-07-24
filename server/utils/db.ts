@@ -41,6 +41,12 @@ export function getDb(): Database.Database {
         revenue_y4 REAL,
         revenue_y5 REAL,
         projected_margin REAL DEFAULT 0.20,
+        margin_mode TEXT DEFAULT 'constant',
+        margin_y1 REAL,
+        margin_y2 REAL,
+        margin_y3 REAL,
+        margin_y4 REAL,
+        margin_y5 REAL,
         target_multiple REAL DEFAULT 20.0,
         discount_rate REAL DEFAULT 0.10,
         risk_spread REAL DEFAULT 0.20,
@@ -88,6 +94,12 @@ export function getDb(): Database.Database {
     safeAddColumn('revenue_y3', 'REAL')
     safeAddColumn('revenue_y4', 'REAL')
     safeAddColumn('revenue_y5', 'REAL')
+    safeAddColumn('margin_mode', "TEXT DEFAULT 'constant'")
+    safeAddColumn('margin_y1', 'REAL')
+    safeAddColumn('margin_y2', 'REAL')
+    safeAddColumn('margin_y3', 'REAL')
+    safeAddColumn('margin_y4', 'REAL')
+    safeAddColumn('margin_y5', 'REAL')
     safeAddColumn('target_multiple', 'REAL DEFAULT 20.0')
     safeAddColumn('risk_spread', 'REAL DEFAULT 0.20')
     safeAddColumn('market_cap', 'REAL')

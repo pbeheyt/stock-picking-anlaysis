@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Stock, GrowthMode, AuditData, StockStatus } from '~/types/database.types'
+import type { Stock, GrowthMode, MarginMode, AuditData, StockStatus } from '~/types/database.types'
 import {
   computeScenarios,
   computeReverseDCF,
@@ -33,7 +33,15 @@ const growthY2 = ref(0.10)
 const growthY3 = ref(0.10)
 const growthY4 = ref(0.10)
 const growthY5 = ref(0.10)
+
+const marginMode = ref<MarginMode>('constant')
 const margin = ref(0.20)
+const marginY1 = ref(0.20)
+const marginY2 = ref(0.20)
+const marginY3 = ref(0.20)
+const marginY4 = ref(0.20)
+const marginY5 = ref(0.20)
+
 const targetMultiple = ref(20.0)
 const discountRate = ref(0.10)
 const riskSpread = ref(0.20)
@@ -67,7 +75,13 @@ const loadStockData = async () => {
           growth_y3: apiData.growth_y3,
           growth_y4: apiData.growth_y4,
           growth_y5: apiData.growth_y5,
+          margin_mode: apiData.margin_mode || 'constant',
           projected_margin: apiData.default_margin,
+          margin_y1: apiData.margin_y1 ?? apiData.default_margin,
+          margin_y2: apiData.margin_y2 ?? apiData.default_margin,
+          margin_y3: apiData.margin_y3 ?? apiData.default_margin,
+          margin_y4: apiData.margin_y4 ?? apiData.default_margin,
+          margin_y5: apiData.margin_y5 ?? apiData.default_margin,
           target_multiple: apiData.default_target_multiple,
           discount_rate: apiData.default_discount_rate,
           risk_spread: apiData.default_risk_spread,
@@ -119,7 +133,15 @@ const initFormValues = (s: Stock) => {
   growthY3.value = s.growth_y3 ?? 0.10
   growthY4.value = s.growth_y4 ?? 0.10
   growthY5.value = s.growth_y5 ?? 0.10
+
+  marginMode.value = s.margin_mode || 'constant'
   margin.value = s.projected_margin ?? 0.20
+  marginY1.value = s.margin_y1 ?? s.projected_margin ?? 0.20
+  marginY2.value = s.margin_y2 ?? s.projected_margin ?? 0.20
+  marginY3.value = s.margin_y3 ?? s.projected_margin ?? 0.20
+  marginY4.value = s.margin_y4 ?? s.projected_margin ?? 0.20
+  marginY5.value = s.margin_y5 ?? s.projected_margin ?? 0.20
+
   targetMultiple.value = s.target_multiple ?? 20.0
   discountRate.value = s.discount_rate ?? 0.10
   riskSpread.value = s.risk_spread ?? 0.20
@@ -162,6 +184,12 @@ const saveHypotheses = async () => {
         growth_y5: Number(growthY5.value),
         margin_type: 'net_income',
         projected_margin: Number(margin.value),
+        margin_mode: marginMode.value,
+        margin_y1: Number(marginY1.value),
+        margin_y2: Number(marginY2.value),
+        margin_y3: Number(marginY3.value),
+        margin_y4: Number(marginY4.value),
+        margin_y5: Number(marginY5.value),
         target_multiple: Number(targetMultiple.value),
         discount_rate: Number(discountRate.value),
         risk_spread: Number(riskSpread.value),
@@ -177,6 +205,14 @@ const saveHypotheses = async () => {
   }
 }
 
+const projectionMode = computed<'global' | 'explicit'>({
+  get: () => (growthMode.value === 'explicit' || marginMode.value === 'explicit' ? 'explicit' : 'global'),
+  set: (val: 'global' | 'explicit') => {
+    growthMode.value = val === 'explicit' ? 'explicit' : 'cagr'
+    marginMode.value = val === 'explicit' ? 'explicit' : 'constant'
+  },
+})
+
 // Valuation Computation Inputs
 const valuationInputs = computed<ValuationInputs>(() => ({
   currentPrice: stock.value?.current_price ?? 0,
@@ -190,7 +226,13 @@ const valuationInputs = computed<ValuationInputs>(() => ({
   growthY4: growthY4.value,
   growthY5: growthY5.value,
   marginType: 'net_income',
+  marginMode: marginMode.value,
   margin: margin.value,
+  marginY1: marginY1.value,
+  marginY2: marginY2.value,
+  marginY3: marginY3.value,
+  marginY4: marginY4.value,
+  marginY5: marginY5.value,
   targetMultiple: targetMultiple.value,
   discountRate: discountRate.value,
   riskSpread: riskSpread.value,
@@ -211,42 +253,80 @@ const badgeConfig = computed(() => {
   return { label: 'Surévaluée', class: 'bg-rose-500/15 text-rose-400 border-rose-500/30' }
 })
 
-// Projections des CA sur 5 ans pour la grille
+// Projections des CA et Résultat Net sur 5 ans pour la grille
 const revenueProjections = computed(() => {
   const baseRev = stock.value?.revenue_ttm ?? 0
   if (!baseRev) return []
 
+  const margins = marginMode.value === 'explicit'
+    ? [marginY1.value, marginY2.value, marginY3.value, marginY4.value, marginY5.value]
+    : [margin.value, margin.value, margin.value, margin.value, margin.value]
+
   if (growthMode.value === 'cagr') {
     const g = growth.value
-    return [1, 2, 3, 4, 5].map(year => ({
-      year,
-      growth: g,
-      revenue: baseRev * Math.pow(1 + g, year),
-    }))
+    return [1, 2, 3, 4, 5].map((year, idx) => {
+      const rev = baseRev * Math.pow(1 + g, year)
+      const m = margins[idx]
+      return {
+        year,
+        growth: g,
+        revenue: rev,
+        margin: m,
+        earnings: rev * m,
+      }
+    })
   } else {
     const rates = [growthY1.value, growthY2.value, growthY3.value, growthY4.value, growthY5.value]
     let current = baseRev
     return rates.map((r, idx) => {
       current = current * (1 + r)
+      const m = margins[idx]
       return {
         year: idx + 1,
         growth: r,
         revenue: current,
+        margin: m,
+        earnings: current * m,
       }
     })
   }
 })
 
-// Handlers d'édition bidirectionnelle CA ($) <-> Croissance (%)
+// Handlers d'édition bidirectionnelle CA ($) <-> Croissance (%) et Marge Nette (%)
 const updateGrowthY = (yearIndex: number, newRate: number) => {
   if (growthMode.value === 'cagr') {
-    growth.value = newRate
-  } else {
-    if (yearIndex === 0) growthY1.value = newRate
-    else if (yearIndex === 1) growthY2.value = newRate
-    else if (yearIndex === 2) growthY3.value = newRate
-    else if (yearIndex === 3) growthY4.value = newRate
-    else if (yearIndex === 4) growthY5.value = newRate
+    growthY1.value = growth.value
+    growthY2.value = growth.value
+    growthY3.value = growth.value
+    growthY4.value = growth.value
+    growthY5.value = growth.value
+    growthMode.value = 'explicit'
+  }
+
+  if (yearIndex === 0) growthY1.value = newRate
+  else if (yearIndex === 1) growthY2.value = newRate
+  else if (yearIndex === 2) growthY3.value = newRate
+  else if (yearIndex === 3) growthY4.value = newRate
+  else if (yearIndex === 4) growthY5.value = newRate
+}
+
+const updateMarginY = (yearIndex: number, newMargin: number) => {
+  if (marginMode.value === 'constant') {
+    marginY1.value = margin.value
+    marginY2.value = margin.value
+    marginY3.value = margin.value
+    marginY4.value = margin.value
+    marginY5.value = margin.value
+    marginMode.value = 'explicit'
+  }
+
+  if (yearIndex === 0) marginY1.value = newMargin
+  else if (yearIndex === 1) marginY2.value = newMargin
+  else if (yearIndex === 2) marginY3.value = newMargin
+  else if (yearIndex === 3) marginY4.value = newMargin
+  else if (yearIndex === 4) {
+    marginY5.value = newMargin
+    margin.value = newMargin
   }
 }
 
@@ -277,6 +357,88 @@ const updateRevenueForYear = (yearIndex: number, newRevenueVal: number) => {
       else if (yearIndex === 4) growthY5.value = impliedGrowth
     }
   }
+}
+
+// Active Cell Focus for Side Inspector Panel
+export interface ActiveCellFocus {
+  type: 'growth' | 'margin' | 'revenue'
+  yearIndex: number
+}
+
+const activeCell = ref<ActiveCellFocus>({ type: 'growth', yearIndex: 0 })
+
+const selectCell = (type: 'growth' | 'margin' | 'revenue', yearIndex: number) => {
+  activeCell.value = { type, yearIndex }
+}
+
+// Active Cell Computed Properties for Live Editing in Side Inspector
+const activeGrowthVal = computed({
+  get: () => {
+    const idx = activeCell.value.yearIndex
+    const refs = [growthY1, growthY2, growthY3, growthY4, growthY5]
+    const val = growthMode.value === 'explicit' ? refs[idx].value : growth.value
+    return parseFloat((val * 100).toFixed(2))
+  },
+  set: (valInPercent: number) => {
+    const decimalRate = valInPercent / 100
+    updateGrowthY(activeCell.value.yearIndex, decimalRate)
+  },
+})
+
+const activeMarginVal = computed({
+  get: () => {
+    const idx = activeCell.value.yearIndex
+    const refs = [marginY1, marginY2, marginY3, marginY4, marginY5]
+    const val = marginMode.value === 'explicit' ? refs[idx].value : margin.value
+    return parseFloat((val * 100).toFixed(2))
+  },
+  set: (valInPercent: number) => {
+    const decimalMargin = valInPercent / 100
+    updateMarginY(activeCell.value.yearIndex, decimalMargin)
+  },
+})
+
+const activeRevenueScaleUnit = ref<'B' | 'M' | 'K' | '1'>('B')
+
+const activeRevenueScaledVal = computed({
+  get: () => {
+    const proj = revenueProjections.value[activeCell.value.yearIndex]
+    if (!proj) return 0
+    const raw = proj.revenue
+    let mult = 1e9
+    if (activeRevenueScaleUnit.value === 'M') mult = 1e6
+    else if (activeRevenueScaleUnit.value === 'K') mult = 1e3
+    else if (activeRevenueScaleUnit.value === '1') mult = 1
+    return parseFloat((raw / mult).toFixed(3))
+  },
+  set: (scaledVal: number) => {
+    let mult = 1e9
+    if (activeRevenueScaleUnit.value === 'M') mult = 1e6
+    else if (activeRevenueScaleUnit.value === 'K') mult = 1e3
+    else if (activeRevenueScaleUnit.value === '1') mult = 1
+
+    const absoluteRevenue = scaledVal * mult
+    updateRevenueForYear(activeCell.value.yearIndex, absoluteRevenue)
+  },
+})
+
+const propagateActiveGrowth = () => {
+  const currentRate = activeGrowthVal.value / 100
+  growthMode.value = 'explicit'
+  const refs = [growthY1, growthY2, growthY3, growthY4, growthY5]
+  for (let i = activeCell.value.yearIndex; i < 5; i++) {
+    refs[i].value = currentRate
+  }
+}
+
+const propagateActiveMargin = () => {
+  const currentMargin = activeMarginVal.value / 100
+  marginMode.value = 'explicit'
+  const refs = [marginY1, marginY2, marginY3, marginY4, marginY5]
+  for (let i = activeCell.value.yearIndex; i < 5; i++) {
+    refs[i].value = currentMargin
+  }
+  margin.value = marginY5.value
 }
 
 // Dual-Track Spectrum Axis Calculations
@@ -477,20 +639,20 @@ const parsedAuditData = computed<AuditData | null>(() => {
             {{ successMessage }}
           </div>
 
-          <!-- Section 1 : 📈 Trajectoire CA 5Y -->
-          <div class="rounded-2xl border border-gray-800 bg-gray-950/70 p-6 space-y-6 shadow-xl backdrop-blur">
-            <div class="flex items-center justify-between border-b border-gray-800 pb-4">
+          <!-- Section 1 : 📊 Modèle Financier P&L Unifié (5Y) — Layout 2 colonnes -->
+          <div class="rounded-2xl border border-gray-800 bg-gray-950/70 shadow-xl backdrop-blur overflow-hidden">
+            <!-- Header -->
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-800 p-6 pb-4">
               <div>
                 <h2 class="text-base font-bold text-white flex items-center gap-2">
-                  <span>📈</span>
-                  <span>Trajectoire Chiffre d'Affaires 5 ans</span>
+                  <span>📊</span>
+                  <span>Modèle Financier P&L Unifié (5Y)</span>
                 </h2>
-                <p class="text-xs text-gray-400 mt-1">Définissez la dynamique de croissance des revenus et visualisez la projection An 5.</p>
+                <p class="text-xs text-gray-400 mt-1">Cliquez une cellule pour l'éditer dans l'inspecteur à droite. Modifications en temps réel.</p>
               </div>
-
               <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-md disabled:opacity-50"
+                class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-md disabled:opacity-50 self-start sm:self-auto"
                 :disabled="isSaving"
                 @click="saveHypotheses"
               >
@@ -498,136 +660,235 @@ const parsedAuditData = computed<AuditData | null>(() => {
               </button>
             </div>
 
-            <!-- Switch Mode Croissance -->
-            <div class="flex items-center gap-6 bg-gray-900/60 p-3 rounded-xl border border-gray-800">
-              <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Mode :</span>
-              <label class="inline-flex items-center gap-2 text-xs font-medium text-white cursor-pointer">
-                <input v-model="growthMode" type="radio" value="cagr" class="text-emerald-500 focus:ring-emerald-500" />
-                <span>CAGR Constant (g)</span>
-              </label>
-              <label class="inline-flex items-center gap-2 text-xs font-medium text-white cursor-pointer">
-                <input v-model="growthMode" type="radio" value="explicit" class="text-emerald-500 focus:ring-emerald-500" />
-                <span>Mode Sur-Mesure 5 ans (Y1..Y5)</span>
-              </label>
-            </div>
+            <!-- Body : Table + Inspector -->
+            <div class="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-800">
 
-            <!-- Sliders Croissance & EditableValue -->
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-              <div v-if="growthMode === 'cagr'" class="col-span-full space-y-2 max-w-xl">
-                <div class="flex items-center justify-between text-xs">
-                  <span class="font-medium text-gray-400">Taux de Croissance Annuel CAGR (g)</span>
-                  <EditableValue v-model="growth" type="percent" :is-decimal="true" :step="0.1" />
+              <!-- ── GAUCHE : Tableau P&L ── -->
+              <div class="flex-1 min-w-0 overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr class="border-b border-gray-800 bg-gray-950/80 text-gray-500 font-mono text-[10px] uppercase tracking-wider">
+                      <th class="py-2 px-3 font-semibold">Poste</th>
+                      <th class="py-2 px-2 text-right font-semibold">TTM</th>
+                      <th
+                        v-for="item in revenueProjections"
+                        :key="item.year"
+                        class="py-2 px-2 text-right font-semibold"
+                      >An {{ item.year }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-800/50">
+
+                    <!-- Row 1 : Croissance CA (%) -->
+                    <tr class="transition">
+                      <td class="py-2 px-3 text-gray-400 whitespace-nowrap font-medium text-[11px]">Crois. %</td>
+                      <td class="py-2 px-2 text-right text-gray-600 font-mono text-[11px]">—</td>
+                      <td
+                        v-for="(item, idx) in revenueProjections"
+                        :key="idx"
+                        class="py-2 px-2 text-right font-mono font-semibold text-[11px] cursor-pointer transition-all duration-150"
+                        :class="activeCell.type === 'growth' && activeCell.yearIndex === idx
+                          ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/50'
+                          : 'text-emerald-400 hover:bg-emerald-500/8'"
+                        @click="selectCell('growth', idx)"
+                      >
+                        {{ formatPercent(item.growth, true) }}
+                      </td>
+                    </tr>
+
+                    <!-- Row 2 : Chiffre d'Affaires -->
+                    <tr class="bg-gray-950/25 transition">
+                      <td class="py-2 px-3 text-gray-300 whitespace-nowrap font-medium text-[11px]">CA</td>
+                      <td class="py-2 px-2 text-right font-mono text-gray-400 font-semibold text-[11px]">
+                        {{ formatScaledCurrency(stock.revenue_ttm, stock.currency) }}
+                      </td>
+                      <td
+                        v-for="(item, idx) in revenueProjections"
+                        :key="idx"
+                        class="py-2 px-2 text-right font-mono font-bold text-[11px] cursor-pointer transition-all duration-150"
+                        :class="activeCell.type === 'revenue' && activeCell.yearIndex === idx
+                          ? 'bg-emerald-500/15 text-emerald-200 ring-1 ring-inset ring-emerald-500/50'
+                          : 'text-white hover:bg-emerald-500/8'"
+                        @click="selectCell('revenue', idx)"
+                      >
+                        {{ formatScaledCurrency(item.revenue, stock.currency) }}
+                      </td>
+                    </tr>
+
+                    <!-- Row 3 : Marge Nette -->
+                    <tr class="transition">
+                      <td class="py-2 px-3 text-gray-400 whitespace-nowrap font-medium text-[11px]">Marge %</td>
+                      <td class="py-2 px-2 text-right font-mono text-gray-500 text-[11px]">
+                        {{ formatPercent(stock.margin_net_raw, true, 1, false) }}
+                      </td>
+                      <td
+                        v-for="(item, idx) in revenueProjections"
+                        :key="idx"
+                        class="py-2 px-2 text-right font-mono font-semibold text-[11px] cursor-pointer transition-all duration-150"
+                        :class="activeCell.type === 'margin' && activeCell.yearIndex === idx
+                          ? 'bg-sky-500/15 text-sky-200 ring-1 ring-inset ring-sky-500/50'
+                          : 'text-sky-400 hover:bg-sky-500/8'"
+                        @click="selectCell('margin', idx)"
+                      >
+                        {{ formatPercent(item.margin, true, 1, false) }}
+                      </td>
+                    </tr>
+
+                    <!-- Row 4 : Résultat Net -->
+                    <tr class="bg-emerald-950/20 border-t border-gray-800">
+                      <td class="py-2 px-3 font-bold text-emerald-400 whitespace-nowrap text-[11px]">Rés. Net</td>
+                      <td class="py-2 px-2 text-right font-mono text-gray-400 font-semibold text-[11px]">
+                        {{ formatScaledCurrency((stock.revenue_ttm || 0) * (stock.margin_net_raw || 0), stock.currency) }}
+                      </td>
+                      <td
+                        v-for="(item, idx) in revenueProjections"
+                        :key="idx"
+                        class="py-2 px-2 text-right font-mono font-bold text-emerald-400 text-[11px]"
+                      >
+                        {{ formatScaledCurrency(item.earnings, stock.currency) }}
+                      </td>
+                    </tr>
+
+                  </tbody>
+                </table>
+
+                <!-- Synthèse P&L An 5 -->
+                <div class="flex flex-wrap gap-6 p-4 bg-emerald-950/20 border-t border-emerald-800/30 text-xs">
+                  <div>
+                    <span class="text-gray-400">CA An 5 : </span>
+                    <span class="font-bold text-emerald-400 ml-1">{{ formatScaledCurrency(scenarios.base.revenue5Y, stock.currency) }}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400">Rés. Net An 5 : </span>
+                    <span class="font-bold text-emerald-400 ml-1">{{ formatScaledCurrency(scenarios.base.earnings5Y, stock.currency) }}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400">CAGR Éq. : </span>
+                    <span class="font-bold text-emerald-400 ml-1">{{ formatPercent(scenarios.base.equivalentCAGR, true) }}</span>
+                  </div>
                 </div>
-                <input v-model.number="growth" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
               </div>
 
-              <template v-else>
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-gray-400 font-medium">Année 1</span>
-                    <EditableValue v-model="growthY1" type="percent" :is-decimal="true" :step="0.1" />
+              <!-- ── DROITE : Inspecteur Latéral Contextuel ── -->
+              <div class="w-full lg:w-56 flex-shrink-0 bg-gray-900/80 p-4 space-y-4">
+
+                <!-- Header Inspecteur -->
+                <div class="border-b border-gray-800 pb-3">
+                  <div class="flex items-center gap-1.5 mb-0.5">
+                    <div
+                      class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      :class="{
+                        'bg-emerald-400': activeCell.type === 'growth',
+                        'bg-sky-400': activeCell.type === 'margin',
+                        'bg-white': activeCell.type === 'revenue',
+                      }"
+                    ></div>
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Inspecteur</span>
                   </div>
-                  <input v-model.number="growthY1" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
+                  <p class="text-xs font-bold text-white truncate">
+                    <span v-if="activeCell.type === 'growth'">Croissance — An {{ activeCell.yearIndex + 1 }}</span>
+                    <span v-else-if="activeCell.type === 'margin'">Marge Nette — An {{ activeCell.yearIndex + 1 }}</span>
+                    <span v-else>Chiffre d'Affaires — An {{ activeCell.yearIndex + 1 }}</span>
+                  </p>
                 </div>
 
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-gray-400 font-medium">Année 2</span>
-                    <EditableValue v-model="growthY2" type="percent" :is-decimal="true" :step="0.1" />
+                <!-- ── Cas : Croissance CA ── -->
+                <div v-if="activeCell.type === 'growth'" class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] text-gray-400">Croissance — An {{ activeCell.yearIndex + 1 }}</span>
+                    <span class="font-mono text-emerald-400 text-xs font-bold">{{ activeGrowthVal.toFixed(1) }}%</span>
                   </div>
-                  <input v-model.number="growthY2" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
-                </div>
-
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-gray-400 font-medium">Année 3</span>
-                    <EditableValue v-model="growthY3" type="percent" :is-decimal="true" :step="0.1" />
-                  </div>
-                  <input v-model.number="growthY3" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
-                </div>
-
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-gray-400 font-medium">Année 4</span>
-                    <EditableValue v-model="growthY4" type="percent" :is-decimal="true" :step="0.1" />
-                  </div>
-                  <input v-model.number="growthY4" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
-                </div>
-
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-gray-400 font-medium">Année 5</span>
-                    <EditableValue v-model="growthY5" type="percent" :is-decimal="true" :step="0.1" />
-                  </div>
-                  <input v-model.number="growthY5" type="range" min="-0.50" max="1.50" step="0.005" class="w-full accent-emerald-500" />
-                </div>
-              </template>
-            </div>
-
-            <!-- Grille d'évolution des CA sur 5 ans (Édition Manuelle Interactive) -->
-            <div class="space-y-3 pt-2 border-t border-gray-800/60">
-              <div class="flex items-center justify-between">
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-400">Projection Annuelle du Chiffre d'Affaires (Cliquer pour éditer)</h3>
-                <span class="text-[11px] text-gray-500 hidden sm:inline">Cliquer sur n'importe quel chiffre pour le modifier</span>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
-                <div v-for="item in revenueProjections" :key="item.year" class="p-3 bg-gray-900 rounded-xl border border-gray-800 space-y-2 text-center group">
-                  <div class="flex items-center justify-between text-[11px] font-mono text-gray-400 border-b border-gray-800/80 pb-1.5">
-                    <span>Année {{ item.year }}</span>
-                    <EditableValue
-                      :model-value="item.growth"
-                      type="percent"
-                      :is-decimal="true"
-                      :step="0.1"
-                      @change="v => updateGrowthY(item.year - 1, v)"
+                  <div class="flex items-center gap-2 overflow-hidden">
+                    <input
+                      v-model.number="activeGrowthVal"
+                      type="number"
+                      step="0.1"
+                      class="w-16 rounded-md bg-gray-950 border border-gray-700 px-1.5 py-1 text-xs font-mono text-white text-right focus:border-emerald-500 focus:outline-none flex-shrink-0"
+                    />
+                    <input
+                      v-model.number="activeGrowthVal"
+                      type="range"
+                      min="-50"
+                      max="150"
+                      step="0.5"
+                      class="w-0 flex-1 min-w-0 accent-emerald-500"
                     />
                   </div>
+                  <button
+                    type="button"
+                    class="w-full rounded-md bg-gray-800 border border-gray-700 px-2 py-1 text-[11px] font-semibold text-gray-400 hover:bg-emerald-800/60 hover:text-white hover:border-emerald-600 transition"
+                    @click="propagateActiveGrowth"
+                  >⚡ An {{ activeCell.yearIndex + 1 }} → An 5</button>
+                </div>
 
-                  <div class="py-1">
-                    <EditableValue
-                      :model-value="item.revenue"
-                      type="scaledCurrency"
-                      :currency="stock?.currency || 'USD'"
-                      :is-decimal="false"
-                      :step="1000000"
-                      @change="v => updateRevenueForYear(item.year - 1, v)"
+                <!-- ── Cas : Marge Nette ── -->
+                <div v-else-if="activeCell.type === 'margin'" class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] text-gray-400">Marge — An {{ activeCell.yearIndex + 1 }}</span>
+                    <span class="font-mono text-sky-400 text-xs font-bold">{{ activeMarginVal.toFixed(1) }}%</span>
+                  </div>
+                  <div class="flex items-center gap-2 overflow-hidden">
+                    <input
+                      v-model.number="activeMarginVal"
+                      type="number"
+                      step="0.1"
+                      class="w-16 rounded-md bg-gray-950 border border-gray-700 px-1.5 py-1 text-xs font-mono text-white text-right focus:border-sky-500 focus:outline-none flex-shrink-0"
+                    />
+                    <input
+                      v-model.number="activeMarginVal"
+                      type="range"
+                      min="0"
+                      max="80"
+                      step="0.5"
+                      class="w-0 flex-1 min-w-0 accent-sky-500"
                     />
                   </div>
+                  <button
+                    type="button"
+                    class="w-full rounded-md bg-gray-800 border border-gray-700 px-2 py-1 text-[11px] font-semibold text-gray-400 hover:bg-sky-800/60 hover:text-white hover:border-sky-600 transition"
+                    @click="propagateActiveMargin"
+                  >⚡ An {{ activeCell.yearIndex + 1 }} → An 5</button>
                 </div>
-              </div>
 
-              <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/20 text-xs">
-                <div>
-                  <span class="text-gray-400">CA Final An 5 Projeté : </span>
-                  <span class="font-bold text-emerald-400 text-sm ml-1">{{ formatScaledCurrency(scenarios.base.revenue5Y, stock.currency) }}</span>
+                <!-- ── Cas : Chiffre d'Affaires ── -->
+                <div v-else-if="activeCell.type === 'revenue'" class="space-y-2">
+                  <span class="text-[11px] text-gray-400">CA — An {{ activeCell.yearIndex + 1 }}</span>
+                  <div class="flex items-center gap-1.5">
+                    <input
+                      v-model.number="activeRevenueScaledVal"
+                      type="number"
+                      step="0.01"
+                      class="flex-1 rounded-md bg-gray-950 border border-gray-700 px-1.5 py-1 text-xs font-mono text-white text-right focus:border-emerald-500 focus:outline-none min-w-0"
+                    />
+                    <select
+                      v-model="activeRevenueScaleUnit"
+                      class="rounded-md bg-gray-950 border border-gray-700 px-1 py-1 text-[10px] font-mono text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none flex-shrink-0"
+                    >
+                      <option value="B">Mds</option>
+                      <option value="M">M</option>
+                      <option value="K">K</option>
+                      <option value="1">$</option>
+                    </select>
+                  </div>
+                  <!-- Spacer calé sur la hauteur du bouton Propager pour égaliser la hauteur totale -->
+                  <div class="h-[26px]"></div>
                 </div>
-                <div>
-                  <span class="text-gray-400">CAGR Équivalent 5 ans : </span>
-                  <span class="font-bold text-emerald-400 text-sm ml-1">{{ formatPercent(scenarios.base.equivalentCAGR, true) }}</span>
-                </div>
+
               </div>
             </div>
           </div>
 
-          <!-- Section 2 : ⚙️ Hypothèses Financières & Risque -->
+
+          <!-- Section 2 : ⚙️ Valorisation & Multiples de Sortie -->
           <div class="rounded-2xl border border-gray-800 bg-gray-950/70 p-6 space-y-6 shadow-xl backdrop-blur">
-            <h2 class="text-base font-bold text-white flex items-center gap-2 border-b border-gray-800 pb-4">
-              <span>⚙️</span>
-              <span>Hypothèses Financières & Risque</span>
-            </h2>
-
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              <!-- Marge Nette (m) -->
-              <div class="space-y-2">
-                <div class="flex items-center justify-between text-xs">
-                  <span class="font-medium text-gray-400">Marge Nette Cible (m)</span>
-                  <EditableValue v-model="margin" type="percent" :is-decimal="true" :step="0.5" />
-                </div>
-                <input v-model.number="margin" type="range" min="0.00" max="0.80" step="0.005" class="w-full accent-emerald-500" />
-              </div>
-
-              <!-- Multiple Exit (P/E) -->
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2 border-b border-gray-800 pb-2">
+                <span>⚙️</span>
+                <span>Valorisation & Multiples de Sortie</span>
+              </h2>
+              <p class="text-xs text-gray-400 mt-1">Paramètres de valorisation boursière (Multiple d'Exit, WACC / Cost of Equity, Risk Spread).</p>
+            </div>
+            <div class="grid gap-6 md:grid-cols-3">
               <div class="space-y-2">
                 <div class="flex items-center justify-between text-xs">
                   <span class="font-medium text-gray-400">Multiple Exit (P/E)</span>
@@ -635,17 +896,13 @@ const parsedAuditData = computed<AuditData | null>(() => {
                 </div>
                 <input v-model.number="targetMultiple" type="range" min="5" max="120" step="0.5" class="w-full accent-emerald-500" />
               </div>
-
-              <!-- Taux d'Actualisation (r) -->
               <div class="space-y-2">
                 <div class="flex items-center justify-between text-xs">
-                  <span class="font-medium text-gray-400">Taux Actualisation (r)</span>
+                  <span class="font-medium text-gray-400">Taux Actualisation / WACC (r)</span>
                   <EditableValue v-model="discountRate" type="percent" :is-decimal="true" :step="0.25" :digits="2" />
                 </div>
                 <input v-model.number="discountRate" type="range" min="0.05" max="0.20" step="0.0025" class="w-full accent-emerald-500" />
               </div>
-
-              <!-- Risk Spread -->
               <div class="space-y-2">
                 <div class="flex items-center justify-between text-xs">
                   <span class="font-medium text-gray-400">Spread Bêta / Scénarios</span>

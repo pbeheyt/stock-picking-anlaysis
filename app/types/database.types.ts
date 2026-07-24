@@ -1,5 +1,6 @@
 export type StockStatus = 'portfolio' | 'watchlist'
 export type GrowthMode = 'cagr' | 'explicit'
+export type MarginMode = 'constant' | 'explicit'
 export type MarginType = 'net_income' | 'fcf'
 
 export interface AuditCandidate {
@@ -75,6 +76,12 @@ export interface Stock {
   revenue_y4: number | null
   revenue_y5: number | null
   projected_margin: number
+  margin_mode?: MarginMode
+  margin_y1?: number
+  margin_y2?: number
+  margin_y3?: number
+  margin_y4?: number
+  margin_y5?: number
   target_multiple: number
   discount_rate: number
   risk_spread: number
