@@ -464,7 +464,7 @@ const startStep = (type: 'growth' | 'margin', isIncrement: boolean) => {
       const newVal = activeGrowthVal.value + delta
       activeGrowthVal.value = parseFloat(Math.min(max, Math.max(min, newVal)).toFixed(1))
     } else {
-      const min = 0, max = 80
+      const min = -50, max = 80
       const newVal = activeMarginVal.value + delta
       activeMarginVal.value = parseFloat(Math.min(max, Math.max(min, newVal)).toFixed(1))
     }
@@ -710,19 +710,19 @@ const parsedAuditData = computed<AuditData | null>(() => {
             </div>
 
             <!-- Body : Table + Inspector -->
-            <div class="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-800">
+            <div class="flex flex-col lg:flex-row gap-6 p-5">
 
-              <!-- ── GAUCHE : Tableau P&L ── -->
+              <!-- ── GAUCHE : Tableau P&L Rétro-Stable ── -->
               <div class="flex-1 min-w-0 overflow-x-auto">
-                <table class="w-full text-left border-collapse text-xs">
+                <table class="w-full border-collapse text-xs table-fixed font-mono tabular-nums">
                   <thead>
-                    <tr class="border-b border-gray-800 bg-gray-950/80 text-gray-500 font-mono text-[10px] uppercase tracking-wider">
-                      <th class="py-2 px-3 font-semibold">Poste</th>
-                      <th class="py-2 px-2 text-right font-semibold">TTM</th>
+                    <tr class="border-b border-gray-800 bg-gray-950/80 text-gray-400 text-[10px] uppercase tracking-wider">
+                      <th class="py-2.5 px-3 font-semibold text-left w-36">Poste P&L</th>
+                      <th class="py-2.5 px-2 text-right font-semibold w-20">TTM</th>
                       <th
                         v-for="item in revenueProjections"
                         :key="item.year"
-                        class="py-2 px-2 text-right font-semibold"
+                        class="py-2.5 px-2 text-right font-semibold w-20"
                       >An {{ item.year }}</th>
                     </tr>
                   </thead>
@@ -730,15 +730,18 @@ const parsedAuditData = computed<AuditData | null>(() => {
 
                     <!-- Row 1 : Croissance CA (%) -->
                     <tr class="transition">
-                      <td class="py-2 px-3 text-gray-400 whitespace-nowrap font-medium text-[11px]">Crois. %</td>
-                      <td class="py-2 px-2 text-right text-gray-600 font-mono text-[11px]">—</td>
+                      <td class="py-2.5 px-3 text-gray-300 font-sans font-medium text-[11px] whitespace-nowrap truncate">Croissance CA</td>
+                      <td class="py-2.5 px-2 text-right text-gray-600 font-mono text-[11px]">—</td>
                       <td
                         v-for="(item, idx) in revenueProjections"
                         :key="idx"
-                        class="py-2 px-2 text-right font-mono font-semibold text-[11px] cursor-pointer transition-all duration-150"
-                        :class="activeCell.type === 'growth' && activeCell.yearIndex === idx
-                          ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/50'
-                          : 'text-emerald-400 hover:bg-emerald-500/8'"
+                        class="py-2.5 px-2 text-right font-mono font-semibold text-[11px] cursor-pointer transition-all duration-150"
+                        :class="[
+                          activeCell.type === 'growth' && activeCell.yearIndex === idx
+                            ? (item.growth >= 0 ? 'bg-emerald-500/15 ring-1 ring-inset ring-emerald-500/50' : 'bg-rose-500/15 ring-1 ring-inset ring-rose-500/50')
+                            : 'hover:bg-gray-800/40',
+                          item.growth > 0 ? 'text-emerald-400' : item.growth < 0 ? 'text-rose-400' : 'text-gray-400'
+                        ]"
                         @click="selectCell('growth', idx)"
                       >
                         {{ formatPercent(item.growth, true) }}
@@ -747,17 +750,17 @@ const parsedAuditData = computed<AuditData | null>(() => {
 
                     <!-- Row 2 : Chiffre d'Affaires -->
                     <tr class="bg-gray-950/25 transition">
-                      <td class="py-2 px-3 text-gray-300 whitespace-nowrap font-medium text-[11px]">CA</td>
-                      <td class="py-2 px-2 text-right font-mono text-gray-400 font-semibold text-[11px]">
+                      <td class="py-2.5 px-3 text-white font-sans font-semibold text-[11px] whitespace-nowrap truncate">Chiffre d'Affaires</td>
+                      <td class="py-2.5 px-2 text-right font-mono text-gray-400 font-semibold text-[11px]">
                         {{ formatScaledCurrency(stock.revenue_ttm, stock.currency) }}
                       </td>
                       <td
                         v-for="(item, idx) in revenueProjections"
                         :key="idx"
-                        class="py-2 px-2 text-right font-mono font-bold text-[11px] cursor-pointer transition-all duration-150"
+                        class="py-2.5 px-2 text-right font-mono font-bold text-[11px] cursor-pointer transition-all duration-150 text-white"
                         :class="activeCell.type === 'revenue' && activeCell.yearIndex === idx
                           ? 'bg-emerald-500/15 text-emerald-200 ring-1 ring-inset ring-emerald-500/50'
-                          : 'text-white hover:bg-emerald-500/8'"
+                          : 'hover:bg-gray-800/40'"
                         @click="selectCell('revenue', idx)"
                       >
                         {{ formatScaledCurrency(item.revenue, stock.currency) }}
@@ -766,17 +769,23 @@ const parsedAuditData = computed<AuditData | null>(() => {
 
                     <!-- Row 3 : Marge Nette -->
                     <tr class="transition">
-                      <td class="py-2 px-3 text-gray-400 whitespace-nowrap font-medium text-[11px]">Marge %</td>
-                      <td class="py-2 px-2 text-right font-mono text-gray-500 text-[11px]">
+                      <td class="py-2.5 px-3 text-gray-300 font-sans font-medium text-[11px] whitespace-nowrap truncate">Marge Nette</td>
+                      <td
+                        class="py-2.5 px-2 text-right font-mono text-[11px]"
+                        :class="(stock.margin_net_raw || 0) >= 0 ? 'text-gray-400' : 'text-rose-400'"
+                      >
                         {{ formatPercent(stock.margin_net_raw, true, 1, false) }}
                       </td>
                       <td
                         v-for="(item, idx) in revenueProjections"
                         :key="idx"
-                        class="py-2 px-2 text-right font-mono font-semibold text-[11px] cursor-pointer transition-all duration-150"
-                        :class="activeCell.type === 'margin' && activeCell.yearIndex === idx
-                          ? 'bg-sky-500/15 text-sky-200 ring-1 ring-inset ring-sky-500/50'
-                          : 'text-sky-400 hover:bg-sky-500/8'"
+                        class="py-2.5 px-2 text-right font-mono font-semibold text-[11px] cursor-pointer transition-all duration-150"
+                        :class="[
+                          activeCell.type === 'margin' && activeCell.yearIndex === idx
+                            ? (item.margin >= 0 ? 'bg-sky-500/15 ring-1 ring-inset ring-sky-500/50' : 'bg-rose-500/15 ring-1 ring-inset ring-rose-500/50')
+                            : 'hover:bg-gray-800/40',
+                          item.margin > 0 ? 'text-sky-400' : item.margin < 0 ? 'text-rose-400 font-bold' : 'text-gray-400'
+                        ]"
                         @click="selectCell('margin', idx)"
                       >
                         {{ formatPercent(item.margin, true, 1, false) }}
@@ -784,15 +793,19 @@ const parsedAuditData = computed<AuditData | null>(() => {
                     </tr>
 
                     <!-- Row 4 : Résultat Net -->
-                    <tr class="bg-emerald-950/20 border-t border-gray-800">
-                      <td class="py-2 px-3 font-bold text-emerald-400 whitespace-nowrap text-[11px]">Rés. Net</td>
-                      <td class="py-2 px-2 text-right font-mono text-gray-400 font-semibold text-[11px]">
+                    <tr class="bg-gray-950/40 border-t border-gray-800">
+                      <td class="py-2.5 px-3 font-sans font-bold text-gray-200 text-[11px] whitespace-nowrap truncate">Résultat Net</td>
+                      <td
+                        class="py-2.5 px-2 text-right font-mono font-semibold text-[11px]"
+                        :class="((stock.revenue_ttm || 0) * (stock.margin_net_raw || 0)) >= 0 ? 'text-gray-300' : 'text-rose-400 font-bold'"
+                      >
                         {{ formatScaledCurrency((stock.revenue_ttm || 0) * (stock.margin_net_raw || 0), stock.currency) }}
                       </td>
                       <td
                         v-for="(item, idx) in revenueProjections"
                         :key="idx"
-                        class="py-2 px-2 text-right font-mono font-bold text-emerald-400 text-[11px]"
+                        class="py-2.5 px-2 text-right font-mono font-bold text-[11px]"
+                        :class="item.earnings > 0 ? 'text-emerald-400' : item.earnings < 0 ? 'text-rose-400 bg-rose-500/10' : 'text-gray-400'"
                       >
                         {{ formatScaledCurrency(item.earnings, stock.currency) }}
                       </td>
@@ -802,24 +815,30 @@ const parsedAuditData = computed<AuditData | null>(() => {
                 </table>
 
                 <!-- Synthèse P&L An 5 -->
-                <div class="flex flex-wrap gap-6 p-4 bg-emerald-950/20 border-t border-emerald-800/30 text-xs">
+                <div class="flex flex-wrap gap-6 p-3 mt-4 rounded-xl bg-emerald-950/20 border border-emerald-800/30 text-xs">
                   <div>
-                    <span class="text-gray-400">CA An 5 : </span>
-                    <span class="font-bold text-emerald-400 ml-1">{{ formatScaledCurrency(scenarios.base.revenue5Y, stock.currency) }}</span>
+                    <span class="text-gray-400">Chiffre d'Affaires An 5 : </span>
+                    <span class="font-bold font-mono text-emerald-400 ml-1">{{ formatScaledCurrency(scenarios.base.revenue5Y, stock.currency) }}</span>
                   </div>
                   <div>
-                    <span class="text-gray-400">Rés. Net An 5 : </span>
-                    <span class="font-bold text-emerald-400 ml-1">{{ formatScaledCurrency(scenarios.base.earnings5Y, stock.currency) }}</span>
+                    <span class="text-gray-400">Résultat Net An 5 : </span>
+                    <span
+                      class="font-bold font-mono ml-1"
+                      :class="scenarios.base.earnings5Y >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                    >{{ formatScaledCurrency(scenarios.base.earnings5Y, stock.currency) }}</span>
                   </div>
                   <div>
-                    <span class="text-gray-400">CAGR Éq. : </span>
-                    <span class="font-bold text-emerald-400 ml-1">{{ formatPercent(scenarios.base.equivalentCAGR, true) }}</span>
+                    <span class="text-gray-400">CAGR Équivalent : </span>
+                    <span
+                      class="font-bold font-mono ml-1"
+                      :class="scenarios.base.equivalentCAGR >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                    >{{ formatPercent(scenarios.base.equivalentCAGR, true) }}</span>
                   </div>
                 </div>
               </div>
 
-              <!-- ── DROITE : Inspecteur Latéral Contextuel ── -->
-              <div class="w-full lg:w-56 flex-shrink-0 bg-gray-900/80 p-4 space-y-4">
+              <!-- ── DROITE : Inspecteur Latéral Contextuel Fixe ── -->
+              <div class="w-full lg:w-60 flex-shrink-0 bg-gray-900/90 border border-gray-800 rounded-xl p-4 space-y-4">
 
                 <!-- Header Inspecteur -->
                 <div class="border-b border-gray-800 pb-3">
@@ -827,8 +846,9 @@ const parsedAuditData = computed<AuditData | null>(() => {
                     <div
                       class="w-1.5 h-1.5 rounded-full flex-shrink-0"
                       :class="{
-                        'bg-emerald-400': activeCell.type === 'growth',
-                        'bg-sky-400': activeCell.type === 'margin',
+                        'bg-emerald-400': activeCell.type === 'growth' && activeGrowthVal >= 0,
+                        'bg-rose-400': (activeCell.type === 'growth' && activeGrowthVal < 0) || (activeCell.type === 'margin' && activeMarginVal < 0),
+                        'bg-sky-400': activeCell.type === 'margin' && activeMarginVal >= 0,
                         'bg-white': activeCell.type === 'revenue',
                       }"
                     ></div>
@@ -845,7 +865,10 @@ const parsedAuditData = computed<AuditData | null>(() => {
                 <div v-if="activeCell.type === 'growth'" class="space-y-2">
                   <div class="flex items-center justify-between">
                     <span class="text-[11px] text-gray-400">Croissance — An {{ activeCell.yearIndex + 1 }}</span>
-                    <span class="font-mono text-emerald-400 text-xs font-bold">{{ activeGrowthVal.toFixed(1) }}%</span>
+                    <span
+                      class="font-mono text-xs font-bold"
+                      :class="activeGrowthVal >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                    >{{ activeGrowthVal.toFixed(1) }}%</span>
                   </div>
                   <div class="flex items-center gap-1">
                     <button
@@ -885,7 +908,8 @@ const parsedAuditData = computed<AuditData | null>(() => {
                     min="-50"
                     max="150"
                     step="0.5"
-                    class="w-full accent-emerald-500 block"
+                    class="w-full block"
+                    :class="activeGrowthVal >= 0 ? 'accent-emerald-500' : 'accent-rose-500'"
                   />
                 </div>
 
@@ -893,7 +917,10 @@ const parsedAuditData = computed<AuditData | null>(() => {
                 <div v-else-if="activeCell.type === 'margin'" class="space-y-2">
                   <div class="flex items-center justify-between">
                     <span class="text-[11px] text-gray-400">Marge — An {{ activeCell.yearIndex + 1 }}</span>
-                    <span class="font-mono text-sky-400 text-xs font-bold">{{ activeMarginVal.toFixed(1) }}%</span>
+                    <span
+                      class="font-mono text-xs font-bold"
+                      :class="activeMarginVal >= 0 ? 'text-sky-400' : 'text-rose-400'"
+                    >{{ activeMarginVal.toFixed(1) }}%</span>
                   </div>
                   <div class="flex items-center gap-1">
                     <button
@@ -930,10 +957,11 @@ const parsedAuditData = computed<AuditData | null>(() => {
                   <input
                     v-model.number="activeMarginVal"
                     type="range"
-                    min="0"
+                    min="-50"
                     max="80"
                     step="0.5"
-                    class="w-full accent-sky-500 block"
+                    class="w-full block"
+                    :class="activeMarginVal >= 0 ? 'accent-sky-500' : 'accent-rose-500'"
                   />
                 </div>
 
