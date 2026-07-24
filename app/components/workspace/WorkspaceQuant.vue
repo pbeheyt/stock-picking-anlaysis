@@ -2,6 +2,7 @@
 import * as echarts from 'echarts'
 import {
   calculateQuantAnalysis,
+  findMaxR2Period,
   type HistoryPoint,
   type QuantAnalysisResult,
 } from '~/utils/quant'
@@ -9,6 +10,7 @@ import {
   formatCurrency,
   formatPercent,
   formatNumber,
+  formatDurationYearsDecimal,
 } from '~/utils/format'
 
 const props = defineProps<{
@@ -27,7 +29,7 @@ const dividendRate = ref<number | null>(null)
 
 const minIndex = ref(0)
 const maxIndex = ref(0)
-const activePreset = ref<'1Y' | '3Y' | '5Y' | '10Y' | 'ALL'>('ALL')
+const activePreset = ref<'1Y' | '3Y' | '5Y' | '10Y' | 'ALL' | 'MAX_R2'>('ALL')
 
 let saveTimer: NodeJS.Timeout | null = null
 
@@ -45,7 +47,6 @@ const saveRegressionPriceToDb = (price: number) => {
     }
   }, 600)
 }
-
 
 const chartRef = ref<HTMLDivElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
@@ -76,9 +77,16 @@ const fetchHistory = async () => {
   }
 }
 
-const setPreset = (preset: '1Y' | '3Y' | '5Y' | '10Y' | 'ALL') => {
+const setPreset = (preset: '1Y' | '3Y' | '5Y' | '10Y' | 'ALL' | 'MAX_R2') => {
   activePreset.value = preset
   if (!rawHistory.value.length) return
+
+  if (preset === 'MAX_R2') {
+    const { minIndex: bestStart, maxIndex: bestEnd } = findMaxR2Period(rawHistory.value, 104)
+    minIndex.value = bestStart
+    maxIndex.value = bestEnd
+    return
+  }
 
   const total = rawHistory.value.length
   maxIndex.value = total - 1
@@ -113,7 +121,6 @@ watch(
   },
   { immediate: true }
 )
-
 
 const findClosestDateIndex = (dateStr: string): number => {
   if (!rawHistory.value.length || !dateStr) return 0
@@ -269,15 +276,16 @@ const renderChart = () => {
   const curr = props.currency || 'USD'
   const symbol = curr === 'EUR' ? '€' : '$'
 
-  const allVals = [
-    ...rawHistory.value.map(h => h.close).filter((v): v is number => v !== null && v > 0),
+  // Dynamic Y-axis scaling based strictly on active visible range
+  const visibleVals = [
+    ...filteredHistory.value.map(h => h.close).filter((v): v is number => v !== null && v > 0),
     ...chartData.minus2SigmaLine.filter((v): v is number => v !== null && v > 0),
     ...chartData.plus2SigmaLine.filter((v): v is number => v !== null && v > 0),
   ]
-  const dataMin = allVals.length ? Math.min(...allVals) : 1
-  const dataMax = allVals.length ? Math.max(...allVals) : 100
-  const yMin = Math.max(0.001, Number((dataMin * 0.92).toPrecision(4)))
-  const yMax = Number((dataMax * 1.08).toPrecision(4))
+  const dataMin = visibleVals.length ? Math.min(...visibleVals) : 1
+  const dataMax = visibleVals.length ? Math.max(...visibleVals) : 100
+  const yMin = Math.max(0.001, Number((dataMin * 0.95).toPrecision(4)))
+  const yMax = Number((dataMax * 1.05).toPrecision(4))
 
   const option: echarts.EChartsOption = {
     backgroundColor: 'transparent',
@@ -483,7 +491,7 @@ const getGaugeArc = (valRatio: number) => {
     </div>
 
     <div v-else-if="quantResult" class="space-y-6">
-      <div class="grid gap-4 md:grid-cols-3">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
           <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
             <span>💰</span>
@@ -513,9 +521,8 @@ const getGaugeArc = (valRatio: number) => {
 
             <div v-if="dividendYield && dividendYield > 0" class="flex justify-between border-t border-gray-800/80 pt-2">
               <span class="text-gray-400">Rendement Dividende</span>
-              <span class="font-bold text-emerald-400 font-mono">
-                {{ formatPercent(dividendYield, true) }}
-                <span v-if="dividendRate" class="text-[10px] text-gray-400">({{ formatCurrency(dividendRate, currency) }}/an)</span>
+              <span class="font-bold text-white font-mono">
+                {{ formatPercent(dividendYield, true, 1, false) }}
               </span>
             </div>
           </div>
@@ -527,7 +534,7 @@ const getGaugeArc = (valRatio: number) => {
             <span>Analyse du Canal (σ)</span>
           </div>
 
-          <div class="space-y-2 text-xs font-mono">
+          <div class="space-y-1 text-xs font-mono">
             <div class="flex justify-between">
               <span class="text-gray-400 font-sans">Borne +2σ (Sur-achat)</span>
               <span class="text-rose-400 font-bold">{{ formatCurrency(quantResult.plus2Sigma, currency) }}</span>
@@ -538,9 +545,9 @@ const getGaugeArc = (valRatio: number) => {
               <span class="text-amber-400 font-bold">{{ formatCurrency(quantResult.plus1Sigma, currency) }}</span>
             </div>
 
-            <div class="flex justify-between border-y border-orange-500/20 py-1 bg-orange-500/5 -mx-2 px-2 rounded">
-              <span class="text-orange-400 font-sans font-bold">Régression Centrale</span>
-              <span class="text-orange-400 font-bold">{{ formatCurrency(quantResult.theoreticalPrice, currency) }}</span>
+            <div class="flex justify-between border-y border-gray-800/80 py-1 font-mono">
+              <span class="text-gray-300 font-sans">Prix Théorique (Centre)</span>
+              <span class="text-white font-bold">{{ formatCurrency(quantResult.theoreticalPrice, currency) }}</span>
             </div>
 
             <div class="flex justify-between">
@@ -563,6 +570,16 @@ const getGaugeArc = (valRatio: number) => {
 
           <div class="space-y-2 text-xs">
             <div class="flex justify-between">
+              <span class="text-gray-400">Prix théorique +5 Ans</span>
+              <span class="font-bold text-emerald-400 font-mono text-sm">{{ formatCurrency(quantResult.projectedPrice5Y, currency) }}</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span class="text-gray-400">Date cible projection</span>
+              <span class="font-bold text-gray-300 capitalize">{{ quantResult.targetDate5Y }}</span>
+            </div>
+
+            <div class="flex justify-between border-t border-gray-800/80 pt-2">
               <span class="text-gray-400">Perf passée 12M</span>
               <span
                 class="font-bold font-mono"
@@ -581,24 +598,48 @@ const getGaugeArc = (valRatio: number) => {
                 {{ formatPercent(quantResult.perf5Y, true) }}
               </span>
             </div>
+          </div>
+        </div>
 
-            <div class="flex justify-between border-t border-gray-800/80 pt-2">
-              <span class="text-gray-400">Prix théorique +5 Ans</span>
-              <span class="font-bold text-emerald-400 font-mono text-sm">{{ formatCurrency(quantResult.projectedPrice5Y, currency) }}</span>
+        <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
+          <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
+            <span>🛡️</span>
+            <span>Risque & Stabilité</span>
+          </div>
+
+          <div class="space-y-2 text-xs">
+            <div class="flex justify-between">
+              <span class="text-gray-400">Volatilité Annualisée</span>
+              <span
+                class="font-bold font-mono"
+                :class="quantResult.annualizedVolatility <= 0.25 ? 'text-emerald-400' : quantResult.annualizedVolatility <= 0.45 ? 'text-amber-400' : 'text-rose-400'"
+              >
+                ±{{ formatPercent(quantResult.annualizedVolatility, true, 1, false) }}
+              </span>
             </div>
 
             <div class="flex justify-between">
-              <span class="text-gray-400">Date cible projection</span>
-              <span class="font-bold text-gray-300 capitalize">{{ quantResult.targetDate5Y }}</span>
+              <span class="text-gray-400">Max Drawdown (Période)</span>
+              <span class="font-bold text-rose-400 font-mono">{{ formatPercent(quantResult.maxDrawdown, true) }}</span>
+            </div>
+
+            <div class="flex justify-between border-t border-gray-800/80 pt-2">
+              <span class="text-gray-400">Durée observée</span>
+              <span class="font-bold text-white font-mono">{{ formatDurationYearsDecimal(quantResult.startDate, quantResult.endDate) }}</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span class="text-gray-400">Échantillon</span>
+              <span class="font-bold text-gray-300 font-mono">{{ quantResult.sampleSize }} sem.</span>
             </div>
           </div>
         </div>
       </div>
 
       <div class="rounded-2xl border border-gray-800 bg-gray-950/80 p-5 space-y-4 shadow-xl">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">Indicateurs de Régression & Momentum</h3>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">Indicateurs Majeurs de Régression & Risque</h3>
 
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
             <div class="text-[11px] font-semibold text-gray-400 uppercase">CAGR Annuel</div>
             <div class="relative h-16 w-32">
@@ -640,46 +681,27 @@ const getGaugeArc = (valRatio: number) => {
           </div>
 
           <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase">Perf 12M</div>
+            <div class="text-[11px] font-semibold text-gray-400 uppercase">Volatilité Annuelle</div>
             <div class="relative h-16 w-32">
               <svg viewBox="0 0 100 55" class="w-full h-full">
                 <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
-                  :stroke="(quantResult.perf12M ?? 0) >= 0 ? '#34d399' : '#ef4444'"
+                  :stroke="quantResult.annualizedVolatility <= 0.25 ? '#34d399' : quantResult.annualizedVolatility <= 0.45 ? '#fbbf24' : '#ef4444'"
                   stroke-width="8"
                   stroke-linecap="round"
                   stroke-dasharray="125.66"
-                  :stroke-dashoffset="getGaugeArc(((quantResult.perf12M ?? 0) + 0.5) / 1.5).strokeDashoffset"
+                  :stroke-dashoffset="getGaugeArc((quantResult.annualizedVolatility) / 0.6).strokeDashoffset"
                 />
-                <circle :cx="getGaugeArc(((quantResult.perf12M ?? 0) + 0.5) / 1.5).cx" :cy="getGaugeArc(((quantResult.perf12M ?? 0) + 0.5) / 1.5).cy" r="4" fill="#ffffff" />
+                <circle :cx="getGaugeArc((quantResult.annualizedVolatility) / 0.6).cx" :cy="getGaugeArc((quantResult.annualizedVolatility) / 0.6).cy" r="4" fill="#ffffff" />
               </svg>
             </div>
-            <div class="font-mono text-sm font-bold" :class="(quantResult.perf12M ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'">
-              {{ formatPercent(quantResult.perf12M, true) }}
-            </div>
-          </div>
-
-          <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase">Perf 5 Ans</div>
-            <div class="relative h-16 w-32">
-              <svg viewBox="0 0 100 55" class="w-full h-full">
-                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
-                <path
-                  d="M 10 50 A 40 40 0 0 1 90 50"
-                  fill="none"
-                  :stroke="(quantResult.perf5Y ?? 0) >= 0 ? '#34d399' : '#ef4444'"
-                  stroke-width="8"
-                  stroke-linecap="round"
-                  stroke-dasharray="125.66"
-                  :stroke-dashoffset="getGaugeArc(((quantResult.perf5Y ?? 0) + 0.5) / 3.5).strokeDashoffset"
-                />
-                <circle :cx="getGaugeArc(((quantResult.perf5Y ?? 0) + 0.5) / 3.5).cx" :cy="getGaugeArc(((quantResult.perf5Y ?? 0) + 0.5) / 3.5).cy" r="4" fill="#ffffff" />
-              </svg>
-            </div>
-            <div class="font-mono text-sm font-bold" :class="(quantResult.perf5Y ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'">
-              {{ formatPercent(quantResult.perf5Y, true) }}
+            <div
+              class="font-mono text-sm font-bold font-mono"
+              :class="quantResult.annualizedVolatility <= 0.25 ? 'text-emerald-400' : quantResult.annualizedVolatility <= 0.45 ? 'text-amber-400' : 'text-rose-400'"
+            >
+              ±{{ formatPercent(quantResult.annualizedVolatility, true, 1, false) }}
             </div>
           </div>
 
@@ -716,49 +738,61 @@ const getGaugeArc = (valRatio: number) => {
           <span class="text-xs text-gray-400 font-mono">Axe Y : Logarithmique | Utilisez le slider sous le graphique pour ajuster la plage</span>
         </div>
 
-        <div ref="chartRef" class="h-[430px] w-full" />
+        <div class="relative">
+          <div ref="chartRef" class="h-[430px] w-full" />
+        </div>
 
         <div class="pt-3 border-t border-gray-800/80 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Presets :</span>
-            <div class="flex items-center gap-1 rounded-lg bg-gray-900 p-1 border border-gray-800">
-              <button
-                v-for="p in (['1Y', '3Y', '5Y', '10Y', 'ALL'] as const)"
-                :key="p"
-                type="button"
-                class="rounded-md px-2.5 py-1 text-xs font-bold transition"
-                :class="activePreset === p
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'text-gray-400 hover:text-gray-200'"
-                @click="setPreset(p)"
-              >
-                {{ p }}
-              </button>
-            </div>
+          <div class="flex items-center gap-1 rounded-lg bg-gray-900 p-1 border border-gray-800">
+            <button
+              v-for="p in (['1Y', '3Y', '5Y', '10Y', 'ALL'] as const)"
+              :key="p"
+              type="button"
+              class="rounded-md px-2.5 py-1 text-xs font-bold transition"
+              :class="activePreset === p
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'text-gray-400 hover:text-gray-200'"
+              @click="setPreset(p)"
+            >
+              {{ p }}
+            </button>
+
+            <div class="h-4 w-px bg-gray-800 mx-1" />
+
+            <button
+              type="button"
+              class="rounded-md px-2.5 py-1 text-xs font-bold transition flex items-center gap-1"
+              :class="activePreset === 'MAX_R2'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                : 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10'"
+              title="Trouver automatiquement la fenêtre (min 2 ans) offrant le meilleur R²"
+              @click="setPreset('MAX_R2')"
+            >
+              <span>✨</span>
+              <span>Max R²</span>
+            </button>
           </div>
 
-          <div class="flex items-center gap-3 text-xs">
-            <div class="flex items-center gap-1.5">
-              <span class="text-gray-400 font-medium">Début :</span>
-              <input
-                v-model="startDateInput"
-                type="date"
-                :min="rawHistory[0]?.date"
-                :max="endDateInput"
-                class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none transition"
-              >
-            </div>
-            <span class="text-gray-500 font-bold">→</span>
-            <div class="flex items-center gap-1.5">
-              <span class="text-gray-400 font-medium">Fin :</span>
-              <input
-                v-model="endDateInput"
-                type="date"
-                :min="startDateInput"
-                :max="rawHistory[rawHistory.length - 1]?.date"
-                class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none transition"
-              >
-            </div>
+          <div class="flex items-center gap-2 text-xs">
+            <input
+              v-model="startDateInput"
+              type="date"
+              :min="rawHistory[0]?.date"
+              :max="endDateInput"
+              class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none transition"
+            >
+            <span class="text-gray-500 font-bold text-sm">-</span>
+            <input
+              v-model="endDateInput"
+              type="date"
+              :min="startDateInput"
+              :max="rawHistory[rawHistory.length - 1]?.date"
+              class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none transition"
+            >
+          </div>
+
+          <div class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono font-bold shadow-inner">
+            {{ formatDurationYearsDecimal(quantResult.startDate, quantResult.endDate) }}
           </div>
         </div>
       </div>

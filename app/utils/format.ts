@@ -39,10 +39,10 @@ export function formatCurrency(val: number | null | undefined, curr = 'USD', dec
   }).format(val)
 }
 
-export function formatPercent(val: number | null | undefined, isDecimal = false, decimals = 1): string {
+export function formatPercent(val: number | null | undefined, isDecimal = false, decimals = 1, showPlus = true): string {
   if (val === null || val === undefined || isNaN(val)) return '-'
   const num = isDecimal ? val * 100 : val
-  const sign = num > 0 ? '+' : ''
+  const sign = (showPlus && num > 0) ? '+' : ''
   return `${sign}${num.toFixed(decimals)}%`
 }
 
@@ -51,4 +51,47 @@ export function formatNumber(val: number | null | undefined, decimals = 2): stri
   return new Intl.NumberFormat('fr-FR', {
     maximumFractionDigits: decimals,
   }).format(val)
+}
+
+export function formatDurationYearsMonths(startDateStr: string, endDateStr: string): string {
+  if (!startDateStr || !endDateStr) return '-'
+  const d1 = new Date(startDateStr)
+  const d2 = new Date(endDateStr)
+  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return '-'
+
+  let years = d2.getFullYear() - d1.getFullYear()
+  let months = d2.getMonth() - d1.getMonth()
+  if (d2.getDate() < d1.getDate()) {
+    months -= 1
+  }
+  if (months < 0) {
+    years -= 1
+    months += 12
+  }
+
+  const parts: string[] = []
+  if (years > 0) parts.push(`${years} ${years > 1 ? 'ans' : 'an'}`)
+  if (months > 0) parts.push(`${months} mois`)
+  if (parts.length === 0) return '< 1 mois'
+  return parts.join(' et ')
+}
+
+export function formatDurationYearsDecimal(startDateStr: string, endDateStr: string): string {
+  if (!startDateStr || !endDateStr) return '-'
+  const d1 = new Date(startDateStr)
+  const d2 = new Date(endDateStr)
+  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return '-'
+
+  const diffDays = (d2.getTime() - d1.getTime()) / (86400 * 1000)
+  const years = diffDays / 365.25
+
+  if (years < 0.08) return '< 1 mois'
+
+  const rounded = Math.round(years)
+  if (Math.abs(years - rounded) < 0.05) {
+    return `${rounded} ${rounded > 1 ? 'ans' : 'an'}`
+  }
+
+  const formatted = years.toFixed(1).replace('.', ',')
+  return `${formatted} ${years >= 2 ? 'ans' : 'an'}`
 }

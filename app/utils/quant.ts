@@ -22,6 +22,8 @@ export interface QuantAnalysisResult {
   targetDate5Y: string
   perf12M: number | null
   perf5Y: number | null
+  annualizedVolatility: number
+  maxDrawdown: number
   chartData: {
     dates: string[]
     closes: (number | null)[]
@@ -88,6 +90,8 @@ export function calculateQuantAnalysis(
       targetDate5Y: '',
       perf12M: null,
       perf5Y: null,
+      annualizedVolatility: 0,
+      maxDrawdown: 0,
       chartData: {
         dates: [],
         closes: [],
@@ -199,6 +203,38 @@ export function calculateQuantAnalysis(
   const perf12M = computePerf(fullHistory, 365)
   const perf5Y = computePerf(fullHistory, 5 * 365)
 
+  // Calculate weekly returns & annualized volatility
+  const weeklyReturns: number[] = []
+  for (let i = 1; i < N; i++) {
+    const prev = validHistory[i - 1].close
+    const curr = validHistory[i].close
+    if (prev > 0) {
+      weeklyReturns.push((curr - prev) / prev)
+    }
+  }
+
+  let annualizedVolatility = 0
+  if (weeklyReturns.length > 1) {
+    const meanRet = weeklyReturns.reduce((acc, r) => acc + r, 0) / weeklyReturns.length
+    const variance = weeklyReturns.reduce((acc, r) => acc + Math.pow(r - meanRet, 2), 0) / (weeklyReturns.length - 1)
+    const stdWeekly = Math.sqrt(variance)
+    annualizedVolatility = stdWeekly * Math.sqrt(52)
+  }
+
+  // Calculate Max Drawdown
+  let maxDrawdown = 0
+  let peak = validHistory[0].close
+  for (let i = 0; i < N; i++) {
+    const price = validHistory[i].close
+    if (price > peak) {
+      peak = price
+    }
+    const dd = (price - peak) / peak
+    if (dd < maxDrawdown) {
+      maxDrawdown = dd
+    }
+  }
+
   return {
     startDate: validHistory[0].date,
     endDate: validHistory[tLast].date,
@@ -218,6 +254,8 @@ export function calculateQuantAnalysis(
     targetDate5Y,
     perf12M,
     perf5Y,
+    annualizedVolatility,
+    maxDrawdown,
     chartData: {
       dates,
       closes,
@@ -234,4 +272,63 @@ export function calculateQuantAnalysis(
       futureMinus2Sigma,
     },
   }
+}
+
+export function findMaxR2Period(
+  history: HistoryPoint[],
+  minWeeks: number = 104
+): { minIndex: number; maxIndex: number; maxR2: number } {
+  const validHistory = history.filter(p => p.close > 0 && !isNaN(p.close))
+  const N = validHistory.length
+  const end = N - 1
+  if (N < minWeeks) return { minIndex: 0, maxIndex: Math.max(0, end), maxR2: 0 }
+
+  const ys = validHistory.map(p => Math.log(p.close))
+
+  let bestR2 = -1
+  let bestStart = 0
+
+  // Single-pass search fixing end at Today (N - 1)
+  for (let start = 0; start <= N - minWeeks; start += 1) {
+    const len = end - start + 1
+    let sumT = 0
+    let sumY = 0
+    let sumTY = 0
+    let sumT2 = 0
+
+    for (let t = 0; t < len; t++) {
+      const y = ys[start + t]
+      sumT += t
+      sumY += y
+      sumTY += t * y
+      sumT2 += t * t
+    }
+
+    const denomT = len * sumT2 - sumT * sumT
+    if (denomT === 0) continue
+
+    const beta = (len * sumTY - sumT * sumY) / denomT
+    const alpha = (sumY - beta * sumT) / len
+
+    const yMean = sumY / len
+    let ssRes = 0
+    let ssTot = 0
+
+    for (let t = 0; t < len; t++) {
+      const y = ys[start + t]
+      const yHat = alpha + beta * t
+      ssRes += (y - yHat) * (y - yHat)
+      ssTot += (y - yMean) * (y - yMean)
+    }
+
+    if (ssTot === 0) continue
+    const r2 = Math.max(0, 1 - ssRes / ssTot)
+
+    if (r2 > bestR2) {
+      bestR2 = r2
+      bestStart = start
+    }
+  }
+
+  return { minIndex: bestStart, maxIndex: end, maxR2: Math.max(0, bestR2) }
 }
