@@ -625,15 +625,14 @@ const getGaugeArc = (valRatio: number) => {
           <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
             <span>🔮</span>
             <span>Prévisions Cibles</span>
-            <InfoTooltip text="Extrapolations théoriques du canal de régression aux horizons 1, 3, 5 et 10 ans." />
-            <span
-              v-if="quantResult.isDamped"
-              class="text-amber-400 flex items-center gap-0.5 ml-1"
-              title="Convergence Damodaran active (CAGR > 20%)"
-            >
-              <span>⚡</span>
-              <InfoTooltip text="Modèle d'Aswath Damodaran (NYU Stern / McKinsey) : En raison d'un CAGR historique exceptionnel (>20%), les projections à 3, 5 et 10 ans intègrent une décélération progressive (demi-vie de 3 ans) vers le taux terminal de 5%." />
-            </span>
+            <InfoTooltip>
+              <div class="space-y-1">
+                <div>Extrapolations théoriques du canal de régression aux horizons 1, 3, 5 et 10 ans.</div>
+                <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-1.5 border-t border-gray-800/80">
+                  ⚡ <b>Convergence Damodaran :</b> En raison d'un CAGR historique exceptionnel (>20%), les projections intègrent une décélération progressive (demi-vie de 3 ans) vers le taux terminal de 5%.
+                </div>
+              </div>
+            </InfoTooltip>
           </div>
 
           <div class="space-y-2 text-xs">
@@ -641,7 +640,19 @@ const getGaugeArc = (valRatio: number) => {
               <span class="text-gray-400">1 An</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice1Y, currency) }}</span>
-                <InfoTooltip :text="`Rendement théorique projeté : ${formatPercent(quantResult.projectedReturn1Y, true)}${quantResult.isDamped ? ' (Pente historique brute : ' + (quantResult.cagrHistorical * 100).toFixed(1) + '%/an)' : ''}`" />
+                <InfoTooltip>
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-gray-400">Rendement :</span>
+                      <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn1Y)">
+                        {{ formatPercent(quantResult.projectedReturn1Y, true) }}
+                      </span>
+                    </div>
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-gray-400 pt-0.5 border-t border-gray-800/80">
+                      Pente brute : {{ (quantResult.cagrHistorical * 100).toFixed(1) }}%/an
+                    </div>
+                  </div>
+                </InfoTooltip>
               </div>
             </div>
 
@@ -649,7 +660,19 @@ const getGaugeArc = (valRatio: number) => {
               <span class="text-gray-400">3 Ans</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice3Y, currency) }}</span>
-                <InfoTooltip :text="`Rendement théorique projeté : ${formatPercent(quantResult.projectedReturn3Y, true)}${quantResult.isDamped ? ' (Taux régressif An 3 : ' + (quantResult.dampedAnnualRate3Y * 100).toFixed(1) + '%/an — Modèle Damodaran avec demi-vie de 3 ans vers 5%)' : ''}`" />
+                <InfoTooltip>
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-gray-400">Rendement :</span>
+                      <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn3Y)">
+                        {{ formatPercent(quantResult.projectedReturn3Y, true) }}
+                      </span>
+                    </div>
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80">
+                      Taux régressif An 3 : +{{ (quantResult.dampedAnnualRate3Y * 100).toFixed(1) }}%/an
+                    </div>
+                  </div>
+                </InfoTooltip>
               </div>
             </div>
 
@@ -657,7 +680,19 @@ const getGaugeArc = (valRatio: number) => {
               <span class="text-gray-400">5 Ans</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice5Y, currency) }}</span>
-                <InfoTooltip :text="`Rendement théorique projeté : ${formatPercent(quantResult.projectedReturn5Y, true)}${quantResult.isDamped ? ' (Taux régressif An 5 : ' + (quantResult.dampedAnnualRate5Y * 100).toFixed(1) + '%/an — Modèle Damodaran avec demi-vie de 3 ans vers 5%)' : ''}`" />
+                <InfoTooltip>
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-gray-400">Rendement :</span>
+                      <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn5Y)">
+                        {{ formatPercent(quantResult.projectedReturn5Y, true) }}
+                      </span>
+                    </div>
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80">
+                      Taux régressif An 5 : +{{ (quantResult.dampedAnnualRate5Y * 100).toFixed(1) }}%/an
+                    </div>
+                  </div>
+                </InfoTooltip>
               </div>
             </div>
 
@@ -665,7 +700,19 @@ const getGaugeArc = (valRatio: number) => {
               <span class="text-gray-400">10 Ans</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice10Y, currency) }}</span>
-                <InfoTooltip :text="`Rendement théorique projeté : ${formatPercent(quantResult.projectedReturn10Y, true)}${quantResult.isDamped ? ' (Taux régressif An 10 : ' + (quantResult.dampedAnnualRate10Y * 100).toFixed(1) + '%/an — Modèle Damodaran avec demi-vie de 3 ans vers 5%)' : ''}`" />
+                <InfoTooltip>
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-gray-400">Rendement :</span>
+                      <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn10Y)">
+                        {{ formatPercent(quantResult.projectedReturn10Y, true) }}
+                      </span>
+                    </div>
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80">
+                      Taux régressif An 10 : +{{ (quantResult.dampedAnnualRate10Y * 100).toFixed(1) }}%/an
+                    </div>
+                  </div>
+                </InfoTooltip>
               </div>
             </div>
           </div>

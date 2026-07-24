@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-  text: string
+  text?: string
 }>()
 
 const isOpen = ref(false)
@@ -22,7 +22,7 @@ const isOpen = ref(false)
     <div
       class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block group-focus-within:block w-64 p-2.5 rounded-lg bg-gray-900 border border-gray-700/90 text-gray-200 text-xs shadow-2xl z-50 pointer-events-none transition-opacity duration-150 leading-relaxed font-normal normal-case text-left"
     >
-      {{ text }}
+      <slot>{{ text }}</slot>
       <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
     </div>
   </div>
