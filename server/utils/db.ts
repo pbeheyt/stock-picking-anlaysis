@@ -4,6 +4,53 @@ import Database from 'better-sqlite3'
 
 let _db: Database.Database | null = null
 
+const COLUMNS_TO_ENSURE: Array<[colName: string, colDef: string]> = [
+  ['currency', "TEXT DEFAULT 'USD'"],
+  ['beta', 'REAL DEFAULT 1.0'],
+  ['margin_type', "TEXT DEFAULT 'net_income'"],
+  ['growth_mode', "TEXT DEFAULT 'cagr'"],
+  ['growth_y1', 'REAL DEFAULT 0.10'],
+  ['growth_y2', 'REAL DEFAULT 0.10'],
+  ['growth_y3', 'REAL DEFAULT 0.10'],
+  ['growth_y4', 'REAL DEFAULT 0.10'],
+  ['growth_y5', 'REAL DEFAULT 0.10'],
+  ['revenue_y1', 'REAL'],
+  ['revenue_y2', 'REAL'],
+  ['revenue_y3', 'REAL'],
+  ['revenue_y4', 'REAL'],
+  ['revenue_y5', 'REAL'],
+  ['margin_mode', "TEXT DEFAULT 'constant'"],
+  ['margin_y1', 'REAL'],
+  ['margin_y2', 'REAL'],
+  ['margin_y3', 'REAL'],
+  ['margin_y4', 'REAL'],
+  ['margin_y5', 'REAL'],
+  ['target_multiple', 'REAL DEFAULT 20.0'],
+  ['risk_spread', 'REAL DEFAULT 0.20'],
+  ['market_cap', 'REAL'],
+  ['pe_trailing_raw', 'REAL'],
+  ['pe_forward_raw', 'REAL'],
+  ['margin_gross_raw', 'REAL'],
+  ['margin_operating_raw', 'REAL'],
+  ['margin_net_raw', 'REAL'],
+  ['margin_fcf_raw', 'REAL'],
+  ['total_cash', 'REAL'],
+  ['total_debt', 'REAL'],
+  ['free_cash_flow_raw', 'REAL'],
+  ['analyst_target_price', 'REAL'],
+  ['analyst_target_median', 'REAL'],
+  ['analyst_target_low', 'REAL'],
+  ['analyst_target_high', 'REAL'],
+  ['analyst_growth_estimate', 'REAL'],
+  ['analyst_count', 'INTEGER'],
+  ['audit_data', 'TEXT'],
+  ['qualitative_data', 'TEXT'],
+  ['regression_fair_price', 'REAL'],
+  ['quant_preset', "TEXT DEFAULT 'MAX_R2'"],
+  ['quant_start_date', 'TEXT'],
+  ['quant_end_date', 'TEXT'],
+]
+
 export function getDb(): Database.Database {
   if (!_db) {
     const dataDir = path.resolve(process.cwd(), '.data')
@@ -74,61 +121,16 @@ export function getDb(): Database.Database {
     `)
 
     // Safe migrations for existing SQLite database files
-    const safeAddColumn = (col: string, def: string) => {
+    for (const [col, def] of COLUMNS_TO_ENSURE) {
       try {
-        _db?.exec(`ALTER TABLE stocks ADD COLUMN ${col} ${def}`)
-      } catch {}
+        _db.exec(`ALTER TABLE stocks ADD COLUMN ${col} ${def}`)
+      } catch {
+        // Ignorer si la colonne existe déjà
+      }
     }
 
-    safeAddColumn('currency', "TEXT DEFAULT 'USD'")
-    safeAddColumn('beta', 'REAL DEFAULT 1.0')
-    safeAddColumn('margin_type', "TEXT DEFAULT 'net_income'")
-    safeAddColumn('growth_mode', "TEXT DEFAULT 'cagr'")
-    safeAddColumn('growth_y1', 'REAL DEFAULT 0.10')
-    safeAddColumn('growth_y2', 'REAL DEFAULT 0.10')
-    safeAddColumn('growth_y3', 'REAL DEFAULT 0.10')
-    safeAddColumn('growth_y4', 'REAL DEFAULT 0.10')
-    safeAddColumn('growth_y5', 'REAL DEFAULT 0.10')
-    safeAddColumn('revenue_y1', 'REAL')
-    safeAddColumn('revenue_y2', 'REAL')
-    safeAddColumn('revenue_y3', 'REAL')
-    safeAddColumn('revenue_y4', 'REAL')
-    safeAddColumn('revenue_y5', 'REAL')
-    safeAddColumn('margin_mode', "TEXT DEFAULT 'constant'")
-    safeAddColumn('margin_y1', 'REAL')
-    safeAddColumn('margin_y2', 'REAL')
-    safeAddColumn('margin_y3', 'REAL')
-    safeAddColumn('margin_y4', 'REAL')
-    safeAddColumn('margin_y5', 'REAL')
-    safeAddColumn('target_multiple', 'REAL DEFAULT 20.0')
-    safeAddColumn('risk_spread', 'REAL DEFAULT 0.20')
-    safeAddColumn('market_cap', 'REAL')
-    safeAddColumn('pe_trailing_raw', 'REAL')
-    safeAddColumn('pe_forward_raw', 'REAL')
-    safeAddColumn('margin_gross_raw', 'REAL')
-    safeAddColumn('margin_operating_raw', 'REAL')
-    safeAddColumn('margin_net_raw', 'REAL')
-    safeAddColumn('margin_fcf_raw', 'REAL')
-    safeAddColumn('total_cash', 'REAL')
-    safeAddColumn('total_debt', 'REAL')
-    safeAddColumn('free_cash_flow_raw', 'REAL')
-    safeAddColumn('analyst_target_price', 'REAL')
-    safeAddColumn('analyst_target_median', 'REAL')
-    safeAddColumn('analyst_target_low', 'REAL')
-    safeAddColumn('analyst_target_high', 'REAL')
-    safeAddColumn('analyst_growth_estimate', 'REAL')
-    safeAddColumn('analyst_count', 'INTEGER')
-    safeAddColumn('audit_data', 'TEXT')
-    safeAddColumn('qualitative_data', 'TEXT')
-    safeAddColumn('regression_fair_price', 'REAL')
-    safeAddColumn('quant_preset', "TEXT DEFAULT 'MAX_R2'")
-    safeAddColumn('quant_start_date', 'TEXT')
-    safeAddColumn('quant_end_date', 'TEXT')
-
-
-
     try {
-      _db?.exec("UPDATE stocks SET status = 'watchlist' WHERE status IS NULL OR status NOT IN ('watchlist', 'portfolio')")
+      _db.exec("UPDATE stocks SET status = 'watchlist' WHERE status IS NULL OR status NOT IN ('watchlist', 'portfolio')")
     } catch {}
   }
 
