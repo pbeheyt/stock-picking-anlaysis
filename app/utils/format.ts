@@ -39,10 +39,33 @@ export function formatCurrency(val: number | null | undefined, curr = 'USD', dec
   }).format(val)
 }
 
+export function formatCompactCurrency(val: number | null | undefined, curr = 'USD'): string {
+  if (val === null || val === undefined || isNaN(val)) return '-'
+  const abs = Math.abs(val)
+  if (abs >= 100000) {
+    return formatScaledCurrency(val, curr, 2)
+  }
+  return formatCurrency(val, curr, 2)
+}
+
 export function formatPercent(val: number | null | undefined, isDecimal = false, decimals = 1, showPlus = true): string {
   if (val === null || val === undefined || isNaN(val)) return '-'
   const num = isDecimal ? val * 100 : val
   const sign = (showPlus && num > 0) ? '+' : ''
+  return `${sign}${num.toFixed(decimals)}%`
+}
+
+export function formatCompactPercent(val: number | null | undefined, isDecimal = false, decimals = 1, showPlus = true): string {
+  if (val === null || val === undefined || isNaN(val)) return '-'
+  const num = isDecimal ? val * 100 : val
+  const abs = Math.abs(num)
+  const sign = (showPlus && num > 0) ? '+' : ''
+  if (abs >= 1e6) {
+    return `${sign}${(num / 1e6).toFixed(1)}M%`
+  }
+  if (abs >= 1e3) {
+    return `${sign}${(num / 1e3).toFixed(1)}k%`
+  }
   return `${sign}${num.toFixed(decimals)}%`
 }
 

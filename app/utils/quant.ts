@@ -33,6 +33,7 @@ export interface QuantAnalysisResult {
   perf10Y: number | null
   annualizedVolatility: number
   maxDrawdown: number
+  isDamped: boolean
   chartData: {
     dates: string[]
     closes: (number | null)[]
@@ -113,6 +114,7 @@ export function calculateQuantAnalysis(
       perf10Y: null,
       annualizedVolatility: 0,
       maxDrawdown: 0,
+      isDamped: false,
       chartData: {
         dates: [],
         closes: [],
@@ -176,10 +178,34 @@ export function calculateQuantAnalysis(
   const minus1Sigma = Math.exp(logTheoryLast - sigma)
   const minus2Sigma = Math.exp(logTheoryLast - 2 * sigma)
 
-  const projectedPrice1Y = Math.exp(alpha + beta * (tLast + 52))
-  const projectedPrice3Y = Math.exp(alpha + beta * (tLast + 156))
-  const projectedPrice5Y = Math.exp(alpha + beta * (tLast + 260))
-  const projectedPrice10Y = Math.exp(alpha + beta * (tLast + 520))
+  // Modèle de convergence de Damodaran (NYU Stern / McKinsey Valuation)
+  // Taux terminal g_terminal = 5%, Seuil d'excès = 20%, Half-life T_1/2 = 3 ans (lambda = ln(2)/3)
+  const isDamped = cagrHistorical > 0.20
+  const gTerminal = 0.05
+  const lambda = Math.LN2 / 3.0
+
+  const getGrowthAtYear = (tYears: number): number => {
+    if (!isDamped) return cagrHistorical
+    const decay = Math.exp(-lambda * (tYears - 1))
+    return gTerminal + (cagrHistorical - gTerminal) * decay
+  }
+
+  const getProjectedPriceForYears = (years: number): number => {
+    if (!isDamped) {
+      return Math.exp(alpha + beta * (tLast + years * 52))
+    }
+    let price = theoreticalPrice
+    for (let y = 1; y <= years; y++) {
+      const gY = getGrowthAtYear(y)
+      price = price * (1 + gY)
+    }
+    return price
+  }
+
+  const projectedPrice1Y = getProjectedPriceForYears(1)
+  const projectedPrice3Y = getProjectedPriceForYears(3)
+  const projectedPrice5Y = getProjectedPriceForYears(5)
+  const projectedPrice10Y = getProjectedPriceForYears(10)
 
   const projectedReturn1Y = currentPrice > 0 ? (projectedPrice1Y - currentPrice) / currentPrice : 0
   const projectedReturn3Y = currentPrice > 0 ? (projectedPrice3Y - currentPrice) / currentPrice : 0
@@ -215,17 +241,34 @@ export function calculateQuantAnalysis(
   const futureMinus2Sigma: number[] = []
 
   let currentDate = lastDateObj
+  let runningFuturePrice = theoreticalPrice
+
   for (let k = 1; k <= 260; k++) {
     currentDate = new Date(currentDate.getTime() + 7 * 86400 * 1000)
     futureDates.push(currentDate.toISOString().split('T')[0])
 
-    const tFut = tLast + k
-    const logFut = alpha + beta * tFut
-    futureRegressionLine.push(Math.exp(logFut))
-    futurePlus1Sigma.push(Math.exp(logFut + sigma))
-    futurePlus2Sigma.push(Math.exp(logFut + 2 * sigma))
-    futureMinus1Sigma.push(Math.exp(logFut - sigma))
-    futureMinus2Sigma.push(Math.exp(logFut - 2 * sigma))
+    const tYears = k / 52.0
+
+    if (!isDamped) {
+      const tFut = tLast + k
+      const logFut = alpha + beta * tFut
+      const futPrice = Math.exp(logFut)
+      futureRegressionLine.push(futPrice)
+      futurePlus1Sigma.push(Math.exp(logFut + sigma))
+      futurePlus2Sigma.push(Math.exp(logFut + 2 * sigma))
+      futureMinus1Sigma.push(Math.exp(logFut - sigma))
+      futureMinus2Sigma.push(Math.exp(logFut - 2 * sigma))
+    } else {
+      const currentAnnualRate = getGrowthAtYear(tYears)
+      const weeklyRate = Math.pow(1 + currentAnnualRate, 1 / 52) - 1
+      runningFuturePrice = runningFuturePrice * (1 + weeklyRate)
+
+      futureRegressionLine.push(runningFuturePrice)
+      futurePlus1Sigma.push(runningFuturePrice * Math.exp(sigma))
+      futurePlus2Sigma.push(runningFuturePrice * Math.exp(2 * sigma))
+      futureMinus1Sigma.push(runningFuturePrice * Math.exp(-sigma))
+      futureMinus2Sigma.push(runningFuturePrice * Math.exp(-2 * sigma))
+    }
   }
 
   const perf12M = computePerf(fullHistory, 365)
@@ -295,6 +338,7 @@ export function calculateQuantAnalysis(
     perf10Y,
     annualizedVolatility,
     maxDrawdown,
+    isDamped,
     chartData: {
       dates,
       closes,

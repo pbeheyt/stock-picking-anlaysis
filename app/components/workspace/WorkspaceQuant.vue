@@ -9,7 +9,9 @@ import {
 } from '~/utils/quant'
 import {
   formatCurrency,
+  formatCompactCurrency,
   formatPercent,
+  formatCompactPercent,
   formatNumber,
   formatDurationYearsDecimal,
 } from '~/utils/format'
@@ -620,53 +622,62 @@ const getGaugeArc = (valRatio: number) => {
         </div>
 
         <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
-          <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
-            <span>🔮</span>
-            <span>Prévisions Cibles</span>
-            <InfoTooltip text="Extrapolations théoriques du canal de régression log-linéaire aux horizons 1, 3, 5 et 10 ans." />
+          <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+            <div class="flex items-center gap-2 text-sm font-bold text-white">
+              <span>🔮</span>
+              <span>Prévisions Cibles</span>
+              <InfoTooltip text="Extrapolations théoriques du canal de régression aux horizons 1, 3, 5 et 10 ans." />
+            </div>
+            <span
+              v-if="quantResult.isDamped"
+              class="rounded bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-semibold text-amber-300 flex items-center gap-1"
+            >
+              <span>⚡ Convergence Damodaran</span>
+              <InfoTooltip text="Modèle d'Aswath Damodaran (NYU Stern / McKinsey) : En raison d'un CAGR historique exceptionnel (>20%), les projections à 3, 5 et 10 ans intègrent une décélération progressive (demi-vie de 3 ans) vers le taux terminal de 5%." />
+            </span>
           </div>
 
           <div class="space-y-2 text-xs">
             <div class="flex justify-between items-center">
               <span class="text-gray-400">1 An</span>
-              <div class="flex items-center gap-1.5 font-mono">
-                <span class="font-bold text-white">{{ formatCurrency(quantResult.projectedPrice1Y, currency) }}</span>
+              <div class="flex items-center gap-1.5 font-mono truncate max-w-[70%]" :title="`${formatCurrency(quantResult.projectedPrice1Y, currency)} (${formatPercent(quantResult.projectedReturn1Y, true)})`">
+                <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice1Y, currency) }}</span>
                 <span class="text-gray-600 font-sans">·</span>
                 <span class="font-bold text-xs" :class="getTrendColorClass(quantResult.projectedReturn1Y)">
-                  {{ formatPercent(quantResult.projectedReturn1Y, true) }}
+                  {{ formatCompactPercent(quantResult.projectedReturn1Y, true) }}
                 </span>
               </div>
             </div>
 
             <div class="flex justify-between items-center">
               <span class="text-gray-400">3 Ans</span>
-              <div class="flex items-center gap-1.5 font-mono">
-                <span class="font-bold text-white">{{ formatCurrency(quantResult.projectedPrice3Y, currency) }}</span>
+              <div class="flex items-center gap-1.5 font-mono truncate max-w-[70%]" :title="`${formatCurrency(quantResult.projectedPrice3Y, currency)} (${formatPercent(quantResult.projectedReturn3Y, true)})`">
+                <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice3Y, currency) }}</span>
                 <span class="text-gray-600 font-sans">·</span>
                 <span class="font-bold text-xs" :class="getTrendColorClass(quantResult.projectedReturn3Y)">
-                  {{ formatPercent(quantResult.projectedReturn3Y, true) }}
+                  {{ formatCompactPercent(quantResult.projectedReturn3Y, true) }}
                 </span>
               </div>
             </div>
 
             <div class="flex justify-between items-center">
               <span class="text-gray-400">5 Ans</span>
-              <div class="flex items-center gap-1.5 font-mono">
-                <span class="font-bold text-white">{{ formatCurrency(quantResult.projectedPrice5Y, currency) }}</span>
+              <div class="flex items-center gap-1.5 font-mono truncate max-w-[70%]" :title="`${formatCurrency(quantResult.projectedPrice5Y, currency)} (${formatPercent(quantResult.projectedReturn5Y, true)})`">
+                <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice5Y, currency) }}</span>
                 <span class="text-gray-600 font-sans">·</span>
                 <span class="font-bold text-xs" :class="getTrendColorClass(quantResult.projectedReturn5Y)">
-                  {{ formatPercent(quantResult.projectedReturn5Y, true) }}
+                  {{ formatCompactPercent(quantResult.projectedReturn5Y, true) }}
                 </span>
               </div>
             </div>
 
             <div class="flex justify-between items-center">
               <span class="text-gray-400">10 Ans</span>
-              <div class="flex items-center gap-1.5 font-mono">
-                <span class="font-bold text-white">{{ formatCurrency(quantResult.projectedPrice10Y, currency) }}</span>
+              <div class="flex items-center gap-1.5 font-mono truncate max-w-[70%]" :title="`${formatCurrency(quantResult.projectedPrice10Y, currency)} (${formatPercent(quantResult.projectedReturn10Y, true)})`">
+                <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice10Y, currency) }}</span>
                 <span class="text-gray-600 font-sans">·</span>
                 <span class="font-bold text-xs" :class="getTrendColorClass(quantResult.projectedReturn10Y)">
-                  {{ formatPercent(quantResult.projectedReturn10Y, true) }}
+                  {{ formatCompactPercent(quantResult.projectedReturn10Y, true) }}
                 </span>
               </div>
             </div>
