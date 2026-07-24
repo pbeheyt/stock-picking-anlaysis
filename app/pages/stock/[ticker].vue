@@ -441,6 +441,55 @@ const propagateActiveMargin = () => {
   margin.value = marginY5.value
 }
 
+// Continuous press-and-hold increment / decrement for % buttons with progressive acceleration
+let stepInterval: ReturnType<typeof setInterval> | null = null
+let stepTimeout: ReturnType<typeof setTimeout> | null = null
+
+const startStep = (type: 'growth' | 'margin', isIncrement: boolean) => {
+  stopStep()
+  let ticks = 0
+
+  const applyStep = () => {
+    ticks++
+    // Progressive acceleration step: 0.1 -> 0.2 -> 0.5 -> 1.0
+    let stepSize = 0.1
+    if (ticks > 25) stepSize = 1.0
+    else if (ticks > 14) stepSize = 0.5
+    else if (ticks > 6) stepSize = 0.2
+
+    const delta = isIncrement ? stepSize : -stepSize
+
+    if (type === 'growth') {
+      const min = -50, max = 150
+      const newVal = activeGrowthVal.value + delta
+      activeGrowthVal.value = parseFloat(Math.min(max, Math.max(min, newVal)).toFixed(1))
+    } else {
+      const min = 0, max = 80
+      const newVal = activeMarginVal.value + delta
+      activeMarginVal.value = parseFloat(Math.min(max, Math.max(min, newVal)).toFixed(1))
+    }
+  }
+
+  // Single click initial step (0.1)
+  applyStep()
+
+  // Long press repeat every 50ms with acceleration
+  stepTimeout = setTimeout(() => {
+    stepInterval = setInterval(applyStep, 50)
+  }, 220)
+}
+
+const stopStep = () => {
+  if (stepTimeout) {
+    clearTimeout(stepTimeout)
+    stepTimeout = null
+  }
+  if (stepInterval) {
+    clearInterval(stepInterval)
+    stepInterval = null
+  }
+}
+
 // Dual-Track Spectrum Axis Calculations
 const spectrumData = computed(() => {
   const price = stock.value?.current_price ?? 0
@@ -798,27 +847,46 @@ const parsedAuditData = computed<AuditData | null>(() => {
                     <span class="text-[11px] text-gray-400">Croissance — An {{ activeCell.yearIndex + 1 }}</span>
                     <span class="font-mono text-emerald-400 text-xs font-bold">{{ activeGrowthVal.toFixed(1) }}%</span>
                   </div>
-                  <div class="flex items-center gap-2 overflow-hidden">
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
+                      @mousedown="startStep('growth', false)"
+                      @mouseleave="stopStep"
+                      @mouseup="stopStep"
+                      @touchstart.prevent="startStep('growth', false)"
+                      @touchend="stopStep"
+                    >−</button>
                     <input
                       v-model.number="activeGrowthVal"
                       type="number"
                       step="0.1"
-                      class="w-16 rounded-md bg-gray-950 border border-gray-700 px-1.5 py-1 text-xs font-mono text-white text-right focus:border-emerald-500 focus:outline-none flex-shrink-0"
+                      class="h-7 w-14 rounded-md bg-gray-950 border border-gray-700 px-1 text-xs font-mono text-white text-center focus:border-emerald-500 focus:outline-none flex-shrink-0"
                     />
-                    <input
-                      v-model.number="activeGrowthVal"
-                      type="range"
-                      min="-50"
-                      max="150"
-                      step="0.5"
-                      class="w-0 flex-1 min-w-0 accent-emerald-500"
-                    />
+                    <button
+                      type="button"
+                      class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
+                      @mousedown="startStep('growth', true)"
+                      @mouseleave="stopStep"
+                      @mouseup="stopStep"
+                      @touchstart.prevent="startStep('growth', true)"
+                      @touchend="stopStep"
+                    >+</button>
+                    <button
+                      type="button"
+                      class="h-7 ml-auto rounded bg-gray-800 border border-gray-700 px-2 text-[10px] font-bold text-gray-300 hover:bg-emerald-800/60 hover:text-emerald-300 hover:border-emerald-600 transition flex-shrink-0 flex items-center justify-center font-sans"
+                      :title="`Propager cette croissance (An ${activeCell.yearIndex + 1} → An 5)`"
+                      @click="propagateActiveGrowth"
+                    >An {{ activeCell.yearIndex + 1 }} ➔ 5</button>
                   </div>
-                  <button
-                    type="button"
-                    class="w-full rounded-md bg-gray-800 border border-gray-700 px-2 py-1 text-[11px] font-semibold text-gray-400 hover:bg-emerald-800/60 hover:text-white hover:border-emerald-600 transition"
-                    @click="propagateActiveGrowth"
-                  >⚡ An {{ activeCell.yearIndex + 1 }} → An 5</button>
+                  <input
+                    v-model.number="activeGrowthVal"
+                    type="range"
+                    min="-50"
+                    max="150"
+                    step="0.5"
+                    class="w-full accent-emerald-500 block"
+                  />
                 </div>
 
                 <!-- ── Cas : Marge Nette ── -->
@@ -827,42 +895,64 @@ const parsedAuditData = computed<AuditData | null>(() => {
                     <span class="text-[11px] text-gray-400">Marge — An {{ activeCell.yearIndex + 1 }}</span>
                     <span class="font-mono text-sky-400 text-xs font-bold">{{ activeMarginVal.toFixed(1) }}%</span>
                   </div>
-                  <div class="flex items-center gap-2 overflow-hidden">
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
+                      @mousedown="startStep('margin', false)"
+                      @mouseleave="stopStep"
+                      @mouseup="stopStep"
+                      @touchstart.prevent="startStep('margin', false)"
+                      @touchend="stopStep"
+                    >−</button>
                     <input
                       v-model.number="activeMarginVal"
                       type="number"
                       step="0.1"
-                      class="w-16 rounded-md bg-gray-950 border border-gray-700 px-1.5 py-1 text-xs font-mono text-white text-right focus:border-sky-500 focus:outline-none flex-shrink-0"
+                      class="h-7 w-14 rounded-md bg-gray-950 border border-gray-700 px-1 text-xs font-mono text-white text-center focus:border-sky-500 focus:outline-none flex-shrink-0"
                     />
-                    <input
-                      v-model.number="activeMarginVal"
-                      type="range"
-                      min="0"
-                      max="80"
-                      step="0.5"
-                      class="w-0 flex-1 min-w-0 accent-sky-500"
-                    />
+                    <button
+                      type="button"
+                      class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
+                      @mousedown="startStep('margin', true)"
+                      @mouseleave="stopStep"
+                      @mouseup="stopStep"
+                      @touchstart.prevent="startStep('margin', true)"
+                      @touchend="stopStep"
+                    >+</button>
+                    <button
+                      type="button"
+                      class="h-7 ml-auto rounded bg-gray-800 border border-gray-700 px-2 text-[10px] font-bold text-gray-300 hover:bg-sky-800/60 hover:text-sky-300 hover:border-sky-600 transition flex-shrink-0 flex items-center justify-center font-sans"
+                      :title="`Propager cette marge (An ${activeCell.yearIndex + 1} → An 5)`"
+                      @click="propagateActiveMargin"
+                    >An {{ activeCell.yearIndex + 1 }} ➔ 5</button>
                   </div>
-                  <button
-                    type="button"
-                    class="w-full rounded-md bg-gray-800 border border-gray-700 px-2 py-1 text-[11px] font-semibold text-gray-400 hover:bg-sky-800/60 hover:text-white hover:border-sky-600 transition"
-                    @click="propagateActiveMargin"
-                  >⚡ An {{ activeCell.yearIndex + 1 }} → An 5</button>
+                  <input
+                    v-model.number="activeMarginVal"
+                    type="range"
+                    min="0"
+                    max="80"
+                    step="0.5"
+                    class="w-full accent-sky-500 block"
+                  />
                 </div>
 
                 <!-- ── Cas : Chiffre d'Affaires ── -->
                 <div v-else-if="activeCell.type === 'revenue'" class="space-y-2">
-                  <span class="text-[11px] text-gray-400">CA — An {{ activeCell.yearIndex + 1 }}</span>
-                  <div class="flex items-center gap-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] text-gray-400">CA — An {{ activeCell.yearIndex + 1 }}</span>
+                    <span class="font-mono text-white text-xs font-bold">{{ formatScaledCurrency(revenueProjections[activeCell.yearIndex]?.revenue, stock.currency) }}</span>
+                  </div>
+                  <div class="flex items-center justify-start gap-1.5">
                     <input
                       v-model.number="activeRevenueScaledVal"
                       type="number"
                       step="0.01"
-                      class="flex-1 rounded-md bg-gray-950 border border-gray-700 px-1.5 py-1 text-xs font-mono text-white text-right focus:border-emerald-500 focus:outline-none min-w-0"
+                      class="h-7 w-24 rounded-md bg-gray-950 border border-gray-700 px-2 text-xs font-mono text-white text-right focus:border-emerald-500 focus:outline-none flex-shrink-0"
                     />
                     <select
                       v-model="activeRevenueScaleUnit"
-                      class="rounded-md bg-gray-950 border border-gray-700 px-1 py-1 text-[10px] font-mono text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none flex-shrink-0"
+                      class="h-7 w-14 rounded-md bg-gray-950 border border-gray-700 px-1 text-xs font-mono text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none flex-shrink-0 cursor-pointer"
                     >
                       <option value="B">Mds</option>
                       <option value="M">M</option>
@@ -870,9 +960,9 @@ const parsedAuditData = computed<AuditData | null>(() => {
                       <option value="1">$</option>
                     </select>
                   </div>
-                  <!-- Spacer calé sur la hauteur du bouton Propager pour égaliser la hauteur totale -->
-                  <div class="h-[26px]"></div>
+                  <div class="h-5"></div>
                 </div>
+
 
               </div>
             </div>
