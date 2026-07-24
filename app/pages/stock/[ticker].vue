@@ -116,11 +116,38 @@ const injectAICopilotProjections = () => {
   setTimeout(() => { successMessage.value = null }, 4000)
 }
 
-const resetToTTMDefaults = () => {
-  if (stock.value) {
-    initFormValues(stock.value)
-    successMessage.value = 'Hypothèses réinitialisées aux valeurs TTM d\'origine.'
-    setTimeout(() => { successMessage.value = null }, 3000)
+const injectYahooBaselineProjections = async () => {
+  try {
+    const freshApi = await $fetch<any>(`/api/stock/${encodeURIComponent(tickerParam.value)}`)
+    if (!freshApi) return
+
+    growthMode.value = freshApi.growth_mode || 'cagr'
+    marginMode.value = 'constant'
+
+    const g = freshApi.default_growth ?? 0.10
+    growth.value = g
+    growthY1.value = freshApi.growth_y1 ?? g
+    growthY2.value = freshApi.growth_y2 ?? g
+    growthY3.value = freshApi.growth_y3 ?? g
+    growthY4.value = freshApi.growth_y4 ?? g
+    growthY5.value = freshApi.growth_y5 ?? g
+
+    const m = freshApi.default_margin ?? freshApi.margin_net_raw ?? 0.15
+    margin.value = m
+    marginY1.value = m
+    marginY2.value = m
+    marginY3.value = m
+    marginY4.value = m
+    marginY5.value = m
+
+    targetMultiple.value = freshApi.default_target_multiple ?? freshApi.pe_forward_raw ?? 20.0
+    discountRate.value = freshApi.default_discount_rate ?? 0.10
+    riskSpread.value = freshApi.default_risk_spread ?? 0.20
+
+    successMessage.value = 'Hypothèses de base Yahoo Finance / Consensus injectées avec succès !'
+    setTimeout(() => { successMessage.value = null }, 4000)
+  } catch (err: any) {
+    console.error('Erreur injection hypothèses Yahoo:', err)
   }
 }
 
@@ -782,12 +809,12 @@ const parsedAuditData = computed<AuditData | null>(() => {
             <button
               v-if="dcfSubTab === 'model'"
               type="button"
-              class="text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-2 bg-gray-900 border border-gray-800 px-3.5 py-2 rounded-lg self-start sm:self-auto"
-              title="Rétablir les hypothèses TTM d'origine"
-              @click="resetToTTMDefaults"
+              class="text-xs font-bold text-emerald-400 hover:text-white transition flex items-center gap-2 bg-emerald-950/40 border border-emerald-500/40 px-4 py-2 rounded-xl self-start sm:self-auto hover:bg-emerald-900/50 shadow"
+              title="Injecter les hypothèses initiales calculées par Yahoo Finance & Cascades Nitro"
+              @click="injectYahooBaselineProjections"
             >
-              <span>🔄</span>
-              <span>Réinitialiser aux hypothèses TTM</span>
+              <span>📊</span>
+              <span>Injecter Hypothèses Yahoo TTM / Consensus</span>
             </button>
           </div>
 
