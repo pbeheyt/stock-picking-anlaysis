@@ -64,5 +64,9 @@ export default defineCachedEventHandler(async (event) => {
 }, {
   maxAge: 86400,
   swr: true,
+  shouldBypassCache: (event) => {
+    const query = getQuery(event)
+    return query.refresh === 'true' || query.refresh === '1'
+  },
   getKey: (event) => `history:${getRouterParam(event, 'ticker')?.toUpperCase()}`,
 })

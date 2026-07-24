@@ -860,6 +860,9 @@ const parsedAuditData = computed<AuditData | null>(() => {
             :currency="stock.currency"
             :current-price="stock.current_price"
             :stock-id="stock.id"
+            :initial-preset="stock.quant_preset"
+            :initial-start-date="stock.quant_start_date"
+            :initial-end-date="stock.quant_end_date"
           />
         </div>
 

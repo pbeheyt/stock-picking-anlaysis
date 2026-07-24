@@ -51,6 +51,9 @@ export default defineEventHandler(async (event) => {
       thesis = ?,
       status = ?,
       regression_fair_price = ?,
+      quant_preset = ?,
+      quant_start_date = ?,
+      quant_end_date = ?,
       updated_at = ?
     WHERE id = ?
   `)
@@ -78,6 +81,9 @@ export default defineEventHandler(async (event) => {
     body.thesis ?? existing.thesis,
     body.status ?? existing.status,
     body.regression_fair_price ?? existing.regression_fair_price,
+    body.quant_preset ?? existing.quant_preset ?? 'MAX_R2',
+    body.quant_start_date ?? existing.quant_start_date,
+    body.quant_end_date ?? existing.quant_end_date,
     now,
     id
   )

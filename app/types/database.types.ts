@@ -97,6 +97,9 @@ export interface Stock {
   audit_data?: AuditData | string | null
   qualitative_data?: QualitativeData | string | null
   regression_fair_price?: number | null
+  quant_preset?: string | null
+  quant_start_date?: string | null
+  quant_end_date?: string | null
   thesis: string | null
   created_at: string
   updated_at: string

@@ -109,6 +109,9 @@ export function getDb(): Database.Database {
     safeAddColumn('audit_data', 'TEXT')
     safeAddColumn('qualitative_data', 'TEXT')
     safeAddColumn('regression_fair_price', 'REAL')
+    safeAddColumn('quant_preset', "TEXT DEFAULT 'MAX_R2'")
+    safeAddColumn('quant_start_date', 'TEXT')
+    safeAddColumn('quant_end_date', 'TEXT')
 
 
 

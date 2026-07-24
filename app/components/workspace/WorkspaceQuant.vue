@@ -32,9 +32,13 @@ const props = defineProps<{
   currency?: string
   currentPrice?: number | null
   stockId?: string
+  initialPreset?: string | null
+  initialStartDate?: string | null
+  initialEndDate?: string | null
 }>()
 
 const isLoading = ref(true)
+const isRefreshing = ref(false)
 const errorMessage = ref<string | null>(null)
 
 const rawHistory = ref<HistoryPoint[]>([])
@@ -43,21 +47,31 @@ const dividendRate = ref<number | null>(null)
 
 const minIndex = ref(0)
 const maxIndex = ref(0)
-const activePreset = ref<'1Y' | '3Y' | '5Y' | '10Y' | 'ALL' | 'MAX_R2'>('ALL')
+const activePreset = ref<'1Y' | '3Y' | '5Y' | '10Y' | 'ALL' | 'MAX_R2' | 'CUSTOM'>(
+  (props.initialPreset as any) || 'MAX_R2'
+)
 
 let saveTimer: NodeJS.Timeout | null = null
 
-const saveRegressionPriceToDb = (price: number) => {
-  if (!props.stockId || !price || price <= 0) return
+const saveQuantStateToDb = (price?: number) => {
+  if (!props.stockId) return
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(async () => {
     try {
+      const payload: Record<string, any> = {
+        quant_preset: activePreset.value || 'MAX_R2',
+        quant_start_date: rawHistory.value[minIndex.value]?.date,
+        quant_end_date: rawHistory.value[maxIndex.value]?.date,
+      }
+      if (price && price > 0) {
+        payload.regression_fair_price = price
+      }
       await $fetch(`/api/stocks/${props.stockId}`, {
         method: 'PUT',
-        body: { regression_fair_price: price },
+        body: payload,
       })
     } catch (err) {
-      console.error('Erreur sauvegarde regression_fair_price:', err)
+      console.error('Erreur sauvegarde état quant:', err)
     }
   }, 600)
 }
@@ -65,17 +79,22 @@ const saveRegressionPriceToDb = (price: number) => {
 const chartRef = ref<HTMLDivElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
 
-const fetchHistory = async () => {
-  isLoading.value = true
+const fetchHistory = async (forceRefresh = false) => {
+  if (forceRefresh) {
+    isRefreshing.value = true
+  } else {
+    isLoading.value = true
+  }
   errorMessage.value = null
   try {
+    const url = `/api/stock/${encodeURIComponent(props.ticker)}/history${forceRefresh ? '?refresh=true' : ''}`
     const res = await $fetch<{
       ticker: string
       currency: string
       dividendYield: number | null
       dividendRate: number | null
       history: HistoryPoint[]
-    }>(`/api/stock/${encodeURIComponent(props.ticker)}/history`)
+    }>(url)
 
     rawHistory.value = res.history || []
     dividendYield.value = res.dividendYield
@@ -83,15 +102,23 @@ const fetchHistory = async () => {
 
     minIndex.value = 0
     maxIndex.value = Math.max(0, rawHistory.value.length - 1)
-    setPreset('ALL')
+
+    // Restore saved preset or default to MAX_R2
+    const targetPreset = activePreset.value || (props.initialPreset as any) || 'MAX_R2'
+    setPreset(targetPreset, false)
   } catch (err: any) {
     errorMessage.value = err?.data?.statusMessage || err?.message || 'Impossible de charger l\'historique'
   } finally {
     isLoading.value = false
+    isRefreshing.value = false
   }
 }
 
-const setPreset = (preset: '1Y' | '3Y' | '5Y' | '10Y' | 'ALL' | 'MAX_R2') => {
+const refreshHistory = () => {
+  fetchHistory(true)
+}
+
+const setPreset = (preset: '1Y' | '3Y' | '5Y' | '10Y' | 'ALL' | 'MAX_R2' | 'CUSTOM', save = true) => {
   activePreset.value = preset
   if (!rawHistory.value.length) return
 
@@ -99,6 +126,7 @@ const setPreset = (preset: '1Y' | '3Y' | '5Y' | '10Y' | 'ALL' | 'MAX_R2') => {
     const { minIndex: bestStart, maxIndex: bestEnd } = findMaxR2Period(rawHistory.value, 104)
     minIndex.value = bestStart
     maxIndex.value = bestEnd
+    if (save) saveQuantStateToDb(quantResult.value?.theoreticalPrice)
     return
   }
 
@@ -112,6 +140,7 @@ const setPreset = (preset: '1Y' | '3Y' | '5Y' | '10Y' | 'ALL' | 'MAX_R2') => {
   else if (preset === '10Y') weeks = 520
 
   minIndex.value = Math.max(0, total - weeks)
+  if (save) saveQuantStateToDb(quantResult.value?.theoreticalPrice)
 }
 
 const filteredHistory = computed(() => {
@@ -130,7 +159,7 @@ watch(
   () => quantResult.value?.theoreticalPrice,
   (newPrice) => {
     if (newPrice && newPrice > 0) {
-      saveRegressionPriceToDb(newPrice)
+      saveQuantStateToDb(newPrice)
     }
   },
   { immediate: true }
@@ -829,12 +858,24 @@ const getGaugeArc = (valRatio: number) => {
       </div>
 
       <div class="rounded-2xl border border-gray-800 bg-gray-950/80 p-5 space-y-4 shadow-xl">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between flex-wrap gap-2">
           <h3 class="text-sm font-bold text-white flex items-center gap-2">
             <span>📈</span>
             <span>Canal de Régression Log-Linéaire & Extrapolation</span>
           </h3>
-          <span class="text-xs text-gray-400 font-mono">Axe Y : Logarithmique | Utilisez le slider sous le graphique pour ajuster la plage</span>
+
+          <div class="flex items-center gap-3">
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 border border-gray-800 px-3 py-1 text-xs font-semibold text-gray-300 hover:bg-gray-800 hover:text-white transition shadow-sm disabled:opacity-50"
+              :disabled="isRefreshing"
+              @click="refreshHistory"
+            >
+              <span :class="{ 'animate-spin': isRefreshing }">🔄</span>
+              <span>{{ isRefreshing ? 'Mise à jour...' : 'Rafraîchir les cours' }}</span>
+            </button>
+            <span class="text-xs text-gray-400 font-mono hidden md:inline">Axe Y : Logarithmique</span>
+          </div>
         </div>
 
         <div class="relative">
