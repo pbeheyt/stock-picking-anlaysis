@@ -115,3 +115,46 @@ export interface Stock {
   margin_source?: string
   pe_source?: string
 }
+
+export interface StockApiResponse {
+  ticker: string
+  name: string
+  currency: string
+  current_price: number | null
+  revenue_ttm: number | null
+  shares_outstanding: number | null
+  beta: number
+  fetched_at: string
+  growth_mode: GrowthMode
+  default_growth: number
+  growth_y1: number
+  growth_y2: number
+  growth_y3: number
+  growth_y4: number
+  growth_y5: number
+  growth_source: string
+  default_margin_type: MarginType
+  default_margin: number
+  margin_source: string
+  default_target_multiple: number
+  pe_source: string
+  default_discount_rate: number
+  default_risk_spread: number
+  market_cap: number | null
+  pe_trailing_raw: number | null
+  pe_forward_raw: number | null
+  margin_gross_raw: number | null
+  margin_operating_raw: number | null
+  margin_net_raw: number | null
+  margin_fcf_raw: number | null
+  total_cash: number | null
+  total_debt: number | null
+  free_cash_flow_raw: number | null
+  analyst_target_low: number | null
+  analyst_target_median: number | null
+  analyst_target_price: number | null
+  analyst_target_high: number | null
+  analyst_growth_estimate: number | null
+  analyst_count: number | null
+  audit_data: AuditData
+}

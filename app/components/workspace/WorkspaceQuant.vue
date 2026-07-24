@@ -505,6 +505,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  if (saveTimer) clearTimeout(saveTimer)
   if (chartInstance) {
     chartInstance.dispose()
     chartInstance = null

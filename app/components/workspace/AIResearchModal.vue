@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { AVAILABLE_AI_MODELS } from '~/utils/aiModels'
+
 const props = withDefaults(defineProps<{
   isOpen: boolean
   ticker: string
@@ -22,7 +24,7 @@ const emit = defineEmits<{
 
 const copyFeedback = ref(false)
 const rawReportInput = ref('')
-const selectedModel = ref<string>('deepseek-v4-flash')
+const selectedModel = ref<string>(AVAILABLE_AI_MODELS[0].id)
 
 // Timer pour l'analyse en cours
 const elapsedSeconds = ref(0)
@@ -80,7 +82,7 @@ const handleRunAnalysis = () => {
       >
         <div class="relative w-full max-w-2xl rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl space-y-6 overflow-hidden">
 
-          <!-- ── OVERLAY DE CHARGEMENT ANIMÉ (quand isAnalyzing === true) ── -->
+          <!-- OVERLAY DE CHARGEMENT ANIMÉ -->
           <Transition
             enter-active-class="transition duration-200 ease-out"
             enter-from-class="opacity-0"
@@ -139,15 +141,20 @@ const handleRunAnalysis = () => {
             </button>
           </div>
 
-          <!-- Selection du Modèle LLM -->
+          <!-- Selection du Modèle LLM (DRY depuis AVAILABLE_AI_MODELS) -->
           <div class="flex items-center justify-between bg-gray-950/60 p-3 rounded-xl border border-gray-800 text-xs">
-            <span class="text-gray-400">Moteur d'analyse LLM :</span>
+            <span class="text-gray-400 font-medium">Moteur d'analyse LLM :</span>
             <select
               v-model="selectedModel"
-              class="rounded-lg bg-gray-900 border border-gray-700 px-3 py-1 text-xs text-white focus:border-emerald-500 focus:outline-none cursor-pointer"
+              class="rounded-lg bg-gray-900 border border-gray-700 px-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none cursor-pointer font-semibold"
             >
-              <option value="deepseek-v4-flash">DeepSeek Flash (Ultra-rapide)</option>
-              <option value="qwen/qwen3.7-plus">Qwen 3.7 Plus (Avancé)</option>
+              <option
+                v-for="m in AVAILABLE_AI_MODELS"
+                :key="m.id"
+                :value="m.id"
+              >
+                {{ m.icon }} {{ m.name }} ({{ m.provider }})
+              </option>
             </select>
           </div>
 
