@@ -283,15 +283,15 @@ const formatTakeawayHtml = (text: string) => {
 
           <!-- Synthèse Théorique -->
           <p class="text-xs text-gray-300 leading-relaxed font-sans">
-            {{ data.evaluations[key]?.summary }}
+            {{ data.evaluations[key]?.summary || data.evaluations[key]?.justification }}
           </p>
 
           <!-- Bullet Points Takeaways -->
-          <div v-if="data.evaluations[key]?.takeaways?.length" class="space-y-2 pt-2 border-t border-gray-800/60">
+          <div v-if="(data.evaluations[key]?.takeaways || data.evaluations[key]?.key_takeaways)?.length" class="space-y-2 pt-2 border-t border-gray-800/60">
             <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Points Clés & Preuves :</div>
             <ul class="space-y-2 text-xs">
               <li
-                v-for="(t, idx) in data.evaluations[key].takeaways"
+                v-for="(t, idx) in (data.evaluations[key]?.takeaways || data.evaluations[key]?.key_takeaways || [])"
                 :key="idx"
                 class="flex items-start gap-2 p-2 rounded-lg bg-gray-900/40 border border-gray-800/40"
               >

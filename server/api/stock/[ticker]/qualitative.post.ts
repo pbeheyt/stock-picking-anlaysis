@@ -22,7 +22,6 @@ export default defineEventHandler(async (event) => {
   //  Évaluation holistique 0-10, paragraphes dialectiques & key takeaways
   // ═══════════════════════════════════════════════════════════════════════════
 
-
   const rubricSystemPrompt = `Tu es un analyste financier Senior Hedge Fund spécialisé en Quality Investing.
 On te fournit le rapport de recherche fondamentale brut d'une entreprise (${ticker}).
 
@@ -57,7 +56,6 @@ FORMAT JSON EXCLUSIF ATTENDU :
       "[-] Forte dépendance à un petit nombre de clients grands comptes. [TradingSat](https://tradingsat.com)"
     ]
   },
-
   "growth": {
     "score": 8,
     "justification": "...",
@@ -106,26 +104,27 @@ FORMAT JSON EXCLUSIF ATTENDU :
   const brickKeys = ['moat', 'growth', 'financials', 'management'] as const
   const WEIGHTS = { moat: 0.30, growth: 0.25, financials: 0.25, management: 0.20 }
 
-  const evaluations: Record<string, { score: number; justification: string; key_takeaways: string[] }> = {}
+  const evaluations: Record<string, { score: number; justification: string; summary: string; key_takeaways: string[]; takeaways: string[] }> = {}
 
   let totalScore = 0
 
   for (const key of brickKeys) {
     const bData = extractedData[key] || {}
     const score = Math.max(0, Math.min(10, Math.round(Number(bData.score || 5))))
-    const justification = String(bData.justification || 'Analyse effectuée par l\'IA.')
-    const rawTakeaways = Array.isArray(bData.key_takeaways) ? bData.key_takeaways : []
+    const justification = String(bData.justification || bData.summary || 'Analyse effectuée par l\'IA.')
+    const rawTakeaways = Array.isArray(bData.key_takeaways) ? bData.key_takeaways : (Array.isArray(bData.takeaways) ? bData.takeaways : [])
     const key_takeaways = rawTakeaways.map((t: any) => String(t))
 
     evaluations[key] = {
       score,
       justification,
+      summary: justification,
       key_takeaways,
+      takeaways: key_takeaways,
     }
 
     totalScore += score * WEIGHTS[key]
   }
-
 
   const qualityScore = Math.round(totalScore * 10)
 

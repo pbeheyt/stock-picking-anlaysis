@@ -24,6 +24,29 @@ const copyFeedback = ref(false)
 const rawReportInput = ref('')
 const selectedModel = ref<string>('deepseek-v4-flash')
 
+// Timer pour l'analyse en cours
+const elapsedSeconds = ref(0)
+let timer: ReturnType<typeof setInterval> | null = null
+
+watch(() => props.isAnalyzing, (newVal) => {
+  if (newVal) {
+    elapsedSeconds.value = 0
+    if (timer) clearInterval(timer)
+    timer = setInterval(() => {
+      elapsedSeconds.value++
+    }, 1000)
+  } else {
+    if (timer) {
+      clearInterval(timer)
+      timer = null
+    }
+  }
+})
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+})
+
 const copyPrompt = async () => {
   try {
     await navigator.clipboard.writeText(props.promptText)
@@ -55,7 +78,49 @@ const handleRunAnalysis = () => {
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/80 backdrop-blur-sm overflow-y-auto"
         @click.self="emit('close')"
       >
-        <div class="relative w-full max-w-2xl rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl space-y-6">
+        <div class="relative w-full max-w-2xl rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl space-y-6 overflow-hidden">
+
+          <!-- ── OVERLAY DE CHARGEMENT ANIMÉ (quand isAnalyzing === true) ── -->
+          <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <div
+              v-if="isAnalyzing"
+              class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-950/95 backdrop-blur-md p-6 text-center space-y-5"
+            >
+              <!-- Spinner pulse & radar -->
+              <div class="relative h-20 w-20 flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full border-4 border-emerald-500/20 border-t-emerald-400 animate-spin"></div>
+                <div class="absolute inset-2 rounded-full border-2 border-sky-500/20 border-b-sky-400 animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
+                <span class="text-3xl animate-bounce">⚡</span>
+              </div>
+
+              <div class="space-y-1.5">
+                <h4 class="text-base font-bold text-white tracking-tight">Analyse LLM Deep Research en cours...</h4>
+                <p class="text-xs text-emerald-400 font-mono font-bold">
+                  {{ ticker }} {{ stockName ? `— ${stockName}` : '' }}
+                </p>
+                <p class="text-xs text-gray-400 font-mono pt-1">
+                  Temps écoulé : <span class="text-white font-bold text-sm font-mono">{{ elapsedSeconds }}s</span>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                class="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-500/40 bg-rose-950/40 px-5 py-2 text-xs font-bold text-rose-300 hover:bg-rose-900/60 hover:text-white transition shadow"
+                @click="emit('cancel')"
+              >
+                <span>🛑</span>
+                <span>Annuler l'analyse</span>
+              </button>
+            </div>
+          </Transition>
+
           <!-- Modal Header -->
           <div class="flex items-center justify-between border-b border-gray-800 pb-4">
             <div class="flex items-center gap-2">
@@ -114,25 +179,14 @@ const handleRunAnalysis = () => {
                   class="w-full rounded-lg bg-gray-950 border border-gray-800 p-2 text-xs font-mono text-gray-200 focus:border-sky-500 focus:outline-none resize-none"
                 ></textarea>
               </div>
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-xs font-bold text-white hover:bg-sky-500 transition shadow disabled:opacity-50"
-                  :disabled="!rawReportInput.trim() || isAnalyzing"
-                  @click="handleRunAnalysis"
-                >
-                  <span v-if="isAnalyzing">⚡ Parsing LLM...</span>
-                  <span v-else>🚀 Extraire avec l'IA</span>
-                </button>
-                <button
-                  v-if="isAnalyzing"
-                  type="button"
-                  class="px-2.5 py-2 rounded-lg bg-rose-600/20 border border-rose-500/40 text-xs font-bold text-rose-300 hover:bg-rose-600/40 transition"
-                  @click="emit('cancel')"
-                >
-                  Annuler
-                </button>
-              </div>
+              <button
+                type="button"
+                class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-xs font-bold text-white hover:bg-sky-500 transition shadow disabled:opacity-50"
+                :disabled="!rawReportInput.trim() || isAnalyzing"
+                @click="handleRunAnalysis"
+              >
+                <span>🚀 Extraire avec l'IA</span>
+              </button>
             </div>
           </div>
 
