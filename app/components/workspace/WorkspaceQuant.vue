@@ -641,15 +641,15 @@ const getGaugeArc = (valRatio: number) => {
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice1Y, currency) }}</span>
                 <InfoTooltip>
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-1.5">
+                  <div class="space-y-1 text-xs">
+                    <div class="flex items-center gap-1.5 whitespace-nowrap">
                       <span class="text-gray-400">Rendement :</span>
                       <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn1Y)">
                         {{ formatPercent(quantResult.projectedReturn1Y, true) }}
                       </span>
                     </div>
-                    <div v-if="quantResult.isDamped" class="text-[11px] text-gray-400 pt-0.5 border-t border-gray-800/80">
-                      Pente brute : {{ (quantResult.cagrHistorical * 100).toFixed(1) }}%/an
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-gray-400 pt-0.5 border-t border-gray-800/80 whitespace-nowrap">
+                      Pente brute : +{{ (quantResult.cagrHistorical * 100).toFixed(1) }}%/an
                     </div>
                   </div>
                 </InfoTooltip>
@@ -661,14 +661,14 @@ const getGaugeArc = (valRatio: number) => {
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice3Y, currency) }}</span>
                 <InfoTooltip>
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-1.5">
+                  <div class="space-y-1 text-xs">
+                    <div class="flex items-center gap-1.5 whitespace-nowrap">
                       <span class="text-gray-400">Rendement :</span>
                       <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn3Y)">
                         {{ formatPercent(quantResult.projectedReturn3Y, true) }}
                       </span>
                     </div>
-                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80">
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80 whitespace-nowrap">
                       Taux régressif An 3 : +{{ (quantResult.dampedAnnualRate3Y * 100).toFixed(1) }}%/an
                     </div>
                   </div>
@@ -681,14 +681,14 @@ const getGaugeArc = (valRatio: number) => {
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice5Y, currency) }}</span>
                 <InfoTooltip>
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-1.5">
+                  <div class="space-y-1 text-xs">
+                    <div class="flex items-center gap-1.5 whitespace-nowrap">
                       <span class="text-gray-400">Rendement :</span>
                       <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn5Y)">
                         {{ formatPercent(quantResult.projectedReturn5Y, true) }}
                       </span>
                     </div>
-                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80">
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80 whitespace-nowrap">
                       Taux régressif An 5 : +{{ (quantResult.dampedAnnualRate5Y * 100).toFixed(1) }}%/an
                     </div>
                   </div>
@@ -701,14 +701,14 @@ const getGaugeArc = (valRatio: number) => {
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice10Y, currency) }}</span>
                 <InfoTooltip>
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-1.5">
+                  <div class="space-y-1 text-xs">
+                    <div class="flex items-center gap-1.5 whitespace-nowrap">
                       <span class="text-gray-400">Rendement :</span>
                       <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn10Y)">
                         {{ formatPercent(quantResult.projectedReturn10Y, true) }}
                       </span>
                     </div>
-                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80">
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80 whitespace-nowrap">
                       Taux régressif An 10 : +{{ (quantResult.dampedAnnualRate10Y * 100).toFixed(1) }}%/an
                     </div>
                   </div>
