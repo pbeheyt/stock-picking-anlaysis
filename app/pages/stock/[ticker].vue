@@ -13,7 +13,8 @@ import {
   formatPercent,
   formatNumber,
 } from '~/utils/format'
-import AIDeepResearchBridge from '~/components/workspace/AIDeepResearchBridge.vue'
+import AIResearchModal from '~/components/workspace/AIResearchModal.vue'
+import AuditTrailDrawer from '~/components/workspace/AuditTrailDrawer.vue'
 import type { QuantitativeAIResult } from '~/server/api/stock/[ticker]/quantitative.post'
 
 const route = useRoute()
@@ -25,8 +26,11 @@ const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 
 const stock = ref<Stock | null>(null)
-const activeTab = ref<'dcf' | 'quant' | 'research' | 'sourcing'>('dcf')
-const dcfSubTab = ref<'model' | 'copilot'>('model')
+const activeTab = ref<'dcf' | 'quant' | 'research'>('dcf')
+
+// Modal & Drawer States
+const isAiModalOpen = ref(false)
+const isAuditDrawerOpen = ref(false)
 
 // Local Editable Hypotheses
 const growthMode = ref<GrowthMode>('cagr')
@@ -110,8 +114,8 @@ const injectAICopilotProjections = () => {
   if (data.discount_rate) discountRate.value = data.discount_rate / 100
   if (data.risk_spread) riskSpread.value = data.risk_spread / 100
 
-  // Redirection automatique vers la grille P&L 5Y
-  dcfSubTab.value = 'model'
+  isAiModalOpen.value = false
+  isAuditDrawerOpen.value = false
   successMessage.value = 'Hypothèses de l\'IA injectées avec succès dans le DCF !'
   setTimeout(() => { successMessage.value = null }, 4000)
 }
@@ -144,6 +148,7 @@ const injectYahooBaselineProjections = async () => {
     discountRate.value = freshApi.default_discount_rate ?? 0.10
     riskSpread.value = freshApi.default_risk_spread ?? 0.20
 
+    isAuditDrawerOpen.value = false
     successMessage.value = 'Hypothèses de base Yahoo Finance / Consensus injectées avec succès !'
     setTimeout(() => { successMessage.value = null }, 4000)
   } catch (err: any) {
@@ -777,711 +782,533 @@ const parsedAuditData = computed<AuditData | null>(() => {
       <div class="space-y-8">
         <!-- TAB 1: DCF & THÈSE QUANTITATIVE -->
         <div v-if="activeTab === 'dcf'" class="space-y-8">
-
-          <!-- Sous-Onglets DCF Bar -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-800 pb-3">
-            <div class="inline-flex p-1 bg-gray-950 rounded-xl border border-gray-800 gap-1 text-xs">
-              <button
-                type="button"
-                class="px-4 py-2 rounded-lg font-bold transition flex items-center gap-2"
-                :class="dcfSubTab === 'model'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'text-gray-400 hover:text-white'"
-                @click="dcfSubTab = 'model'"
-              >
-                <span>📊</span>
-                <span>Modèle Financier 5Y</span>
-              </button>
-              <button
-                type="button"
-                class="px-4 py-2 rounded-lg font-bold transition flex items-center gap-2"
-                :class="dcfSubTab === 'copilot'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'text-gray-400 hover:text-white'"
-                @click="dcfSubTab = 'copilot'"
-              >
-                <span>🎯</span>
-                <span>IA Copilot & Audit Trail</span>
-                <span v-if="quantAiResult" class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              </button>
-            </div>
-
-            <button
-              v-if="dcfSubTab === 'model'"
-              type="button"
-              class="text-xs font-bold text-emerald-400 hover:text-white transition flex items-center gap-2 bg-emerald-950/40 border border-emerald-500/40 px-4 py-2 rounded-xl self-start sm:self-auto hover:bg-emerald-900/50 shadow"
-              title="Injecter les hypothèses initiales calculées par Yahoo Finance & Cascades Nitro"
-              @click="injectYahooBaselineProjections"
-            >
-              <span>📊</span>
-              <span>Injecter Hypothèses Yahoo TTM / Consensus</span>
-            </button>
-          </div>
-
-          <!-- Notification Toast -->
-          <div v-if="successMessage" class="rounded-xl border border-emerald-500/40 bg-emerald-950/60 p-4 text-xs font-semibold text-emerald-300">
-            {{ successMessage }}
-          </div>
-
-          <!-- SUB-TAB 1: Modèle Financier 5Y -->
-          <div v-if="dcfSubTab === 'model'" class="space-y-8">
-            <!-- Section 1 : 📊 Modèle Financier P&L Unifié (5Y) — Layout 2 colonnes -->
-            <div class="rounded-2xl border border-gray-800 bg-gray-950/70 shadow-xl backdrop-blur overflow-hidden">
-              <!-- Header -->
-              <div class="border-b border-gray-800 p-5">
+          
+          <!-- Section 1 : 📊 Modèle Financier P&L Unifié (5Y) — Layout 2 colonnes -->
+          <div class="rounded-2xl border border-gray-800 bg-gray-950/70 shadow-xl backdrop-blur overflow-hidden">
+            <!-- Header -->
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-800 p-5">
+              <div>
                 <h2 class="text-base font-bold text-white flex items-center gap-2">
                   <span>📊</span>
                   <span>Modèle Financier P&L Unifié (5Y)</span>
                 </h2>
                 <p class="text-xs text-gray-400 mt-0.5">Cliquez une cellule pour l'éditer dans l'inspecteur à droite. Modifications recalculées en temps réel.</p>
               </div>
+              <div class="flex items-center gap-2 self-start sm:self-auto">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-2 text-xs font-bold text-white hover:from-emerald-500 hover:to-teal-500 transition shadow-md"
+                  @click="isAiModalOpen = true"
+                >
+                  <span>✨</span>
+                  <span>Enrichir avec l'IA</span>
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-xl bg-gray-900 border border-gray-700 px-3.5 py-2 text-xs font-bold text-gray-300 hover:text-white hover:border-gray-600 transition shadow"
+                  @click="isAuditDrawerOpen = true"
+                >
+                  <span>📋</span>
+                  <span>Audit Trail & Sources</span>
+                  <span v-if="quantAiResult" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                </button>
+              </div>
+            </div>
 
-              <!-- Body : Table + Inspector -->
-              <div class="flex flex-col lg:flex-row gap-6 p-5">
+            <!-- Body : Table + Inspector -->
+            <div class="flex flex-col lg:flex-row gap-6 p-5">
 
-                <!-- ── GAUCHE : Tableau P&L Rétro-Stable ── -->
-                <div class="flex-1 min-w-0 overflow-x-auto">
-                  <table class="w-full border-collapse text-xs table-fixed font-mono tabular-nums">
-                    <thead>
-                      <tr class="border-b border-gray-800 bg-gray-950/80 text-gray-400 text-[10px] uppercase tracking-wider">
-                        <th class="py-2.5 px-3 font-semibold text-left w-36">Poste P&L</th>
-                        <th class="py-2.5 px-2 text-right font-semibold w-20">TTM</th>
-                        <th
-                          v-for="item in revenueProjections"
-                          :key="item.year"
-                          class="py-2.5 px-2 text-right font-semibold w-20"
-                        >An {{ item.year }}</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-800/50">
+              <!-- ── GAUCHE : Tableau P&L Rétro-Stable ── -->
+              <div class="flex-1 min-w-0 overflow-x-auto">
+                <table class="w-full border-collapse text-xs table-fixed font-mono tabular-nums">
+                  <thead>
+                    <tr class="border-b border-gray-800 bg-gray-950/80 text-gray-400 text-[10px] uppercase tracking-wider">
+                      <th class="py-2.5 px-3 font-semibold text-left w-36">Poste P&L</th>
+                      <th class="py-2.5 px-2 text-right font-semibold w-20">TTM</th>
+                      <th
+                        v-for="item in revenueProjections"
+                        :key="item.year"
+                        class="py-2.5 px-2 text-right font-semibold w-20"
+                      >An {{ item.year }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-800/50">
 
-                      <!-- Row 1 : Croissance CA (%) -->
-                      <tr class="transition">
-                        <td class="py-2.5 px-3 text-gray-300 font-sans font-medium text-[11px] whitespace-nowrap truncate">Croissance CA</td>
-                        <td class="py-2.5 px-2 text-right text-gray-600 font-mono text-[11px]">—</td>
-                        <td
-                          v-for="(item, idx) in revenueProjections"
-                          :key="idx"
-                          class="py-2.5 px-2 text-right font-mono font-semibold text-[11px] cursor-pointer transition-all duration-150"
-                          :class="[
-                            activeCell.type === 'growth' && activeCell.yearIndex === idx
-                              ? (item.growth >= 0 ? 'bg-emerald-500/15 ring-1 ring-inset ring-emerald-500/50' : 'bg-rose-500/15 ring-1 ring-inset ring-rose-500/50')
-                              : 'hover:bg-gray-800/40',
-                            item.growth > 0 ? 'text-emerald-400' : item.growth < 0 ? 'text-rose-400' : 'text-gray-400'
-                          ]"
-                          @click="selectCell('growth', idx)"
-                        >
-                          {{ formatPercent(item.growth, true) }}
-                        </td>
-                      </tr>
+                    <!-- Row 1 : Croissance CA (%) -->
+                    <tr class="transition">
+                      <td class="py-2.5 px-3 text-gray-300 font-sans font-medium text-[11px] whitespace-nowrap truncate">Croissance CA</td>
+                      <td class="py-2.5 px-2 text-right text-gray-600 font-mono text-[11px]">—</td>
+                      <td
+                        v-for="(item, idx) in revenueProjections"
+                        :key="idx"
+                        class="py-2.5 px-2 text-right font-mono font-semibold text-[11px] cursor-pointer transition-all duration-150"
+                        :class="[
+                          activeCell.type === 'growth' && activeCell.yearIndex === idx
+                            ? (item.growth >= 0 ? 'bg-emerald-500/15 ring-1 ring-inset ring-emerald-500/50' : 'bg-rose-500/15 ring-1 ring-inset ring-rose-500/50')
+                            : 'hover:bg-gray-800/40',
+                          item.growth > 0 ? 'text-emerald-400' : item.growth < 0 ? 'text-rose-400' : 'text-gray-400'
+                        ]"
+                        @click="selectCell('growth', idx)"
+                      >
+                        {{ formatPercent(item.growth, true) }}
+                      </td>
+                    </tr>
 
-                      <!-- Row 2 : Chiffre d'Affaires -->
-                      <tr class="bg-gray-950/25 transition">
-                        <td class="py-2.5 px-3 text-white font-sans font-semibold text-[11px] whitespace-nowrap truncate">Chiffre d'Affaires</td>
-                        <td class="py-2.5 px-2 text-right font-mono text-gray-400 font-semibold text-[11px]">
-                          {{ formatScaledCurrency(stock.revenue_ttm, stock.currency) }}
-                        </td>
-                        <td
-                          v-for="(item, idx) in revenueProjections"
-                          :key="idx"
-                          class="py-2.5 px-2 text-right font-mono font-bold text-[11px] cursor-pointer transition-all duration-150 text-white"
-                          :class="activeCell.type === 'revenue' && activeCell.yearIndex === idx
-                            ? 'bg-emerald-500/15 text-emerald-200 ring-1 ring-inset ring-emerald-500/50'
-                            : 'hover:bg-gray-800/40'"
-                          @click="selectCell('revenue', idx)"
-                        >
-                          {{ formatScaledCurrency(item.revenue, stock.currency) }}
-                        </td>
-                      </tr>
+                    <!-- Row 2 : Chiffre d'Affaires -->
+                    <tr class="bg-gray-950/25 transition">
+                      <td class="py-2.5 px-3 text-white font-sans font-semibold text-[11px] whitespace-nowrap truncate">Chiffre d'Affaires</td>
+                      <td class="py-2.5 px-2 text-right font-mono text-gray-400 font-semibold text-[11px]">
+                        {{ formatScaledCurrency(stock.revenue_ttm, stock.currency) }}
+                      </td>
+                      <td
+                        v-for="(item, idx) in revenueProjections"
+                        :key="idx"
+                        class="py-2.5 px-2 text-right font-mono font-bold text-[11px] cursor-pointer transition-all duration-150 text-white"
+                        :class="activeCell.type === 'revenue' && activeCell.yearIndex === idx
+                          ? 'bg-emerald-500/15 text-emerald-200 ring-1 ring-inset ring-emerald-500/50'
+                          : 'hover:bg-gray-800/40'"
+                        @click="selectCell('revenue', idx)"
+                      >
+                        {{ formatScaledCurrency(item.revenue, stock.currency) }}
+                      </td>
+                    </tr>
 
-                      <!-- Row 3 : Marge Nette -->
-                      <tr class="transition">
-                        <td class="py-2.5 px-3 text-gray-300 font-sans font-medium text-[11px] whitespace-nowrap truncate">Marge Nette</td>
-                        <td
-                          class="py-2.5 px-2 text-right font-mono text-[11px]"
-                          :class="(stock.margin_net_raw || 0) >= 0 ? 'text-gray-400' : 'text-rose-400'"
-                        >
-                          {{ formatPercent(stock.margin_net_raw, true, 1, false) }}
-                        </td>
-                        <td
-                          v-for="(item, idx) in revenueProjections"
-                          :key="idx"
-                          class="py-2.5 px-2 text-right font-mono font-semibold text-[11px] cursor-pointer transition-all duration-150"
-                          :class="[
-                            activeCell.type === 'margin' && activeCell.yearIndex === idx
-                              ? (item.margin >= 0 ? 'bg-sky-500/15 ring-1 ring-inset ring-sky-500/50' : 'bg-rose-500/15 ring-1 ring-inset ring-rose-500/50')
-                              : 'hover:bg-gray-800/40',
-                            item.margin > 0 ? 'text-sky-400' : item.margin < 0 ? 'text-rose-400 font-bold' : 'text-gray-400'
-                          ]"
-                          @click="selectCell('margin', idx)"
-                        >
-                          {{ formatPercent(item.margin, true, 1, false) }}
-                        </td>
-                      </tr>
+                    <!-- Row 3 : Marge Nette -->
+                    <tr class="transition">
+                      <td class="py-2.5 px-3 text-gray-300 font-sans font-medium text-[11px] whitespace-nowrap truncate">Marge Nette</td>
+                      <td
+                        class="py-2.5 px-2 text-right font-mono text-[11px]"
+                        :class="(stock.margin_net_raw || 0) >= 0 ? 'text-gray-400' : 'text-rose-400'"
+                      >
+                        {{ formatPercent(stock.margin_net_raw, true, 1, false) }}
+                      </td>
+                      <td
+                        v-for="(item, idx) in revenueProjections"
+                        :key="idx"
+                        class="py-2.5 px-2 text-right font-mono font-semibold text-[11px] cursor-pointer transition-all duration-150"
+                        :class="[
+                          activeCell.type === 'margin' && activeCell.yearIndex === idx
+                            ? (item.margin >= 0 ? 'bg-sky-500/15 ring-1 ring-inset ring-sky-500/50' : 'bg-rose-500/15 ring-1 ring-inset ring-rose-500/50')
+                            : 'hover:bg-gray-800/40',
+                          item.margin > 0 ? 'text-sky-400' : item.margin < 0 ? 'text-rose-400 font-bold' : 'text-gray-400'
+                        ]"
+                        @click="selectCell('margin', idx)"
+                      >
+                        {{ formatPercent(item.margin, true, 1, false) }}
+                      </td>
+                    </tr>
 
-                      <!-- Row 4 : Résultat Net -->
-                      <tr class="bg-gray-950/40 border-t border-gray-800">
-                        <td class="py-2.5 px-3 font-sans font-bold text-gray-200 text-[11px] whitespace-nowrap truncate">Résultat Net</td>
-                        <td
-                          class="py-2.5 px-2 text-right font-mono font-semibold text-[11px]"
-                          :class="((stock.revenue_ttm || 0) * (stock.margin_net_raw || 0)) >= 0 ? 'text-gray-300' : 'text-rose-400 font-bold'"
-                        >
-                          {{ formatScaledCurrency((stock.revenue_ttm || 0) * (stock.margin_net_raw || 0), stock.currency) }}
-                        </td>
-                        <td
-                          v-for="(item, idx) in revenueProjections"
-                          :key="idx"
-                          class="py-2.5 px-2 text-right font-mono font-bold text-[11px]"
-                          :class="item.earnings > 0 ? 'text-emerald-400' : item.earnings < 0 ? 'text-rose-400 bg-rose-500/10' : 'text-gray-400'"
-                        >
-                          {{ formatScaledCurrency(item.earnings, stock.currency) }}
-                        </td>
-                      </tr>
+                    <!-- Row 4 : Résultat Net -->
+                    <tr class="bg-gray-950/40 border-t border-gray-800">
+                      <td class="py-2.5 px-3 font-sans font-bold text-gray-200 text-[11px] whitespace-nowrap truncate">Résultat Net</td>
+                      <td
+                        class="py-2.5 px-2 text-right font-mono font-semibold text-[11px]"
+                        :class="((stock.revenue_ttm || 0) * (stock.margin_net_raw || 0)) >= 0 ? 'text-gray-300' : 'text-rose-400 font-bold'"
+                      >
+                        {{ formatScaledCurrency((stock.revenue_ttm || 0) * (stock.margin_net_raw || 0), stock.currency) }}
+                      </td>
+                      <td
+                        v-for="(item, idx) in revenueProjections"
+                        :key="idx"
+                        class="py-2.5 px-2 text-right font-mono font-bold text-[11px]"
+                        :class="item.earnings > 0 ? 'text-emerald-400' : item.earnings < 0 ? 'text-rose-400 bg-rose-500/10' : 'text-gray-400'"
+                      >
+                        {{ formatScaledCurrency(item.earnings, stock.currency) }}
+                      </td>
+                    </tr>
 
-                    </tbody>
-                  </table>
+                  </tbody>
+                </table>
 
-                  <!-- Synthèse P&L An 5 -->
-                  <div class="flex flex-wrap gap-6 p-3 mt-4 rounded-xl bg-emerald-950/20 border border-emerald-800/30 text-xs">
-                    <div>
-                      <span class="text-gray-400">Chiffre d'Affaires An 5 : </span>
-                      <span class="font-bold font-mono text-emerald-400 ml-1">{{ formatScaledCurrency(scenarios.base.revenue5Y, stock.currency) }}</span>
-                    </div>
-                    <div>
-                      <span class="text-gray-400">Résultat Net An 5 : </span>
-                      <span
-                        class="font-bold font-mono ml-1"
-                        :class="scenarios.base.earnings5Y >= 0 ? 'text-emerald-400' : 'text-rose-400'"
-                      >{{ formatScaledCurrency(scenarios.base.earnings5Y, stock.currency) }}</span>
-                    </div>
-                    <div>
-                      <span class="text-gray-400">CAGR Équivalent : </span>
-                      <span
-                        class="font-bold font-mono ml-1"
-                        :class="scenarios.base.equivalentCAGR >= 0 ? 'text-emerald-400' : 'text-rose-400'"
-                      >{{ formatPercent(scenarios.base.equivalentCAGR, true) }}</span>
-                    </div>
+                <!-- Synthèse P&L An 5 -->
+                <div class="flex flex-wrap gap-6 p-3 mt-4 rounded-xl bg-emerald-950/20 border border-emerald-800/30 text-xs">
+                  <div>
+                    <span class="text-gray-400">Chiffre d'Affaires An 5 : </span>
+                    <span class="font-bold font-mono text-emerald-400 ml-1">{{ formatScaledCurrency(scenarios.base.revenue5Y, stock.currency) }}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400">Résultat Net An 5 : </span>
+                    <span
+                      class="font-bold font-mono ml-1"
+                      :class="scenarios.base.earnings5Y >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                    >{{ formatScaledCurrency(scenarios.base.earnings5Y, stock.currency) }}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400">CAGR Équivalent : </span>
+                    <span
+                      class="font-bold font-mono ml-1"
+                      :class="scenarios.base.equivalentCAGR >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                    >{{ formatPercent(scenarios.base.equivalentCAGR, true) }}</span>
                   </div>
                 </div>
+              </div>
 
-                <!-- ── DROITE : Inspecteur Latéral Contextuel Fixe ── -->
-                <div class="w-full lg:w-60 flex-shrink-0 bg-gray-900/90 border border-gray-800 rounded-xl p-4 space-y-4">
+              <!-- ── DROITE : Inspecteur Latéral Contextuel Fixe ── -->
+              <div class="w-full lg:w-60 flex-shrink-0 bg-gray-900/90 border border-gray-800 rounded-xl p-4 space-y-4">
 
-                  <!-- Header Inspecteur -->
-                  <div class="border-b border-gray-800 pb-3">
-                    <div class="flex items-center gap-1.5 mb-0.5">
-                      <div
-                        class="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        :class="{
-                          'bg-emerald-400': activeCell.type === 'growth' && activeGrowthVal >= 0,
-                          'bg-rose-400': (activeCell.type === 'growth' && activeGrowthVal < 0) || (activeCell.type === 'margin' && activeMarginVal < 0),
-                          'bg-sky-400': activeCell.type === 'margin' && activeMarginVal >= 0,
-                          'bg-white': activeCell.type === 'revenue',
-                        }"
-                      ></div>
-                      <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Inspecteur</span>
-                    </div>
-                    <p class="text-xs font-bold text-white truncate">
-                      <span v-if="activeCell.type === 'growth'">Croissance — An {{ activeCell.yearIndex + 1 }}</span>
-                      <span v-else-if="activeCell.type === 'margin'">Marge Nette — An {{ activeCell.yearIndex + 1 }}</span>
-                      <span v-else>Chiffre d'Affaires — An {{ activeCell.yearIndex + 1 }}</span>
-                    </p>
+                <!-- Header Inspecteur -->
+                <div class="border-b border-gray-800 pb-3">
+                  <div class="flex items-center gap-1.5 mb-0.5">
+                    <div
+                      class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      :class="{
+                        'bg-emerald-400': activeCell.type === 'growth' && activeGrowthVal >= 0,
+                        'bg-rose-400': (activeCell.type === 'growth' && activeGrowthVal < 0) || (activeCell.type === 'margin' && activeMarginVal < 0),
+                        'bg-sky-400': activeCell.type === 'margin' && activeMarginVal >= 0,
+                        'bg-white': activeCell.type === 'revenue',
+                      }"
+                    ></div>
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Inspecteur</span>
                   </div>
+                  <p class="text-xs font-bold text-white truncate">
+                    <span v-if="activeCell.type === 'growth'">Croissance — An {{ activeCell.yearIndex + 1 }}</span>
+                    <span v-else-if="activeCell.type === 'margin'">Marge Nette — An {{ activeCell.yearIndex + 1 }}</span>
+                    <span v-else>Chiffre d'Affaires — An {{ activeCell.yearIndex + 1 }}</span>
+                  </p>
+                </div>
 
-                  <!-- ── Cas : Croissance CA ── -->
-                  <div v-if="activeCell.type === 'growth'" class="space-y-2">
-                    <div class="flex items-center justify-between">
-                      <span class="text-[11px] text-gray-400">Croissance — An {{ activeCell.yearIndex + 1 }}</span>
-                      <span
-                        class="font-mono text-xs font-bold"
-                        :class="activeGrowthVal >= 0 ? 'text-emerald-400' : 'text-rose-400'"
-                      >{{ activeGrowthVal.toFixed(1) }}%</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <button
-                        type="button"
-                        class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
-                        @mousedown="startStep('growth', false)"
-                        @mouseleave="stopStep"
-                        @mouseup="stopStep"
-                        @touchstart.prevent="startStep('growth', false)"
-                        @touchend="stopStep"
-                      >−</button>
-                      <input
-                        v-model.number="activeGrowthVal"
-                        type="number"
-                        step="0.1"
-                        class="h-7 w-14 rounded-md bg-gray-950 border border-gray-700 px-1 text-xs font-mono text-white text-center focus:border-emerald-500 focus:outline-none flex-shrink-0"
-                      />
-                      <button
-                        type="button"
-                        class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
-                        @mousedown="startStep('growth', true)"
-                        @mouseleave="stopStep"
-                        @mouseup="stopStep"
-                        @touchstart.prevent="startStep('growth', true)"
-                        @touchend="stopStep"
-                      >+</button>
-                      <button
-                        type="button"
-                        class="h-7 ml-auto rounded bg-gray-800 border border-gray-700 px-2 text-[10px] font-bold text-gray-300 hover:bg-emerald-800/60 hover:text-emerald-300 hover:border-emerald-600 transition flex-shrink-0 flex items-center justify-center font-sans"
-                        :title="`Propager cette croissance (An ${activeCell.yearIndex + 1} → An 5)`"
-                        @click="propagateActiveGrowth"
-                      >An {{ activeCell.yearIndex + 1 }} ➔ 5</button>
-                    </div>
+                <!-- ── Cas : Croissance CA ── -->
+                <div v-if="activeCell.type === 'growth'" class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] text-gray-400">Croissance — An {{ activeCell.yearIndex + 1 }}</span>
+                    <span
+                      class="font-mono text-xs font-bold"
+                      :class="activeGrowthVal >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                    >{{ activeGrowthVal.toFixed(1) }}%</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
+                      @mousedown="startStep('growth', false)"
+                      @mouseleave="stopStep"
+                      @mouseup="stopStep"
+                      @touchstart.prevent="startStep('growth', false)"
+                      @touchend="stopStep"
+                    >−</button>
                     <input
                       v-model.number="activeGrowthVal"
-                      type="range"
-                      min="-50"
-                      max="150"
-                      step="0.5"
-                      class="w-full block"
-                      :class="activeGrowthVal >= 0 ? 'accent-emerald-500' : 'accent-rose-500'"
+                      type="number"
+                      step="0.1"
+                      class="h-7 w-14 rounded-md bg-gray-950 border border-gray-700 px-1 text-xs font-mono text-white text-center focus:border-emerald-500 focus:outline-none flex-shrink-0"
                     />
+                    <button
+                      type="button"
+                      class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
+                      @mousedown="startStep('growth', true)"
+                      @mouseleave="stopStep"
+                      @mouseup="stopStep"
+                      @touchstart.prevent="startStep('growth', true)"
+                      @touchend="stopStep"
+                    >+</button>
+                    <button
+                      type="button"
+                      class="h-7 ml-auto rounded bg-gray-800 border border-gray-700 px-2 text-[10px] font-bold text-gray-300 hover:bg-emerald-800/60 hover:text-emerald-300 hover:border-emerald-600 transition flex-shrink-0 flex items-center justify-center font-sans"
+                      :title="`Propager cette croissance (An ${activeCell.yearIndex + 1} → An 5)`"
+                      @click="propagateActiveGrowth"
+                    >An {{ activeCell.yearIndex + 1 }} ➔ 5</button>
                   </div>
+                  <input
+                    v-model.number="activeGrowthVal"
+                    type="range"
+                    min="-50"
+                    max="150"
+                    step="0.5"
+                    class="w-full block"
+                    :class="activeGrowthVal >= 0 ? 'accent-emerald-500' : 'accent-rose-500'"
+                  />
+                </div>
 
-                  <!-- ── Cas : Marge Nette ── -->
-                  <div v-else-if="activeCell.type === 'margin'" class="space-y-2">
-                    <div class="flex items-center justify-between">
-                      <span class="text-[11px] text-gray-400">Marge — An {{ activeCell.yearIndex + 1 }}</span>
-                      <span
-                        class="font-mono text-xs font-bold"
-                        :class="activeMarginVal >= 0 ? 'text-sky-400' : 'text-rose-400'"
-                      >{{ activeMarginVal.toFixed(1) }}%</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <button
-                        type="button"
-                        class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
-                        @mousedown="startStep('margin', false)"
-                        @mouseleave="stopStep"
-                        @mouseup="stopStep"
-                        @touchstart.prevent="startStep('margin', false)"
-                        @touchend="stopStep"
-                      >−</button>
-                      <input
-                        v-model.number="activeMarginVal"
-                        type="number"
-                        step="0.1"
-                        class="h-7 w-14 rounded-md bg-gray-950 border border-gray-700 px-1 text-xs font-mono text-white text-center focus:border-sky-500 focus:outline-none flex-shrink-0"
-                      />
-                      <button
-                        type="button"
-                        class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
-                        @mousedown="startStep('margin', true)"
-                        @mouseleave="stopStep"
-                        @mouseup="stopStep"
-                        @touchstart.prevent="startStep('margin', true)"
-                        @touchend="stopStep"
-                      >+</button>
-                      <button
-                        type="button"
-                        class="h-7 ml-auto rounded bg-gray-800 border border-gray-700 px-2 text-[10px] font-bold text-gray-300 hover:bg-sky-800/60 hover:text-sky-300 hover:border-sky-600 transition flex-shrink-0 flex items-center justify-center font-sans"
-                        :title="`Propager cette marge (An ${activeCell.yearIndex + 1} → An 5)`"
-                        @click="propagateActiveMargin"
-                      >An {{ activeCell.yearIndex + 1 }} ➔ 5</button>
-                    </div>
+                <!-- ── Cas : Marge Nette ── -->
+                <div v-else-if="activeCell.type === 'margin'" class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] text-gray-400">Marge — An {{ activeCell.yearIndex + 1 }}</span>
+                    <span
+                      class="font-mono text-xs font-bold"
+                      :class="activeMarginVal >= 0 ? 'text-sky-400' : 'text-rose-400'"
+                    >{{ activeMarginVal.toFixed(1) }}%</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
+                      @mousedown="startStep('margin', false)"
+                      @mouseleave="stopStep"
+                      @mouseup="stopStep"
+                      @touchstart.prevent="startStep('margin', false)"
+                      @touchend="stopStep"
+                    >−</button>
                     <input
                       v-model.number="activeMarginVal"
-                      type="range"
-                      min="-50"
-                      max="80"
-                      step="0.5"
-                      class="w-full block"
-                      :class="activeMarginVal >= 0 ? 'accent-sky-500' : 'accent-rose-500'"
+                      type="number"
+                      step="0.1"
+                      class="h-7 w-14 rounded-md bg-gray-950 border border-gray-700 px-1 text-xs font-mono text-white text-center focus:border-sky-500 focus:outline-none flex-shrink-0"
                     />
+                    <button
+                      type="button"
+                      class="h-7 w-7 rounded bg-gray-800 border border-gray-700 text-sm font-black text-gray-200 hover:bg-gray-700 hover:text-white transition flex-shrink-0 flex items-center justify-center select-none"
+                      @mousedown="startStep('margin', true)"
+                      @mouseleave="stopStep"
+                      @mouseup="stopStep"
+                      @touchstart.prevent="startStep('margin', true)"
+                      @touchend="stopStep"
+                    >+</button>
+                    <button
+                      type="button"
+                      class="h-7 ml-auto rounded bg-gray-800 border border-gray-700 px-2 text-[10px] font-bold text-gray-300 hover:bg-sky-800/60 hover:text-sky-300 hover:border-sky-600 transition flex-shrink-0 flex items-center justify-center font-sans"
+                      :title="`Propager cette marge (An ${activeCell.yearIndex + 1} → An 5)`"
+                      @click="propagateActiveMargin"
+                    >An {{ activeCell.yearIndex + 1 }} ➔ 5</button>
                   </div>
-
-                  <!-- ── Cas : Chiffre d'Affaires ── -->
-                  <div v-else-if="activeCell.type === 'revenue'" class="space-y-2">
-                    <div class="flex items-center justify-between">
-                      <span class="text-[11px] text-gray-400">CA — An {{ activeCell.yearIndex + 1 }}</span>
-                      <span class="font-mono text-white text-xs font-bold">{{ formatScaledCurrency(revenueProjections[activeCell.yearIndex]?.revenue, stock.currency) }}</span>
-                    </div>
-                    <div class="flex items-center justify-start gap-1.5">
-                      <input
-                        v-model.number="activeRevenueScaledVal"
-                        type="number"
-                        step="0.01"
-                        class="h-7 w-24 rounded-md bg-gray-950 border border-gray-700 px-2 text-xs font-mono text-white text-right focus:border-emerald-500 focus:outline-none flex-shrink-0"
-                      />
-                      <select
-                        v-model="activeRevenueScaleUnit"
-                        class="h-7 w-14 rounded-md bg-gray-950 border border-gray-700 px-1 text-xs font-mono text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none flex-shrink-0 cursor-pointer"
-                      >
-                        <option value="B">Mds</option>
-                        <option value="M">M</option>
-                        <option value="K">K</option>
-                        <option value="1">$</option>
-                      </select>
-                    </div>
-                    <div class="h-5"></div>
-                  </div>
-
+                  <input
+                    v-model.number="activeMarginVal"
+                    type="range"
+                    min="-50"
+                    max="80"
+                    step="0.5"
+                    class="w-full block"
+                    :class="activeMarginVal >= 0 ? 'accent-sky-500' : 'accent-rose-500'"
+                  />
                 </div>
+
+                <!-- ── Cas : Chiffre d'Affaires ── -->
+                <div v-else-if="activeCell.type === 'revenue'" class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] text-gray-400">CA — An {{ activeCell.yearIndex + 1 }}</span>
+                    <span class="font-mono text-white text-xs font-bold">{{ formatScaledCurrency(revenueProjections[activeCell.yearIndex]?.revenue, stock.currency) }}</span>
+                  </div>
+                  <div class="flex items-center justify-start gap-1.5">
+                    <input
+                      v-model.number="activeRevenueScaledVal"
+                      type="number"
+                      step="0.01"
+                      class="h-7 w-24 rounded-md bg-gray-950 border border-gray-700 px-2 text-xs font-mono text-white text-right focus:border-emerald-500 focus:outline-none flex-shrink-0"
+                    />
+                    <select
+                      v-model="activeRevenueScaleUnit"
+                      class="h-7 w-14 rounded-md bg-gray-950 border border-gray-700 px-1 text-xs font-mono text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none flex-shrink-0 cursor-pointer"
+                    >
+                      <option value="B">Mds</option>
+                      <option value="M">M</option>
+                      <option value="K">K</option>
+                      <option value="1">$</option>
+                    </select>
+                  </div>
+                  <div class="h-5"></div>
+                </div>
+
               </div>
             </div>
+          </div>
 
-            <!-- Section 2 : ⚙️ Valorisation & Multiples de Sortie -->
-            <div class="rounded-2xl border border-gray-800 bg-gray-950/70 p-6 space-y-6 shadow-xl backdrop-blur">
-              <div>
-                <h2 class="text-base font-bold text-white flex items-center gap-2 border-b border-gray-800 pb-2">
-                  <span>⚙️</span>
-                  <span>Valorisation & Multiples de Sortie</span>
-                </h2>
+          <!-- Section 2 : ⚙️ Valorisation & Multiples de Sortie -->
+          <div class="rounded-2xl border border-gray-800 bg-gray-950/70 p-6 space-y-6 shadow-xl backdrop-blur">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2 border-b border-gray-800 pb-2">
+                <span>⚙️</span>
+                <span>Valorisation & Multiples de Sortie</span>
+              </h2>
+            </div>
+            <div class="grid gap-6 md:grid-cols-3">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-medium text-gray-400">Multiple Exit (P/E)</span>
+                  <EditableValue v-model="targetMultiple" type="multiple" :is-decimal="false" :step="0.5" />
+                </div>
+                <input v-model.number="targetMultiple" type="range" min="5" max="120" step="0.5" class="w-full accent-emerald-500" />
               </div>
-              <div class="grid gap-6 md:grid-cols-3">
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="font-medium text-gray-400">Multiple Exit (P/E)</span>
-                    <EditableValue v-model="targetMultiple" type="multiple" :is-decimal="false" :step="0.5" />
-                  </div>
-                  <input v-model.number="targetMultiple" type="range" min="5" max="120" step="0.5" class="w-full accent-emerald-500" />
+              <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-medium text-gray-400">Taux Actualisation / WACC (r)</span>
+                  <EditableValue v-model="discountRate" type="percent" :is-decimal="true" :step="0.25" :digits="2" />
                 </div>
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="font-medium text-gray-400">Taux Actualisation / WACC (r)</span>
-                    <EditableValue v-model="discountRate" type="percent" :is-decimal="true" :step="0.25" :digits="2" />
+                <input v-model.number="discountRate" type="range" min="0.05" max="0.20" step="0.0025" class="w-full accent-emerald-500" />
+              </div>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-medium text-gray-400">Spread Bêta / Scénarios</span>
+                  <div class="flex items-center gap-1">
+                    <span class="text-gray-400">±</span>
+                    <EditableValue v-model="riskSpread" type="percent" :is-decimal="true" :step="1" :digits="0" />
                   </div>
-                  <input v-model.number="discountRate" type="range" min="0.05" max="0.20" step="0.0025" class="w-full accent-emerald-500" />
                 </div>
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="font-medium text-gray-400">Spread Bêta / Scénarios</span>
-                    <div class="flex items-center gap-1">
-                      <span class="text-gray-400">±</span>
-                      <EditableValue v-model="riskSpread" type="percent" :is-decimal="true" :step="1" :digits="0" />
-                    </div>
-                  </div>
-                  <input v-model.number="riskSpread" type="range" min="0.05" max="0.50" step="0.01" class="w-full accent-emerald-500" />
-                </div>
+                <input v-model.number="riskSpread" type="range" min="0.05" max="0.50" step="0.01" class="w-full accent-emerald-500" />
               </div>
             </div>
+          </div>
 
-            <!-- Dual-Track Spectrum -->
-            <div v-if="spectrumData" class="rounded-2xl border border-gray-800 bg-gray-950/70 p-6 space-y-6 shadow-xl backdrop-blur">
-              <h3 class="text-sm font-bold uppercase tracking-wider text-gray-300 flex items-center justify-between">
-                <span>📊 Valorisation & Spectrum de Prix Dual-Track</span>
-                <span class="text-xs text-gray-400 font-normal">Comparaison Modèle vs Consensus Wall Street</span>
-              </h3>
-              <div class="space-y-8 py-2">
-                <!-- Track 1 : MODÈLE STOCKPICK (NOTRE DCF) -->
-                <div class="space-y-2">
-                  <div class="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-                    Modèle StockPick (Notre DCF)
-                  </div>
+          <!-- Dual-Track Spectrum -->
+          <div v-if="spectrumData" class="rounded-2xl border border-gray-800 bg-gray-950/70 p-6 space-y-6 shadow-xl backdrop-blur">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-gray-300 flex items-center justify-between">
+              <span>📊 Valorisation & Spectrum de Prix Dual-Track</span>
+              <span class="text-xs text-gray-400 font-normal">Comparaison Modèle vs Consensus Wall Street</span>
+            </h3>
 
-                  <div class="relative pt-6 pb-6">
-                    <div class="h-3.5 w-full rounded-full bg-gradient-to-r from-red-500/25 via-amber-500/25 to-emerald-500/25 border border-gray-800 relative shadow-inner">
-                      <div class="absolute top-0 bottom-0 w-0.5 bg-rose-500 shadow-md z-10" :style="{ left: `${spectrumData.bearPos}%` }">
-                        <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
-                          {{ formatCurrency(spectrumData.bearVal, stock.currency) }}
-                        </div>
-                        <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-rose-400 whitespace-nowrap">
-                          Bear
-                        </div>
-                      </div>
-
-                      <div class="absolute top-0 bottom-0 w-0.5 bg-amber-400 shadow-md z-20" :style="{ left: `${spectrumData.basePos}%` }">
-                        <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
-                          {{ formatCurrency(spectrumData.baseVal, stock.currency) }}
-                        </div>
-                        <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-amber-400 whitespace-nowrap">
-                          Base
-                        </div>
-                      </div>
-
-                      <div class="absolute top-0 bottom-0 w-0.5 bg-emerald-400 shadow-md z-10" :style="{ left: `${spectrumData.bullPos}%` }">
-                        <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
-                          {{ formatCurrency(spectrumData.bullVal, stock.currency) }}
-                        </div>
-                        <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-emerald-400 whitespace-nowrap">
-                          Bull
-                        </div>
-                      </div>
-
-                      <div class="absolute top-0 bottom-0 w-1 bg-white z-30 shadow-lg" :style="{ left: `${spectrumData.pricePos}%` }">
-                        <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white bg-gray-900/90 px-1 rounded border border-gray-700 whitespace-nowrap">
-                          {{ formatCurrency(spectrumData.priceVal, stock.currency) }}
-                        </div>
-                        <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-bold text-white whitespace-nowrap">
-                          Prix
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+            <div class="space-y-8 py-2">
+              <!-- Track 1 : MODÈLE STOCKPICK (NOTRE DCF) -->
+              <div class="space-y-2">
+                <div class="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                  Modèle StockPick (Notre DCF)
                 </div>
 
-                <!-- Track 2 : CONSENSUS WALL STREET (ANALYSTES 12M) -->
-                <div v-if="spectrumData.lowVal !== null || spectrumData.meanVal !== null" class="space-y-2">
-                  <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-indigo-400">
-                    <span>Consensus Wall Street (Analystes 12M)</span>
-                    <span v-if="stock.analyst_count" class="text-[11px] font-normal text-gray-400 font-sans lowercase">
-                      ({{ stock.analyst_count }} analystes)
-                    </span>
-                  </div>
-
-                  <div class="relative pt-6 pb-6">
-                    <div class="h-3.5 w-full rounded-full bg-gradient-to-r from-red-500/25 via-amber-500/25 to-emerald-500/25 border border-gray-800 relative shadow-inner">
-                      <div v-if="spectrumData.lowPos !== null" class="absolute top-0 bottom-0 w-0.5 bg-rose-500 shadow-md z-10" :style="{ left: `${spectrumData.lowPos}%` }">
-                        <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
-                          {{ formatCurrency(spectrumData.lowVal, stock.currency) }}
-                        </div>
-                        <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-rose-400 whitespace-nowrap">
-                          Low
-                        </div>
+                <div class="relative pt-6 pb-6">
+                  <div class="h-3.5 w-full rounded-full bg-gradient-to-r from-red-500/25 via-amber-500/25 to-emerald-500/25 border border-gray-800 relative shadow-inner">
+                    <div class="absolute top-0 bottom-0 w-0.5 bg-rose-500 shadow-md z-10" :style="{ left: `${spectrumData.bearPos}%` }">
+                      <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
+                        {{ formatCurrency(spectrumData.bearVal, stock.currency) }}
                       </div>
-
-                      <div v-if="spectrumData.meanPos !== null" class="absolute top-0 bottom-0 w-0.5 bg-amber-400 shadow-md z-20" :style="{ left: `${spectrumData.meanPos}%` }">
-                        <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
-                          {{ formatCurrency(spectrumData.meanVal, stock.currency) }}
-                        </div>
-                        <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-amber-400 whitespace-nowrap">
-                          Moyen
-                        </div>
+                      <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-rose-400 whitespace-nowrap">
+                        Bear
                       </div>
+                    </div>
 
-                      <div v-if="spectrumData.highPos !== null" class="absolute top-0 bottom-0 w-0.5 bg-emerald-400 shadow-md z-10" :style="{ left: `${spectrumData.highPos}%` }">
-                        <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
-                          {{ formatCurrency(spectrumData.highVal, stock.currency) }}
-                        </div>
-                        <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-emerald-400 whitespace-nowrap">
-                          High
-                        </div>
+                    <div class="absolute top-0 bottom-0 w-0.5 bg-amber-400 shadow-md z-20" :style="{ left: `${spectrumData.basePos}%` }">
+                      <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
+                        {{ formatCurrency(spectrumData.baseVal, stock.currency) }}
                       </div>
+                      <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-amber-400 whitespace-nowrap">
+                        Base
+                      </div>
+                    </div>
 
-                      <div class="absolute top-0 bottom-0 w-1 bg-white z-30 shadow-lg" :style="{ left: `${spectrumData.pricePos}%` }">
-                        <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white bg-gray-900/90 px-1 rounded border border-gray-700 whitespace-nowrap">
-                          {{ formatCurrency(spectrumData.priceVal, stock.currency) }}
-                        </div>
-                        <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-bold text-white whitespace-nowrap">
-                          Prix
-                        </div>
+                    <div class="absolute top-0 bottom-0 w-0.5 bg-emerald-400 shadow-md z-10" :style="{ left: `${spectrumData.bullPos}%` }">
+                      <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
+                        {{ formatCurrency(spectrumData.bullVal, stock.currency) }}
+                      </div>
+                      <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-emerald-400 whitespace-nowrap">
+                        Bull
+                      </div>
+                    </div>
+
+                    <div class="absolute top-0 bottom-0 w-1 bg-white z-30 shadow-lg" :style="{ left: `${spectrumData.pricePos}%` }">
+                      <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white bg-gray-900/90 px-1 rounded border border-gray-700 whitespace-nowrap">
+                        {{ formatCurrency(spectrumData.priceVal, stock.currency) }}
+                      </div>
+                      <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-bold text-white whitespace-nowrap">
+                        Prix
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Scénarios Bear / Base / Bull -->
-            <div class="grid gap-4 md:grid-cols-3">
-              <div class="rounded-xl border border-rose-500/20 bg-rose-950/10 p-5 space-y-3">
-                <div class="flex justify-between items-center">
-                  <span class="font-bold text-rose-400 text-sm">🐻 Scénario Bear</span>
-                  <span class="text-xs font-mono text-rose-300/80">-{{ (riskSpread * 100).toFixed(0) }}% spread</span>
+              <!-- Track 2 : CONSENSUS WALL STREET (ANALYSTES 12M) -->
+              <div v-if="spectrumData.lowVal !== null || spectrumData.meanVal !== null" class="space-y-2">
+                <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-indigo-400">
+                  <span>Consensus Wall Street (Analystes 12M)</span>
+                  <span v-if="stock.analyst_count" class="text-[11px] font-normal text-gray-400 font-sans lowercase">
+                    ({{ stock.analyst_count }} analystes)
+                  </span>
                 </div>
-                <div class="text-2xl font-black text-white">
-                  {{ formatCurrency(scenarios.bear.fairValue, stock.currency) }}
-                </div>
-                <div class="text-xs text-gray-400 space-y-1">
-                  <div>MoS : <span class="font-semibold text-rose-300">{{ formatPercent(scenarios.bear.marginOfSafety) }}</span></div>
-                  <div>Target Price 5Y : <span class="text-gray-300">{{ formatCurrency(scenarios.bear.targetPrice5Y, stock.currency) }}</span></div>
-                </div>
-              </div>
 
-              <div class="rounded-xl border border-amber-500/20 bg-amber-950/10 p-5 space-y-3">
-                <div class="flex justify-between items-center">
-                  <span class="font-bold text-amber-400 text-sm">⚖️ Scénario Base</span>
-                  <span class="text-xs font-mono text-amber-300/80">Hypothèses Clés</span>
-                </div>
-                <div class="text-2xl font-black text-white">
-                  {{ formatCurrency(scenarios.base.fairValue, stock.currency) }}
-                </div>
-                <div class="text-xs text-gray-400 space-y-1">
-                  <div>MoS : <span class="font-semibold text-amber-300">{{ formatPercent(scenarios.base.marginOfSafety) }}</span></div>
-                  <div>Target Price 5Y : <span class="text-gray-300">{{ formatCurrency(scenarios.base.targetPrice5Y, stock.currency) }}</span></div>
-                </div>
-              </div>
+                <div class="relative pt-6 pb-6">
+                  <div class="h-3.5 w-full rounded-full bg-gradient-to-r from-red-500/25 via-amber-500/25 to-emerald-500/25 border border-gray-800 relative shadow-inner">
+                    <div v-if="spectrumData.lowPos !== null" class="absolute top-0 bottom-0 w-0.5 bg-rose-500 shadow-md z-10" :style="{ left: `${spectrumData.lowPos}%` }">
+                      <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
+                        {{ formatCurrency(spectrumData.lowVal, stock.currency) }}
+                      </div>
+                      <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-rose-400 whitespace-nowrap">
+                        Low
+                      </div>
+                    </div>
 
-              <div class="rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-5 space-y-3">
-                <div class="flex justify-between items-center">
-                  <span class="font-bold text-emerald-400 text-sm">🚀 Scénario Bull</span>
-                  <span class="text-xs font-mono text-emerald-300/80">+{{ (riskSpread * 100).toFixed(0) }}% spread</span>
-                </div>
-                <div class="text-2xl font-black text-white">
-                  {{ formatCurrency(scenarios.bull.fairValue, stock.currency) }}
-                </div>
-                <div class="text-xs text-gray-400 space-y-1">
-                  <div>MoS : <span class="font-semibold text-emerald-300">{{ formatPercent(scenarios.bull.marginOfSafety) }}</span></div>
-                  <div>Target Price 5Y : <span class="text-gray-300">{{ formatCurrency(scenarios.bull.targetPrice5Y, stock.currency) }}</span></div>
-                </div>
-              </div>
-            </div>
+                    <div v-if="spectrumData.meanPos !== null" class="absolute top-0 bottom-0 w-0.5 bg-amber-400 shadow-md z-20" :style="{ left: `${spectrumData.meanPos}%` }">
+                      <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
+                        {{ formatCurrency(spectrumData.meanVal, stock.currency) }}
+                      </div>
+                      <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-amber-400 whitespace-nowrap">
+                        Moyen
+                      </div>
+                    </div>
 
-            <!-- Reverse DCF -->
-            <div class="rounded-2xl border border-gray-800 bg-gray-950/70 p-6 space-y-4 shadow-xl backdrop-blur">
-              <h3 class="text-base font-bold text-white flex items-center gap-2">
-                <span>🔄</span>
-                <span>Reverse DCF (Implicite Marché)</span>
-              </h3>
-              <p class="text-xs text-gray-400">
-                Au cours actuel de <span class="font-semibold text-white">{{ formatCurrency(stock.current_price, stock.currency) }}</span>, le marché anticipe un taux de croissance annuel du CA de :
-              </p>
-              <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6 rounded-xl bg-gray-900 border border-gray-800 p-5">
-                <div>
-                  <div class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Croissance Implicite Requis</div>
-                  <div class="text-3xl font-extrabold text-amber-400">
-                    {{ (reverseDCF.impliedGrowth * 100).toFixed(1) }}% <span class="text-xs font-normal text-gray-400">/ an</span>
+                    <div v-if="spectrumData.highPos !== null" class="absolute top-0 bottom-0 w-0.5 bg-emerald-400 shadow-md z-10" :style="{ left: `${spectrumData.highPos}%` }">
+                      <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white whitespace-nowrap">
+                        {{ formatCurrency(spectrumData.highVal, stock.currency) }}
+                      </div>
+                      <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-semibold text-emerald-400 whitespace-nowrap">
+                        High
+                      </div>
+                    </div>
+
+                    <div class="absolute top-0 bottom-0 w-1 bg-white z-30 shadow-lg" :style="{ left: `${spectrumData.pricePos}%` }">
+                      <div class="absolute bottom-full mb-1 -translate-x-1/2 text-[11px] font-mono font-bold text-white bg-gray-900/90 px-1 rounded border border-gray-700 whitespace-nowrap">
+                        {{ formatCurrency(spectrumData.priceVal, stock.currency) }}
+                      </div>
+                      <div class="absolute top-full mt-1 -translate-x-1/2 text-[10px] font-bold text-white whitespace-nowrap">
+                        Prix
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div class="text-xs text-gray-400 sm:border-l border-gray-800 sm:pl-6 space-y-1">
-                  <div>Prix Cible 5Y Implicite : <span class="font-semibold text-white">{{ formatCurrency(reverseDCF.targetPrice5YMarket, stock.currency) }}</span></div>
-                  <div>Bénéfices 5Y Implicites : <span class="font-semibold text-white">{{ formatScaledCurrency(reverseDCF.earnings5YMarket, stock.currency) }}</span></div>
-                  <div>CA 5Y Implicite : <span class="font-semibold text-white">{{ formatScaledCurrency(reverseDCF.revenue5YMarket, stock.currency) }}</span></div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- SUB-TAB 2: IA Copilot & Audit Trail -->
-          <div v-else-if="dcfSubTab === 'copilot'" class="space-y-8">
-            <!-- AIDeepResearchBridge Component -->
-            <AIDeepResearchBridge
-              mode="quantitative"
-              :ticker="tickerParam"
-              :stock-name="stock.name || tickerParam"
-              :prompt-text="quantiPromptText"
-              :is-analyzing="isAnalyzingQuant"
-              :error-message="quantAiErrorMessage"
-              @analyze="handleAnalyzeQuant"
-            />
-
-            <!-- Carte des Résultats Extraits IA (si disponible) -->
-            <div v-if="quantAiResult" class="rounded-2xl border border-emerald-500/30 bg-gray-950/90 p-6 space-y-6 shadow-xl backdrop-blur">
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-800 pb-4 gap-4">
-                <div>
-                  <h4 class="text-base font-bold text-white flex items-center gap-2">
-                    <span>⚡</span>
-                    <span>Hypothèses Quantitatives Extraites par DeepSeek</span>
-                  </h4>
-                  <p class="text-xs text-gray-400 mt-1">Prévisualisation avant injection automatique dans le modèle P&L DCF 5Y.</p>
-                </div>
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-extrabold text-white hover:bg-emerald-500 transition shadow-lg self-start sm:self-auto"
-                  @click="injectAICopilotProjections"
-                >
-                  <span>🚀 Injecter dans le DCF 5Y</span>
-                </button>
+          <!-- Scénarios Bear / Base / Bull -->
+          <div class="grid gap-4 md:grid-cols-3">
+            <div class="rounded-xl border border-rose-500/20 bg-rose-950/10 p-5 space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-rose-400 text-sm">🐻 Scénario Bear</span>
+                <span class="text-xs font-mono text-rose-300/80">-{{ (riskSpread * 100).toFixed(0) }}% spread</span>
               </div>
-
-              <!-- Grille des Projections Extraites -->
-              <div class="grid gap-6 md:grid-cols-2">
-                <!-- Croissance CA 5Y -->
-                <div class="rounded-xl bg-gray-900 border border-gray-800 p-4 space-y-2">
-                  <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Trajectoire Croissance CA (%)</div>
-                  <div class="flex gap-2 text-xs font-mono font-bold flex-wrap">
-                    <span v-for="(g, idx) in quantAiResult.growth_projections" :key="idx" class="px-2 py-1 rounded bg-gray-950 border border-gray-800 text-emerald-300">
-                      An {{ idx + 1 }}: {{ g }}%
-                    </span>
-                  </div>
-                  <p class="text-xs text-gray-300 italic pt-1 border-t border-gray-800/60 mt-2">
-                    "{{ quantAiResult.justifications.growth }}"
-                  </p>
-                </div>
-
-                <!-- Marge Nette 5Y -->
-                <div class="rounded-xl bg-gray-900 border border-gray-800 p-4 space-y-2">
-                  <div class="text-xs font-bold text-sky-400 uppercase tracking-wider">Trajectoire Marge Nette (%)</div>
-                  <div class="flex gap-2 text-xs font-mono font-bold flex-wrap">
-                    <span v-for="(m, idx) in quantAiResult.margin_projections" :key="idx" class="px-2 py-1 rounded bg-gray-950 border border-gray-800 text-sky-300">
-                      An {{ idx + 1 }}: {{ m }}%
-                    </span>
-                  </div>
-                  <p class="text-xs text-gray-300 italic pt-1 border-t border-gray-800/60 mt-2">
-                    "{{ quantAiResult.justifications.margin }}"
-                  </p>
-                </div>
+              <div class="text-2xl font-black text-white">
+                {{ formatCurrency(scenarios.bear.fairValue, stock.currency) }}
               </div>
-
-              <div class="grid gap-4 sm:grid-cols-3 text-xs">
-                <div class="rounded-xl bg-gray-900 border border-gray-800 p-3.5 space-y-1">
-                  <div class="text-gray-400 font-medium">Multiple P/E Exit : <span class="font-bold text-white font-mono">{{ quantAiResult.target_multiple }}x</span></div>
-                  <p class="text-[11px] text-gray-400 italic">"{{ quantAiResult.justifications.multiple }}"</p>
-                </div>
-                <div class="rounded-xl bg-gray-900 border border-gray-800 p-3.5 space-y-1">
-                  <div class="text-gray-400 font-medium">Taux Actualisation (WACC) : <span class="font-bold text-white font-mono">{{ quantAiResult.discount_rate }}%</span></div>
-                  <p class="text-[11px] text-gray-400 italic">"{{ quantAiResult.justifications.wacc }}"</p>
-                </div>
-                <div class="rounded-xl bg-gray-900 border border-gray-800 p-3.5 space-y-1">
-                  <div class="text-gray-400 font-medium">Spread Scénarios : <span class="font-bold text-white font-mono">±{{ quantAiResult.risk_spread }}%</span></div>
-                </div>
+              <div class="text-xs text-gray-400 space-y-1">
+                <div>MoS : <span class="font-semibold text-rose-300">{{ formatPercent(scenarios.bear.marginOfSafety) }}</span></div>
+                <div>Target Price 5Y : <span class="text-gray-300">{{ formatCurrency(scenarios.bear.targetPrice5Y, stock.currency) }}</span></div>
               </div>
             </div>
 
-            <!-- Nitro Audit Cascades (Conservé) -->
-            <div v-if="parsedAuditData" class="space-y-6">
-              <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                <span>📋</span>
-                <span>Audit Trail des Cascades Nitro</span>
-              </h3>
+            <div class="rounded-xl border border-amber-500/20 bg-amber-950/10 p-5 space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-amber-400 text-sm">⚖️ Scénario Base</span>
+                <span class="text-xs font-mono text-amber-300/80">Hypothèses Clés</span>
+              </div>
+              <div class="text-2xl font-black text-white">
+                {{ formatCurrency(scenarios.base.fairValue, stock.currency) }}
+              </div>
+              <div class="text-xs text-gray-400 space-y-1">
+                <div>MoS : <span class="font-semibold text-amber-300">{{ formatPercent(scenarios.base.marginOfSafety) }}</span></div>
+                <div>Target Price 5Y : <span class="text-gray-300">{{ formatCurrency(scenarios.base.targetPrice5Y, stock.currency) }}</span></div>
+              </div>
+            </div>
 
-              <!-- 4 Tables for Growth, Margin, P/E, Discount Rate -->
-              <div class="grid gap-6 md:grid-cols-2">
-                <!-- Croissance -->
-                <div class="rounded-xl border border-gray-800 bg-gray-950 p-5 space-y-3">
-                  <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-                    <h4 class="font-bold text-white text-sm">1. Croissance (g)</h4>
-                    <span class="text-xs text-emerald-400 font-mono">Retenu : {{ (parsedAuditData.growth?.selected * 100).toFixed(1) }}%</span>
-                  </div>
-                  <div class="space-y-2">
-                    <div v-for="c in parsedAuditData.growth?.candidates || []" :key="c.name" class="flex justify-between text-xs p-2 rounded bg-gray-900">
-                      <span class="text-gray-300">{{ c.name }}</span>
-                      <span :class="c.status === 'selected' ? 'text-emerald-400 font-bold' : 'text-gray-500'">
-                        {{ c.value !== null ? `${(c.value * 100).toFixed(1)}%` : '-' }} ({{ c.status }})
-                      </span>
-                    </div>
-                  </div>
-                </div>
+            <div class="rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-5 space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-emerald-400 text-sm">🚀 Scénario Bull</span>
+                <span class="text-xs font-mono text-emerald-300/80">+{{ (riskSpread * 100).toFixed(0) }}% spread</span>
+              </div>
+              <div class="text-2xl font-black text-white">
+                {{ formatCurrency(scenarios.bull.fairValue, stock.currency) }}
+              </div>
+              <div class="text-xs text-gray-400 space-y-1">
+                <div>MoS : <span class="font-semibold text-emerald-300">{{ formatPercent(scenarios.bull.marginOfSafety) }}</span></div>
+                <div>Target Price 5Y : <span class="text-gray-300">{{ formatCurrency(scenarios.bull.targetPrice5Y, stock.currency) }}</span></div>
+              </div>
+            </div>
+          </div>
 
-                <!-- Marge Nette -->
-                <div class="rounded-xl border border-gray-800 bg-gray-950 p-5 space-y-3">
-                  <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-                    <h4 class="font-bold text-white text-sm">2. Marge Nette (m)</h4>
-                    <span class="text-xs text-emerald-400 font-mono">Retenu : {{ (parsedAuditData.margin?.selected * 100).toFixed(1) }}%</span>
-                  </div>
-                  <div class="space-y-2">
-                    <div v-for="c in parsedAuditData.margin?.candidates || []" :key="c.name" class="flex justify-between text-xs p-2 rounded bg-gray-900">
-                      <span class="text-gray-300">{{ c.name }}</span>
-                      <span :class="c.status === 'selected' ? 'text-emerald-400 font-bold' : 'text-gray-500'">
-                        {{ c.value !== null ? `${(c.value * 100).toFixed(1)}%` : '-' }} ({{ c.status }})
-                      </span>
-                    </div>
-                  </div>
+          <!-- Reverse DCF -->
+          <div class="rounded-2xl border border-gray-800 bg-gray-950/70 p-6 space-y-4 shadow-xl backdrop-blur">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span>🔄</span>
+              <span>Reverse DCF (Implicite Marché)</span>
+            </h3>
+            <p class="text-xs text-gray-400">
+              Au cours actuel de <span class="font-semibold text-white">{{ formatCurrency(stock.current_price, stock.currency) }}</span>, le marché anticipe un taux de croissance annuel du CA de :
+            </p>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6 rounded-xl bg-gray-900 border border-gray-800 p-5">
+              <div>
+                <div class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Croissance Implicite Requis</div>
+                <div class="text-3xl font-extrabold text-amber-400">
+                  {{ (reverseDCF.impliedGrowth * 100).toFixed(1) }}% <span class="text-xs font-normal text-gray-400">/ an</span>
                 </div>
-
-                <!-- Exit Multiple -->
-                <div class="rounded-xl border border-gray-800 bg-gray-950 p-5 space-y-3">
-                  <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-                    <h4 class="font-bold text-white text-sm">3. Exit Multiple (P/E)</h4>
-                    <span class="text-xs text-emerald-400 font-mono">Retenu : {{ parsedAuditData.pe?.selected }}x</span>
-                  </div>
-                  <div class="space-y-2">
-                    <div v-for="c in parsedAuditData.pe?.candidates || []" :key="c.name" class="flex justify-between text-xs p-2 rounded bg-gray-900">
-                      <span class="text-gray-300">{{ c.name }}</span>
-                      <span :class="c.status === 'selected' ? 'text-emerald-400 font-bold' : 'text-gray-500'">
-                        {{ c.value !== null ? `${c.value}x` : '-' }} ({{ c.status }})
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Discount Rate -->
-                <div class="rounded-xl border border-gray-800 bg-gray-950 p-5 space-y-3">
-                  <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-                    <h4 class="font-bold text-white text-sm">4. Taux Actualisation (r)</h4>
-                    <span class="text-xs text-emerald-400 font-mono">Retenu : {{ (parsedAuditData.discount_rate?.selected * 100).toFixed(1) }}%</span>
-                    </div>
-                  <div class="space-y-2">
-                    <div v-for="c in parsedAuditData.discount_rate?.candidates || []" :key="c.name" class="flex justify-between text-xs p-2 rounded bg-gray-900">
-                      <span class="text-gray-300">{{ c.name }}</span>
-                      <span :class="c.status === 'selected' ? 'text-emerald-400 font-bold' : 'text-gray-500'">
-                        {{ c.value !== null ? `${(c.value * 100).toFixed(1)}%` : '-' }} ({{ c.status }})
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              </div>
+              <div class="text-xs text-gray-400 sm:border-l border-gray-800 sm:pl-6 space-y-1">
+                <div>Prix Cible 5Y Implicite : <span class="font-semibold text-white">{{ formatCurrency(reverseDCF.targetPrice5YMarket, stock.currency) }}</span></div>
+                <div>Bénéfices 5Y Implicites : <span class="font-semibold text-white">{{ formatScaledCurrency(reverseDCF.earnings5YMarket, stock.currency) }}</span></div>
+                <div>CA 5Y Implicite : <span class="font-semibold text-white">{{ formatScaledCurrency(reverseDCF.revenue5YMarket, stock.currency) }}</span></div>
               </div>
             </div>
           </div>
@@ -1500,8 +1327,6 @@ const parsedAuditData = computed<AuditData | null>(() => {
           />
         </div>
 
-
-
         <!-- TAB 3: DEEP RESEARCH QUALITATIVE -->
         <div v-else-if="activeTab === 'research'">
           <WorkspaceResearch
@@ -1512,5 +1337,30 @@ const parsedAuditData = computed<AuditData | null>(() => {
         </div>
       </div>
     </div>
+
+    <!-- Modal Workflow IA -->
+    <AIResearchModal
+      :is-open="isAiModalOpen"
+      :ticker="tickerParam"
+      :stock-name="stock?.name || tickerParam"
+      :prompt-text="quantiPromptText"
+      :is-analyzing="isAnalyzingQuant"
+      :error-message="quantAiErrorMessage"
+      @close="isAiModalOpen = false"
+      @analyze="handleAnalyzeQuant"
+      @cancel="isAnalyzingQuant = false"
+    />
+
+    <!-- Drawer Audit Trail & Sources -->
+    <AuditTrailDrawer
+      :is-open="isAuditDrawerOpen"
+      :ticker="tickerParam"
+      :parsed-audit-data="parsedAuditData"
+      :quant-ai-result="quantAiResult"
+      @close="isAuditDrawerOpen = false"
+      @inject-yahoo="injectYahooBaselineProjections"
+      @inject-ai="injectAICopilotProjections"
+      @open-ai-modal="isAuditDrawerOpen = false; isAiModalOpen = true"
+    />
   </div>
 </template>
