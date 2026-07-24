@@ -1,3 +1,5 @@
+import type { QuantitativeAIResult } from '~/server/api/stock/[ticker]/quantitative.post'
+
 export type StockStatus = 'portfolio' | 'watchlist'
 export type GrowthMode = 'cagr' | 'explicit'
 export type MarginMode = 'constant' | 'explicit'
@@ -34,19 +36,17 @@ export interface QualitativeFact {
 export interface BrickEvaluation {
   score: number
   justification: string
+  summary?: string
   key_takeaways: string[]
+  takeaways?: string[]
 }
 
+export type BrickKey = 'moat' | 'growth' | 'financials' | 'management'
 
 export interface QualitativeData {
   raw_report: string
   analyzed_at: string
-  evaluations: {
-    moat: BrickEvaluation
-    growth: BrickEvaluation
-    financials: BrickEvaluation
-    management: BrickEvaluation
-  }
+  evaluations: Record<BrickKey, BrickEvaluation>
   quality_score: number
   tier: 'S' | 'A' | 'B' | 'C' | 'F'
 }
@@ -103,6 +103,7 @@ export interface Stock {
   analyst_count?: number | null
   audit_data?: AuditData | string | null
   qualitative_data?: QualitativeData | string | null
+  quanti_ai_data?: QuantitativeAIResult | string | null
   regression_fair_price?: number | null
   quant_preset?: string | null
   quant_start_date?: string | null
@@ -114,5 +115,3 @@ export interface Stock {
   margin_source?: string
   pe_source?: string
 }
-
-
