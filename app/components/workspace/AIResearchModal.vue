@@ -1,12 +1,18 @@
 <script setup lang="ts">
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   isOpen: boolean
   ticker: string
-  stockName: string
+  stockName?: string
+  title?: string
+  subtitle?: string
   promptText: string
   isAnalyzing: boolean
   errorMessage?: string | null
-}>()
+}>(), {
+  stockName: '',
+  title: '',
+  subtitle: 'Générez un prompt, lancez la Deep Research puis laissez le modèle LLM extraire la thèse.',
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -55,8 +61,8 @@ const handleRunAnalysis = () => {
             <div class="flex items-center gap-2">
               <span class="text-xl">✨</span>
               <div>
-                <h3 class="text-base font-bold text-white">Enrichir avec l'IA — {{ ticker }}</h3>
-                <p class="text-xs text-gray-400">Générez un prompt, lancez la Deep Research puis laissez DeepSeek extraire la thèse 5Y.</p>
+                <h3 class="text-base font-bold text-white">{{ title || `Enrichir avec l'IA — ${ticker}` }}</h3>
+                <p class="text-xs text-gray-400">{{ subtitle }}</p>
               </div>
             </div>
             <button
@@ -68,12 +74,12 @@ const handleRunAnalysis = () => {
             </button>
           </div>
 
-          <!-- Selection du Modèle -->
+          <!-- Selection du Modèle LLM -->
           <div class="flex items-center justify-between bg-gray-950/60 p-3 rounded-xl border border-gray-800 text-xs">
             <span class="text-gray-400">Moteur d'analyse LLM :</span>
             <select
               v-model="selectedModel"
-              class="rounded-lg bg-gray-900 border border-gray-700 px-3 py-1 text-xs text-white focus:border-emerald-500 focus:outline-none"
+              class="rounded-lg bg-gray-900 border border-gray-700 px-3 py-1 text-xs text-white focus:border-emerald-500 focus:outline-none cursor-pointer"
             >
               <option value="deepseek-v4-flash">DeepSeek Flash (Ultra-rapide)</option>
               <option value="qwen/qwen3.7-plus">Qwen 3.7 Plus (Avancé)</option>
@@ -86,7 +92,7 @@ const handleRunAnalysis = () => {
             <div class="rounded-xl border border-gray-800 bg-gray-950/50 p-4 space-y-3 flex flex-col justify-between">
               <div>
                 <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">Étape 1 : Copier le Prompt</div>
-                <p class="text-[11px] text-gray-300">Copiez ce prompt optimisé pour demander aux IA (OpenAI Deep Research / Gemini) de sourcer vos hypothèses.</p>
+                <p class="text-[11px] text-gray-300">Copiez ce prompt optimisé pour demander aux IA (OpenAI Deep Research / Gemini) d'analyser {{ ticker }}.</p>
               </div>
               <button
                 type="button"
@@ -115,8 +121,8 @@ const handleRunAnalysis = () => {
                   :disabled="!rawReportInput.trim() || isAnalyzing"
                   @click="handleRunAnalysis"
                 >
-                  <span v-if="isAnalyzing">⚡ Parsing DeepSeek...</span>
-                  <span v-else>🚀 Extraire avec DeepSeek</span>
+                  <span v-if="isAnalyzing">⚡ Parsing LLM...</span>
+                  <span v-else>🚀 Extraire avec l'IA</span>
                 </button>
                 <button
                   v-if="isAnalyzing"
