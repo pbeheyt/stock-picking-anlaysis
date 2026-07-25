@@ -252,6 +252,8 @@ const loadStockData = async () => {
           audit_data: apiData.audit_data,
         },
       })
+    }
+
     stock.value = found
     if (found.quanti_ai_data) {
       try {
