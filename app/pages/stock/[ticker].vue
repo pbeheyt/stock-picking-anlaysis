@@ -613,22 +613,6 @@ const parsedAuditData = computed<AuditData | null>(() => {
             </div>
           </div>
 
-          <!-- Right: Actions / Toggle -->
-          <div class="flex items-center gap-3">
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition shadow-sm"
-              :class="stock.status === 'portfolio' 
-                ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white' 
-                : 'border-emerald-500/30 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60'"
-              @click="toggleStatus"
-            >
-              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-              <span v-if="stock.status === 'watchlist'">Passer en Portefeuille</span>
-              <span v-else>Passer en Watchlist</span>
-            </button>
           </div>
         </div>
       </div>
