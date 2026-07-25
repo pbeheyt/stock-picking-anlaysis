@@ -33,7 +33,7 @@ export interface AiUsageResponse {
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const page = Math.max(1, parseInt(String(query.page || '1'), 10))
-  const pageSize = Math.max(1, Math.min(100, parseInt(String(query.pageSize || '20'), 10)))
+  const pageSize = Math.max(1, Math.min(100, parseInt(String(query.pageSize || '5'), 10)))
   const offset = (page - 1) * pageSize
 
   const period = query.period ? String(query.period).trim() : 'all'

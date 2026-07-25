@@ -25,7 +25,7 @@ const fetchUsageLogs = async () => {
   try {
     const params = new URLSearchParams({
       page: String(currentPage.value),
-      pageSize: '20',
+      pageSize: '5',
       period: periodFilter.value,
     })
 
@@ -247,51 +247,53 @@ const formatActionName = (typeStr: string) => {
             </button>
           </div>
 
-          <!-- Logs Table Container -->
-          <div class="flex-1 overflow-y-auto rounded-xl border border-zinc-800/80 bg-zinc-900/30">
-            <div v-if="isLoading && !usageData" class="p-12 text-center text-xs text-zinc-500">
+          <!-- Logs Table Container (Hauteur fixe h-[250px] pour 5 lignes sans saut de layout) -->
+          <div class="h-[250px] flex flex-col justify-between overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-900/30 shrink-0">
+            <div v-if="isLoading && !usageData" class="flex-1 flex items-center justify-center text-xs text-zinc-500 font-sans">
               Chargement de l'historique...
             </div>
 
-            <div v-else-if="!usageData?.logs.length" class="p-12 text-center text-xs text-zinc-500 font-sans">
-              Aucun appel d'API IA enregistré dans l'historique pour le moment.
+            <div v-else-if="!usageData?.logs.length" class="flex-1 flex items-center justify-center text-xs text-zinc-500 font-sans">
+              Aucun appel d'API IA enregistré pour cette période.
             </div>
 
-            <table v-else class="w-full text-left text-xs border-collapse">
-              <thead class="sticky top-0 bg-zinc-900 border-b border-zinc-800 text-[10px] uppercase text-zinc-400 tracking-wider">
-                <tr>
-                  <th class="p-3">Date</th>
-                  <th class="p-3">Ticker</th>
-                  <th class="p-3">Action</th>
-                  <th class="p-3">Modèle / Provider</th>
-                  <th class="p-3 text-right">Input T.</th>
-                  <th class="p-3 text-right">Output T.</th>
-                  <th class="p-3 text-right">Coût Est. ($)</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-zinc-800/50">
-                <tr
-                  v-for="log in usageData.logs"
-                  :key="log.id"
-                  class="hover:bg-zinc-900/60 transition"
-                >
-                  <td class="p-3 text-zinc-400 whitespace-nowrap">{{ formatDateTime(log.created_at) }}</td>
-                  <td class="p-3 font-bold text-white whitespace-nowrap">
-                    <span v-if="log.ticker" class="text-emerald-400 font-mono">{{ log.ticker }}</span>
-                    <span v-else class="text-zinc-600">-</span>
-                  </td>
-                  <td class="p-3 text-zinc-300 font-sans text-[11px] whitespace-nowrap">{{ formatActionName(log.call_type) }}</td>
-                  <td class="p-3 font-mono text-[11px] whitespace-nowrap">
-                    <span class="text-zinc-200 truncate max-w-[180px] block" :title="log.model">{{ log.model }}</span>
-                  </td>
-                  <td class="p-3 text-right text-zinc-400 font-mono whitespace-nowrap">{{ log.prompt_tokens.toLocaleString('fr-FR') }}</td>
-                  <td class="p-3 text-right text-zinc-400 font-mono whitespace-nowrap">{{ log.completion_tokens.toLocaleString('fr-FR') }}</td>
-                  <td class="p-3 text-right font-bold font-mono whitespace-nowrap" :class="log.cost_usd > 0 ? 'text-emerald-400' : 'text-zinc-500'">
-                    {{ formatCost(log.cost_usd) }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div v-else class="overflow-y-auto flex-1">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead class="sticky top-0 bg-zinc-900 border-b border-zinc-800 text-[10px] uppercase text-zinc-400 tracking-wider">
+                  <tr>
+                    <th class="p-2.5">Date</th>
+                    <th class="p-2.5">Ticker</th>
+                    <th class="p-2.5">Action</th>
+                    <th class="p-2.5">Modèle / Provider</th>
+                    <th class="p-2.5 text-right">Input T.</th>
+                    <th class="p-2.5 text-right">Output T.</th>
+                    <th class="p-2.5 text-right">Coût Est. ($)</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800/50">
+                  <tr
+                    v-for="log in usageData.logs"
+                    :key="log.id"
+                    class="hover:bg-zinc-900/60 transition"
+                  >
+                    <td class="p-2.5 text-zinc-400 whitespace-nowrap">{{ formatDateTime(log.created_at) }}</td>
+                    <td class="p-2.5 font-bold text-white whitespace-nowrap">
+                      <span v-if="log.ticker" class="text-emerald-400 font-mono">{{ log.ticker }}</span>
+                      <span v-else class="text-zinc-600">-</span>
+                    </td>
+                    <td class="p-2.5 text-zinc-300 font-sans text-[11px] whitespace-nowrap">{{ formatActionName(log.call_type) }}</td>
+                    <td class="p-2.5 font-mono text-[11px] whitespace-nowrap">
+                      <span class="text-zinc-200 truncate max-w-[180px] block" :title="log.model">{{ log.model }}</span>
+                    </td>
+                    <td class="p-2.5 text-right text-zinc-400 font-mono whitespace-nowrap">{{ log.prompt_tokens.toLocaleString('fr-FR') }}</td>
+                    <td class="p-2.5 text-right text-zinc-400 font-mono whitespace-nowrap">{{ log.completion_tokens.toLocaleString('fr-FR') }}</td>
+                    <td class="p-2.5 text-right font-bold font-mono whitespace-nowrap" :class="log.cost_usd > 0 ? 'text-emerald-400' : 'text-zinc-500'">
+                      {{ formatCost(log.cost_usd) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <!-- Pagination Footer -->
