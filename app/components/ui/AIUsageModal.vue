@@ -221,19 +221,11 @@ const formatActionName = (typeStr: string) => {
                 </button>
               </div>
 
-              <!-- Inputs Custom Date (v-show pour éviter les retours à la ligne / saut de layout) -->
+              <!-- Inputs Custom Date (AppDatePicker français JJ/MM/AAAA) -->
               <div v-show="periodFilter === 'custom'" class="flex items-center gap-1.5 text-xs font-mono h-8">
-                <input
-                  v-model="customStartDate"
-                  type="date"
-                  class="h-8 rounded-lg bg-zinc-900 border border-zinc-800 px-2 py-0.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-                >
+                <AppDatePicker v-model="customStartDate" placeholder="Début (JJ/MM/AAAA)" />
                 <span class="text-zinc-600 font-bold">-</span>
-                <input
-                  v-model="customEndDate"
-                  type="date"
-                  class="h-8 rounded-lg bg-zinc-900 border border-zinc-800 px-2 py-0.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-                >
+                <AppDatePicker v-model="customEndDate" placeholder="Fin (JJ/MM/AAAA)" />
               </div>
             </div>
 
