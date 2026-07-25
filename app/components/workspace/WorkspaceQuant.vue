@@ -527,31 +527,30 @@ const getGaugeArc = (valRatio: number) => {
 
 <template>
   <div class="space-y-6">
-    <div v-if="isLoading" class="py-16 text-center text-sm text-gray-400">
+    <div v-if="isLoading" class="py-16 text-center text-xs text-zinc-500 font-mono">
       <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent mb-3" />
       <div>Chargement de l'historique boursier...</div>
     </div>
 
-    <div v-else-if="errorMessage" class="rounded-xl border border-red-500/30 bg-red-950/40 p-6 text-sm text-red-300">
+    <div v-else-if="errorMessage" class="rounded-xl border border-rose-500/30 bg-rose-950/40 p-6 text-xs text-rose-300 font-mono">
       {{ errorMessage }}
     </div>
 
     <div v-else-if="quantResult" class="space-y-6">
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
-          <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
-            <span>💰</span>
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3 shadow-md">
+          <div class="flex items-center gap-2 border-b border-zinc-800 pb-2 text-xs font-bold text-white uppercase tracking-wider font-mono">
             <span>Données Actuelles</span>
           </div>
 
-          <div class="space-y-2 text-xs">
+          <div class="space-y-2 text-xs font-mono">
             <div class="flex justify-between items-center">
-              <span class="text-gray-400">Cours actuel (P₀)</span>
+              <span class="text-zinc-400">Cours actuel (P₀)</span>
               <span class="font-bold text-white font-mono">{{ formatCurrency(quantResult.currentPrice, currency) }}</span>
             </div>
 
             <div class="flex justify-between items-center">
-              <span class="text-gray-400 flex items-center gap-1">
+              <span class="text-zinc-400 flex items-center gap-1">
                 <span>Écart vs Régression</span>
                 <InfoTooltip text="Écart en % entre le cours actuel et la médiane théorique du canal. Négatif = Le cours est sous sa moyenne historique (Décote relative)." />
               </span>
@@ -563,16 +562,16 @@ const getGaugeArc = (valRatio: number) => {
               </span>
             </div>
 
-            <div v-if="dividendYield && dividendYield > 0" class="space-y-2 border-t border-gray-800/80 pt-2">
+            <div v-if="dividendYield && dividendYield > 0" class="space-y-2 border-t border-zinc-800/80 pt-2">
               <div class="flex justify-between items-center">
-                <span class="text-gray-400">Rendement Dividende</span>
+                <span class="text-zinc-400">Rendement Dividende</span>
                 <span class="font-bold text-white font-mono">
                   {{ formatPercent(dividendYield, true, 1, false) }}
                 </span>
               </div>
 
               <div class="flex justify-between items-center">
-                <span class="text-gray-400 flex items-center gap-1">
+                <span class="text-zinc-400 flex items-center gap-1">
                   <span>Total Return Estimé</span>
                   <InfoTooltip text="Rendement annuel global estimé combinant la croissance du cours (CAGR) et les dividendes perçus." />
                 </span>
@@ -587,69 +586,67 @@ const getGaugeArc = (valRatio: number) => {
           </div>
         </div>
 
-        <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
-          <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
-            <span>📊</span>
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3 shadow-md">
+          <div class="flex items-center gap-2 border-b border-zinc-800 pb-2 text-xs font-bold text-white uppercase tracking-wider font-mono">
             <span>Analyse du Canal (σ)</span>
             <InfoTooltip text="Canaux statistiques de variabilité. ±2σ encadre environ 95% des variations historiques du cours." />
           </div>
 
           <div class="space-y-1 text-xs font-mono">
             <div class="flex justify-between">
-              <span class="text-gray-400 font-sans">Borne +2σ</span>
+              <span class="text-zinc-400 font-sans">Borne +2σ</span>
               <span class="text-rose-400 font-bold">{{ formatCurrency(quantResult.plus2Sigma, currency) }}</span>
             </div>
 
             <div class="flex justify-between">
-              <span class="text-gray-400 font-sans">Borne +1σ</span>
+              <span class="text-zinc-400 font-sans">Borne +1σ</span>
               <span class="text-amber-400 font-bold">{{ formatCurrency(quantResult.plus1Sigma, currency) }}</span>
             </div>
 
-            <div class="flex justify-between border-y border-gray-800/80 py-1 font-mono">
-              <span class="text-gray-300 font-sans">Médiane (0σ)</span>
+            <div class="flex justify-between border-y border-zinc-800/80 py-1 font-mono">
+              <span class="text-zinc-300 font-sans">Médiane (0σ)</span>
               <span class="text-white font-bold">{{ formatCurrency(quantResult.theoreticalPrice, currency) }}</span>
             </div>
 
             <div class="flex justify-between">
-              <span class="text-gray-400 font-sans">Borne -1σ</span>
+              <span class="text-zinc-400 font-sans">Borne -1σ</span>
               <span class="text-amber-400 font-bold">{{ formatCurrency(quantResult.minus1Sigma, currency) }}</span>
             </div>
 
             <div class="flex justify-between">
-              <span class="text-gray-400 font-sans">Borne -2σ</span>
+              <span class="text-zinc-400 font-sans">Borne -2σ</span>
               <span class="text-emerald-400 font-bold">{{ formatCurrency(quantResult.minus2Sigma, currency) }}</span>
             </div>
           </div>
         </div>
 
-        <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
-          <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
-            <span>🔮</span>
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3 shadow-md">
+          <div class="flex items-center gap-2 border-b border-zinc-800 pb-2 text-xs font-bold text-white uppercase tracking-wider font-mono">
             <span>Prévisions Cibles</span>
             <InfoTooltip>
               <div class="space-y-1">
                 <div>Extrapolations théoriques du canal de régression aux horizons 1, 3, 5 et 10 ans.</div>
-                <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-1.5 border-t border-gray-800/80">
-                  ⚡ <b>Convergence Damodaran :</b> En raison d'un CAGR historique exceptionnel (>20%), les projections intègrent une décélération progressive (demi-vie de 3 ans) vers le taux terminal de 5%.
+                <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-1.5 border-t border-zinc-800/80 font-mono">
+                  <b>Convergence Damodaran :</b> En raison d'un CAGR historique exceptionnel (>20%), les projections intègrent une décélération progressive (demi-vie de 3 ans) vers le taux terminal de 5%.
                 </div>
               </div>
             </InfoTooltip>
           </div>
 
-          <div class="space-y-2 text-xs">
+          <div class="space-y-2 text-xs font-mono">
             <div class="flex justify-between items-center">
-              <span class="text-gray-400">1 An</span>
+              <span class="text-zinc-400">1 An</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice1Y, currency) }}</span>
                 <InfoTooltip>
-                  <div class="space-y-1 text-xs">
+                  <div class="space-y-1 text-xs font-mono">
                     <div class="flex items-center gap-1.5 whitespace-nowrap">
-                      <span class="text-gray-400">Rendement :</span>
+                      <span class="text-zinc-400">Rendement :</span>
                       <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn1Y)">
                         {{ formatPercent(quantResult.projectedReturn1Y, true) }}
                       </span>
                     </div>
-                    <div v-if="quantResult.isDamped" class="text-[11px] text-gray-400 pt-0.5 border-t border-gray-800/80 whitespace-nowrap">
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-zinc-400 pt-0.5 border-t border-zinc-800/80 whitespace-nowrap">
                       Pente brute : +{{ (quantResult.cagrHistorical * 100).toFixed(1) }}%/an
                     </div>
                   </div>
@@ -658,18 +655,18 @@ const getGaugeArc = (valRatio: number) => {
             </div>
 
             <div class="flex justify-between items-center">
-              <span class="text-gray-400">3 Ans</span>
+              <span class="text-zinc-400">3 Ans</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice3Y, currency) }}</span>
                 <InfoTooltip>
-                  <div class="space-y-1 text-xs">
+                  <div class="space-y-1 text-xs font-mono">
                     <div class="flex items-center gap-1.5 whitespace-nowrap">
-                      <span class="text-gray-400">Rendement :</span>
+                      <span class="text-zinc-400">Rendement :</span>
                       <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn3Y)">
                         {{ formatPercent(quantResult.projectedReturn3Y, true) }}
                       </span>
                     </div>
-                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80 whitespace-nowrap">
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-zinc-800/80 whitespace-nowrap">
                       Taux régressif An 3 : +{{ (quantResult.dampedAnnualRate3Y * 100).toFixed(1) }}%/an
                     </div>
                   </div>
@@ -678,18 +675,18 @@ const getGaugeArc = (valRatio: number) => {
             </div>
 
             <div class="flex justify-between items-center">
-              <span class="text-gray-400">5 Ans</span>
+              <span class="text-zinc-400">5 Ans</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice5Y, currency) }}</span>
                 <InfoTooltip>
-                  <div class="space-y-1 text-xs">
+                  <div class="space-y-1 text-xs font-mono">
                     <div class="flex items-center gap-1.5 whitespace-nowrap">
-                      <span class="text-gray-400">Rendement :</span>
+                      <span class="text-zinc-400">Rendement :</span>
                       <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn5Y)">
                         {{ formatPercent(quantResult.projectedReturn5Y, true) }}
                       </span>
                     </div>
-                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80 whitespace-nowrap">
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-zinc-800/80 whitespace-nowrap">
                       Taux régressif An 5 : +{{ (quantResult.dampedAnnualRate5Y * 100).toFixed(1) }}%/an
                     </div>
                   </div>
@@ -698,18 +695,18 @@ const getGaugeArc = (valRatio: number) => {
             </div>
 
             <div class="flex justify-between items-center">
-              <span class="text-gray-400">10 Ans</span>
+              <span class="text-zinc-400">10 Ans</span>
               <div class="flex items-center gap-1.5 font-mono">
                 <span class="font-bold text-white">{{ formatCompactCurrency(quantResult.projectedPrice10Y, currency) }}</span>
                 <InfoTooltip>
-                  <div class="space-y-1 text-xs">
+                  <div class="space-y-1 text-xs font-mono">
                     <div class="flex items-center gap-1.5 whitespace-nowrap">
-                      <span class="text-gray-400">Rendement :</span>
+                      <span class="text-zinc-400">Rendement :</span>
                       <span class="font-bold font-mono" :class="getTrendColorClass(quantResult.projectedReturn10Y)">
                         {{ formatPercent(quantResult.projectedReturn10Y, true) }}
                       </span>
                     </div>
-                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-gray-800/80 whitespace-nowrap">
+                    <div v-if="quantResult.isDamped" class="text-[11px] text-amber-300/90 pt-0.5 border-t border-zinc-800/80 whitespace-nowrap">
                       Taux régressif An 10 : +{{ (quantResult.dampedAnnualRate10Y * 100).toFixed(1) }}%/an
                     </div>
                   </div>
@@ -719,15 +716,14 @@ const getGaugeArc = (valRatio: number) => {
           </div>
         </div>
 
-        <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-5 space-y-3 shadow-md">
-          <div class="flex items-center gap-2 border-b border-gray-800 pb-2 text-sm font-bold text-white">
-            <span>📜</span>
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3 shadow-md">
+          <div class="flex items-center gap-2 border-b border-zinc-800 pb-2 text-xs font-bold text-white uppercase tracking-wider font-mono">
             <span>Perfs Historiques</span>
           </div>
 
-          <div class="space-y-2 text-xs">
+          <div class="space-y-2 text-xs font-mono">
             <div class="flex justify-between items-center">
-              <span class="text-gray-400">1 An</span>
+              <span class="text-zinc-400">1 An</span>
               <span
                 class="font-bold font-mono"
                 :class="getTrendColorClass(quantResult.perf12M)"
@@ -737,7 +733,7 @@ const getGaugeArc = (valRatio: number) => {
             </div>
 
             <div class="flex justify-between items-center">
-              <span class="text-gray-400">3 Ans</span>
+              <span class="text-zinc-400">3 Ans</span>
               <span
                 class="font-bold font-mono"
                 :class="getTrendColorClass(quantResult.perf3Y)"
@@ -747,7 +743,7 @@ const getGaugeArc = (valRatio: number) => {
             </div>
 
             <div class="flex justify-between items-center">
-              <span class="text-gray-400">5 Ans</span>
+              <span class="text-zinc-400">5 Ans</span>
               <span
                 class="font-bold font-mono"
                 :class="getTrendColorClass(quantResult.perf5Y)"
@@ -757,7 +753,7 @@ const getGaugeArc = (valRatio: number) => {
             </div>
 
             <div class="flex justify-between items-center">
-              <span class="text-gray-400">10 Ans</span>
+              <span class="text-zinc-400">10 Ans</span>
               <span
                 class="font-bold font-mono"
                 :class="getTrendColorClass(quantResult.perf10Y)"
@@ -769,18 +765,18 @@ const getGaugeArc = (valRatio: number) => {
         </div>
       </div>
 
-      <div class="rounded-2xl border border-gray-800 bg-gray-950/80 p-5 space-y-4 shadow-xl">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">Indicateurs Majeurs de Régression & Risque</h3>
+      <div class="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5 space-y-4 shadow-xl">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono">Indicateurs Majeurs de Régression & Risque</h3>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 font-mono">
+          <div class="flex flex-col items-center bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/80 text-center space-y-1">
+            <div class="text-[11px] font-semibold text-zinc-400 uppercase flex items-center gap-1">
               <span>CAGR Annuel</span>
               <InfoTooltip text="Taux de croissance annuel composé moyen du cours sur la période observée." />
             </div>
             <div class="relative h-16 w-32">
               <svg viewBox="0 0 100 55" class="w-full h-full">
-                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
+                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#27272a" stroke-width="8" stroke-linecap="round" />
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
@@ -798,14 +794,14 @@ const getGaugeArc = (valRatio: number) => {
             </div>
           </div>
 
-          <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+          <div class="flex flex-col items-center bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/80 text-center space-y-1">
+            <div class="text-[11px] font-semibold text-zinc-400 uppercase flex items-center gap-1">
               <span>R² (Qualité)</span>
               <InfoTooltip text="Coefficient de détermination (0 à 1). Mesure la fidélité et la régularité du cours au canal de régression." />
             </div>
             <div class="relative h-16 w-32">
               <svg viewBox="0 0 100 55" class="w-full h-full">
-                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
+                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#27272a" stroke-width="8" stroke-linecap="round" />
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
@@ -823,14 +819,14 @@ const getGaugeArc = (valRatio: number) => {
             </div>
           </div>
 
-          <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+          <div class="flex flex-col items-center bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/80 text-center space-y-1">
+            <div class="text-[11px] font-semibold text-zinc-400 uppercase flex items-center gap-1">
               <span>Position (σ)</span>
               <InfoTooltip text="Position actuelle du cours dans le canal exprimée en déviations standard (Z-score). < -1σ = Zone opportunité, > +1σ = Zone sur-achat." />
             </div>
             <div class="relative h-16 w-32">
               <svg viewBox="0 0 100 55" class="w-full h-full">
-                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
+                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#27272a" stroke-width="8" stroke-linecap="round" />
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
@@ -848,14 +844,14 @@ const getGaugeArc = (valRatio: number) => {
             </div>
           </div>
 
-          <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+          <div class="flex flex-col items-center bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/80 text-center space-y-1">
+            <div class="text-[11px] font-semibold text-zinc-400 uppercase flex items-center gap-1">
               <span>Volatilité Annuelle</span>
               <InfoTooltip text="Amplitude des fluctuations hebdomadaires rapportée à l'année (1σ)." />
             </div>
             <div class="relative h-16 w-32">
               <svg viewBox="0 0 100 55" class="w-full h-full">
-                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
+                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#27272a" stroke-width="8" stroke-linecap="round" />
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
@@ -869,21 +865,21 @@ const getGaugeArc = (valRatio: number) => {
               </svg>
             </div>
             <div
-              class="font-mono text-sm font-bold font-mono"
+              class="font-mono text-sm font-bold"
               :class="getVolatilityColorClass(quantResult.annualizedVolatility)"
             >
               ±{{ formatPercent(quantResult.annualizedVolatility, true, 1, false) }}
             </div>
           </div>
 
-          <div class="flex flex-col items-center bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-center space-y-1">
-            <div class="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+          <div class="flex flex-col items-center bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/80 text-center space-y-1">
+            <div class="text-[11px] font-semibold text-zinc-400 uppercase flex items-center gap-1">
               <span>Max Drawdown</span>
               <InfoTooltip text="Pire chute maximale subie entre un sommet absolu et un creux historique sur la période observée." />
             </div>
             <div class="relative h-16 w-32">
               <svg viewBox="0 0 100 55" class="w-full h-full">
-                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round" />
+                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#27272a" stroke-width="8" stroke-linecap="round" />
                 <path
                   d="M 10 50 A 40 40 0 0 1 90 50"
                   fill="none"
@@ -896,28 +892,30 @@ const getGaugeArc = (valRatio: number) => {
                 <circle :cx="getGaugeArc(Math.min(1, Math.abs(quantResult.maxDrawdown) / 0.5)).cx" :cy="getGaugeArc(Math.min(1, Math.abs(quantResult.maxDrawdown) / 0.5)).cy" r="4" fill="#ffffff" />
               </svg>
             </div>
-            <div class="font-mono text-sm font-bold font-mono" :class="getMaxDrawdownColorClass(quantResult.maxDrawdown)">
+            <div class="font-mono text-sm font-bold" :class="getMaxDrawdownColorClass(quantResult.maxDrawdown)">
               {{ formatPercent(quantResult.maxDrawdown, true) }}
             </div>
           </div>
         </div>
       </div>
 
-      <div class="rounded-2xl border border-gray-800 bg-gray-950/80 p-5 space-y-4 shadow-xl">
+      <div class="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5 space-y-4 shadow-xl">
         <div class="flex items-center justify-between flex-wrap gap-2">
-          <h3 class="text-sm font-bold text-white flex items-center gap-2">
-            <span>📈</span>
-            <span>Canal de Régression Log-Linéaire & Extrapolation</span>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono">
+            Canal de Régression Log-Linéaire & Extrapolation
           </h3>
 
           <div class="flex items-center gap-3">
             <button
               type="button"
-              class="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 border border-gray-800 px-3 py-1 text-xs font-semibold text-gray-300 hover:bg-gray-800 hover:text-white transition shadow-sm disabled:opacity-50"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition shadow-sm disabled:opacity-50 font-mono"
               :disabled="isRefreshing"
               @click="refreshHistory"
             >
-              <span :class="{ 'animate-spin': isRefreshing }">🔄</span>
+              <svg class="h-3.5 w-3.5" :class="{ 'animate-spin': isRefreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+
               <span>{{ isRefreshing ? 'Mise à jour...' : 'Rafraîchir les cours' }}</span>
             </button>
             <span class="text-xs text-gray-400 font-mono hidden md:inline">Axe Y : Logarithmique</span>

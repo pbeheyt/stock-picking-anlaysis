@@ -72,12 +72,18 @@ Consigne stricte de recherche quantitative :
 Fournis un rapport complet et structuré en français avec toutes les données chiffrées et leurs justifications.`
 })
 
-const handleAnalyzeQuant = async (rawReport: string, model: string) => {
+import { getApiHeaders } from '~/utils/apiHeaders'
+
+const handleAnalyzeQuant = async (payload: { rawReport: string; modelId?: string } | string, modelArg?: string) => {
+  const rawReport = typeof payload === 'string' ? payload : payload.rawReport
+  const model = typeof payload === 'string' ? modelArg : payload.modelId
+
   isAnalyzingQuant.value = true
   quantAiErrorMessage.value = null
   try {
     const res = await $fetch<QuantitativeAIResult>(`/api/stock/${encodeURIComponent(tickerParam.value)}/quantitative`, {
       method: 'POST',
+      headers: getApiHeaders(),
       body: { raw_report: rawReport, model },
     })
     quantAiResult.value = res
@@ -554,60 +560,50 @@ const parsedAuditData = computed<AuditData | null>(() => {
 
 <template>
   <div class="space-y-6">
-    <!-- Top Nav Back Button -->
-    <div>
-      <NuxtLink
-        to="/"
-        class="inline-flex items-center gap-2 rounded-lg bg-gray-900 border border-gray-800 px-3.5 py-1.5 text-xs font-semibold text-gray-300 hover:bg-gray-800 hover:text-white transition"
-      >
-        <span>← Dashboard</span>
-      </NuxtLink>
-    </div>
-
     <!-- Error State -->
-    <div v-if="errorMessage" class="rounded-xl border border-red-500/30 bg-red-950/40 p-6 text-sm text-red-300">
+    <div v-if="errorMessage" class="rounded-xl border border-rose-500/30 bg-rose-950/40 p-6 text-xs text-rose-300 font-mono">
       {{ errorMessage }}
     </div>
 
     <!-- Loading State -->
-    <div v-else-if="isLoading" class="py-24 text-center text-sm text-gray-400">
+    <div v-else-if="isLoading" class="py-24 text-center text-xs text-zinc-500 font-mono">
       Chargement du workspace pour {{ tickerParam }}...
     </div>
 
     <!-- Workspace Loaded -->
     <div v-else-if="stock" class="space-y-8">
       <!-- Workspace Header -->
-      <div class="rounded-2xl border border-gray-800 bg-gray-950/80 p-6 shadow-2xl backdrop-blur">
+      <div class="rounded-2xl border border-zinc-800/80 bg-zinc-950/80 p-6 shadow-2xl backdrop-blur">
         <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <!-- Left: Stock Meta -->
           <div class="flex items-center gap-5">
-            <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-900 border border-gray-800 font-black text-2xl text-emerald-400 shadow-inner">
+            <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 font-mono font-black text-xl text-emerald-400 shadow-inner">
               {{ stock.ticker }}
             </div>
             <div>
               <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-2xl font-bold tracking-tight text-white">
+                <h1 class="text-xl font-bold tracking-tight text-white">
                   {{ stock.name || stock.ticker }}
                 </h1>
-                <span class="rounded-md bg-gray-800 px-2 py-0.5 text-xs font-mono text-gray-300">
+                <span class="rounded-md bg-zinc-900 border border-zinc-800 px-2 py-0.5 text-xs font-mono text-zinc-400">
                   Bêta {{ stock.beta ? stock.beta.toFixed(2) : '1.00' }}
                 </span>
                 <span
-                  class="rounded-md border px-2.5 py-0.5 text-xs font-semibold"
+                  class="rounded-md border px-2.5 py-0.5 text-xs font-mono font-bold"
                   :class="badgeConfig.class"
                 >
                   {{ badgeConfig.label }} ({{ formatPercent(marginOfSafety) }})
                 </span>
               </div>
 
-              <div class="mt-2 flex items-center gap-6 text-sm text-gray-400 flex-wrap">
+              <div class="mt-2 flex items-center gap-6 text-xs text-zinc-400 font-mono flex-wrap">
                 <div>
-                  Cours Actuel : <span class="font-bold text-white text-base">{{ formatCurrency(stock.current_price, stock.currency) }}</span>
+                  <span class="text-zinc-500">P0:</span> <span class="font-bold text-white text-sm">{{ formatCurrency(stock.current_price, stock.currency) }}</span>
                 </div>
                 <div>
-                  Fair Value Base : 
+                  <span class="text-zinc-500">DCF Fair Value:</span> 
                   <span
-                    class="font-bold text-base"
+                    class="font-bold text-sm ml-1"
                     :class="isUndervalued ? 'text-emerald-400' : 'text-rose-400'"
                   >
                     {{ formatCurrency(fairValue, stock.currency) }}
@@ -621,55 +617,64 @@ const parsedAuditData = computed<AuditData | null>(() => {
           <div class="flex items-center gap-3">
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition shadow-md"
+              class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition shadow-sm"
               :class="stock.status === 'portfolio' 
-                ? 'border-gray-700 bg-gray-800/80 text-gray-300 hover:bg-gray-800 hover:text-white' 
-                : 'border-emerald-500/40 bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900/60'"
+                ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white' 
+                : 'border-emerald-500/30 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60'"
               @click="toggleStatus"
             >
-              <span v-if="stock.status === 'watchlist'">💼 Transférer dans le Portefeuille</span>
-              <span v-else>👀 Transférer dans la Watchlist</span>
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              <span v-if="stock.status === 'watchlist'">Passer en Portefeuille</span>
+              <span v-else>Passer en Watchlist</span>
             </button>
           </div>
         </div>
       </div>
 
       <!-- Tab Navigation -->
-      <div class="border-b border-gray-800">
-        <nav class="-mb-px flex space-x-6 overflow-x-auto scrollbar-none">
+      <div class="border-b border-zinc-800">
+        <nav class="-mb-px flex space-x-6 overflow-x-auto scrollbar-none font-mono">
           <button
             type="button"
-            class="whitespace-nowrap pb-4 px-1 border-b-2 font-bold text-sm transition flex items-center gap-2"
+            class="whitespace-nowrap pb-3.5 px-1 border-b-2 font-bold text-xs transition flex items-center gap-2"
             :class="activeTab === 'dcf' 
               ? 'border-emerald-500 text-emerald-400' 
-              : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-700'"
+              : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'"
             @click="activeTab = 'dcf'"
           >
-            <span>🎯</span>
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
             <span>DCF & Thèse Quantitative</span>
           </button>
 
           <button
             type="button"
-            class="whitespace-nowrap pb-4 px-1 border-b-2 font-bold text-sm transition flex items-center gap-2"
+            class="whitespace-nowrap pb-3.5 px-1 border-b-2 font-bold text-xs transition flex items-center gap-2"
             :class="activeTab === 'quant' 
               ? 'border-emerald-500 text-emerald-400' 
-              : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-700'"
+              : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'"
             @click="activeTab = 'quant'"
           >
-            <span>📊</span>
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+            </svg>
             <span>Quant & Régression</span>
           </button>
 
           <button
             type="button"
-            class="whitespace-nowrap pb-4 px-1 border-b-2 font-bold text-sm transition flex items-center gap-2"
+            class="whitespace-nowrap pb-3.5 px-1 border-b-2 font-bold text-xs transition flex items-center gap-2"
             :class="activeTab === 'research' 
               ? 'border-emerald-500 text-emerald-400' 
-              : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-700'"
+              : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'"
             @click="activeTab = 'research'"
           >
-            <span>🧠</span>
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
             <span>Deep Research Qualitative</span>
           </button>
         </nav>
@@ -709,34 +714,33 @@ const parsedAuditData = computed<AuditData | null>(() => {
             @open-audit-drawer="isAuditDrawerOpen = true"
           />
 
-          <!-- Section 2 : ⚙️ Valorisation & Multiples de Sortie -->
-          <div class="rounded-2xl border border-gray-800 bg-gray-950/70 p-6 space-y-6 shadow-xl backdrop-blur">
+          <!-- Section 2 : Valorisation & Multiples de Sortie -->
+          <div class="rounded-2xl border border-zinc-800/80 bg-zinc-950/70 p-6 space-y-6 shadow-xl backdrop-blur">
             <div>
-              <h2 class="text-base font-bold text-white flex items-center gap-2 border-b border-gray-800 pb-2">
-                <span>⚙️</span>
-                <span>Valorisation & Multiples de Sortie</span>
+              <h2 class="text-xs font-bold text-white uppercase tracking-wider font-mono border-b border-zinc-800 pb-2.5">
+                Valorisation & Multiples de Sortie
               </h2>
             </div>
             <div class="grid gap-6 md:grid-cols-3">
               <div class="space-y-2">
                 <div class="flex items-center justify-between text-xs">
-                  <span class="font-medium text-gray-400">Multiple Exit (P/E)</span>
+                  <span class="font-medium text-zinc-400">Multiple Exit (P/E)</span>
                   <EditableValue v-model="targetMultiple" type="multiple" :is-decimal="false" :step="0.5" />
                 </div>
                 <input v-model.number="targetMultiple" type="range" min="5" max="120" step="0.5" class="w-full accent-emerald-500" />
               </div>
               <div class="space-y-2">
                 <div class="flex items-center justify-between text-xs">
-                  <span class="font-medium text-gray-400">Taux Actualisation / WACC (r)</span>
+                  <span class="font-medium text-zinc-400">Taux Actualisation / WACC (r)</span>
                   <EditableValue v-model="discountRate" type="percent" :is-decimal="true" :step="0.25" :digits="2" />
                 </div>
                 <input v-model.number="discountRate" type="range" min="0.05" max="0.20" step="0.0025" class="w-full accent-emerald-500" />
               </div>
               <div class="space-y-2">
                 <div class="flex items-center justify-between text-xs">
-                  <span class="font-medium text-gray-400">Spread Bêta / Scénarios</span>
+                  <span class="font-medium text-zinc-400">Spread Bêta / Scénarios</span>
                   <div class="flex items-center gap-1">
-                    <span class="text-gray-400">±</span>
+                    <span class="text-zinc-400">±</span>
                     <EditableValue v-model="riskSpread" type="percent" :is-decimal="true" :step="1" :digits="0" />
                   </div>
                 </div>
@@ -744,6 +748,7 @@ const parsedAuditData = computed<AuditData | null>(() => {
               </div>
             </div>
           </div>
+
 
           <!-- Dual-Track Spectrum Component -->
           <DualTrackSpectrum

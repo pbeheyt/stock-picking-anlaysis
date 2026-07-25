@@ -65,19 +65,24 @@ FORMAT JSON EXCLUSIF ATTENDU :
   }
 }`
 
+  const deepseekApiKey = getHeader(event, 'x-deepseek-api-key') || undefined
+  const openrouterApiKey = getHeader(event, 'x-openrouter-api-key') || undefined
+
   let rawResult = ''
   try {
     rawResult = await aiComplete({
       model: targetAiModel,
       temperature: 0.0,
       response_format: { type: 'json_object' },
+      deepseekApiKey,
+      openrouterApiKey,
       messages: [
         { role: 'system', content: quantSystemPrompt },
         { role: 'user', content: body.raw_report },
       ],
     })
   } catch (err: any) {
-    throw createError({ statusCode: 502, statusMessage: `Erreur API DeepSeek : ${err.message}` })
+    throw createError({ statusCode: 502, statusMessage: err.message || 'Erreur API IA' })
   }
 
   let parsed: Record<string, any>

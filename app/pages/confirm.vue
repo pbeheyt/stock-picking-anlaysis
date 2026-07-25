@@ -9,7 +9,7 @@ navigateTo('/')
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-gray-950 text-gray-400">
-    <p class="text-sm">Redirection vers le tableau de bord local…</p>
+  <div class="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-500 font-mono text-xs">
+    <p>Redirection vers le tableau de bord local...</p>
   </div>
 </template>

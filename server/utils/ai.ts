@@ -11,8 +11,9 @@ interface AiCompletionOptions {
   temperature?: number
   max_tokens?: number
   response_format?: { type: 'json_object' }
+  deepseekApiKey?: string
+  openrouterApiKey?: string
 }
-
 
 export function repairJson(jsonString: string): string {
   let str = (jsonString || '').trim()
@@ -87,12 +88,12 @@ export function parseAiJson<T = any>(text: string): T {
 }
 
 export async function aiComplete(options: AiCompletionOptions): Promise<string> {
-  const { model, messages, temperature = 0.0, max_tokens = 8192, response_format } = options
+  const { model, messages, temperature = 0.0, max_tokens = 8192, response_format, deepseekApiKey, openrouterApiKey } = options
 
   // Si le modèle est sur OpenRouter (ex: qwen/qwen3.7-plus)
   if (model.includes('/') || model.startsWith('qwen')) {
-    const apiKey = process.env.OPENROUTER_API_KEY
-    if (!apiKey) throw new Error('OPENROUTER_API_KEY non configurée dans .env')
+    const apiKey = openrouterApiKey || process.env.OPENROUTER_API_KEY
+    if (!apiKey) throw new Error('Aucune clé API OpenRouter disponible. Veuillez la renseigner dans les Paramètres (Engrenage en haut à droite).')
 
     const res = await $fetch<any>('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -112,10 +113,9 @@ export async function aiComplete(options: AiCompletionOptions): Promise<string> 
     return res.choices?.[0]?.message?.content || ''
   }
 
-
   // Modèles DeepSeek API directe
-  const apiKey = process.env.DEEPSEEK_API_KEY
-  if (!apiKey) throw new Error('DEEPSEEK_API_KEY non configurée dans .env')
+  const apiKey = deepseekApiKey || process.env.DEEPSEEK_API_KEY
+  if (!apiKey) throw new Error('Aucune clé API DeepSeek disponible. Veuillez la renseigner dans les Paramètres (Engrenage en haut à droite).')
 
   const modelsToTry = [model, 'deepseek-chat']
   let lastError: any = null
@@ -147,7 +147,3 @@ export async function aiComplete(options: AiCompletionOptions): Promise<string> 
 
   throw new Error(`Erreur API DeepSeek: ${lastError?.data?.error?.message || lastError?.message || 'Échec de connexion'}`)
 }
-
-
-
-

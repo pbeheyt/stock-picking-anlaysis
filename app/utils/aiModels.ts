@@ -6,6 +6,8 @@ export interface AIModelOption {
   description: string
 }
 
+export const DEFAULT_MODEL_ID = 'deepseek-v4-flash'
+
 export const AVAILABLE_AI_MODELS: AIModelOption[] = [
   {
     id: 'deepseek-v4-flash',
