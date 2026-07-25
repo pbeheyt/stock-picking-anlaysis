@@ -90,32 +90,40 @@ export function parseAiJson<T = any>(text: string): T {
 export async function aiComplete(options: AiCompletionOptions): Promise<string> {
   const { model, messages, temperature = 0.0, max_tokens = 8192, response_format, deepseekApiKey, openrouterApiKey } = options
 
-  // Si le modèle est sur OpenRouter (ex: qwen/qwen3.7-plus)
-  if (model.includes('/') || model.startsWith('qwen')) {
-    const apiKey = openrouterApiKey || process.env.OPENROUTER_API_KEY
-    if (!apiKey) throw new Error('Aucune clé API OpenRouter disponible. Veuillez la renseigner dans les Paramètres (Engrenage en haut à droite).')
+  // Si le modèle est sur OpenRouter (contient '/' ou préfixe fournisseur ex: google/, qwen/, anthropic/, meta-llama/)
+  if (model.includes('/') || model.startsWith('qwen') || model.startsWith('google') || model.startsWith('anthropic') || model.startsWith('meta-llama')) {
+    const apiKey = openrouterApiKey?.trim()
+    if (!apiKey) {
+      throw new Error('Clé API OpenRouter manquante. Veuillez configurer votre clé dans les Paramètres (icône Engrenage en haut à droite).')
+    }
 
-    const res = await $fetch<any>('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      timeout: 60000,
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: {
-        model,
-        messages,
-        temperature,
-        max_tokens,
-        ...(response_format && { response_format }),
-      },
-    })
-    return res.choices?.[0]?.message?.content || ''
+    try {
+      const res = await $fetch<any>('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        timeout: 60000,
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: {
+          model,
+          messages,
+          temperature,
+          max_tokens,
+          ...(response_format && { response_format }),
+        },
+      })
+      return res.choices?.[0]?.message?.content || ''
+    } catch (err: any) {
+      throw new Error(`Erreur API OpenRouter (${model}): ${err?.data?.error?.message || err?.message || 'Échec de connexion'}`)
+    }
   }
 
   // Modèles DeepSeek API directe
-  const apiKey = deepseekApiKey || process.env.DEEPSEEK_API_KEY
-  if (!apiKey) throw new Error('Aucune clé API DeepSeek disponible. Veuillez la renseigner dans les Paramètres (Engrenage en haut à droite).')
+  const apiKey = deepseekApiKey?.trim()
+  if (!apiKey) {
+    throw new Error('Clé API DeepSeek manquante. Veuillez configurer votre clé dans les Paramètres (icône Engrenage en haut à droite).')
+  }
 
   const modelsToTry = [model, 'deepseek-chat']
   let lastError: any = null

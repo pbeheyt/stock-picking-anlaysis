@@ -118,9 +118,16 @@ export function getDb(): Database.Database {
         created_at TEXT,
         updated_at TEXT
       );
+
+      CREATE TABLE IF NOT EXISTS ai_models (
+        id TEXT PRIMARY KEY,
+        provider TEXT NOT NULL,
+        name TEXT NOT NULL,
+        tested_at TEXT NOT NULL
+      );
     `)
 
-    // Safe migrations for existing SQLite database files
+    // Migrations de colonnes
     for (const [col, def] of COLUMNS_TO_ENSURE) {
       try {
         _db.exec(`ALTER TABLE stocks ADD COLUMN ${col} ${def}`)
@@ -128,10 +135,6 @@ export function getDb(): Database.Database {
         // Ignorer si la colonne existe déjà
       }
     }
-
-    try {
-      _db.exec("UPDATE stocks SET status = 'watchlist' WHERE status IS NULL OR status NOT IN ('watchlist', 'portfolio')")
-    } catch {}
   }
 
   return _db

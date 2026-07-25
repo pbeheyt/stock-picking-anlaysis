@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { AVAILABLE_AI_MODELS, DEFAULT_MODEL_ID } from '~/utils/aiModels'
+import {
+  fetchApprovedModels,
+  filterModelsForActiveKeys,
+  type AIModelOption,
+} from '~/utils/aiModels'
 
 const props = withDefaults(defineProps<{
   isOpen: boolean
@@ -26,9 +30,40 @@ const emit = defineEmits<{
 
 const rawReportInput = ref('')
 const copyFeedback = ref(false)
-const selectedModel = ref<string>(DEFAULT_MODEL_ID)
+const selectedModel = ref<string>('')
 const elapsedSeconds = ref(0)
 let timer: ReturnType<typeof setInterval> | null = null
+
+const availableModels = ref<AIModelOption[]>([])
+const isLoadingModels = ref(false)
+
+const refreshAvailableModels = async () => {
+  if (import.meta.client) {
+    isLoadingModels.value = true
+    const dbModels = await fetchApprovedModels()
+    const activeModels = filterModelsForActiveKeys(dbModels)
+    availableModels.value = activeModels
+
+    if (availableModels.value.length > 0) {
+      if (!availableModels.value.some(m => m.id === selectedModel.value)) {
+        selectedModel.value = availableModels.value[0].id
+      }
+    } else {
+      selectedModel.value = ''
+    }
+    isLoadingModels.value = false
+  }
+}
+
+onMounted(() => {
+  refreshAvailableModels()
+})
+
+watch(() => props.isOpen, (open) => {
+  if (open) {
+    refreshAvailableModels()
+  }
+})
 
 watch(() => props.isAnalyzing, (analyzing) => {
   if (analyzing) {
@@ -62,12 +97,16 @@ const copyPrompt = async () => {
 }
 
 const handleRunAnalysis = () => {
-  if (!rawReportInput.value.trim()) return
+  if (!rawReportInput.value.trim() || !selectedModel.value) return
   emit('analyze', {
     rawReport: rawReportInput.value.trim(),
     modelId: selectedModel.value,
   })
 }
+
+// Séparation par provider pour l'affichage optgroup
+const deepseekModels = computed(() => availableModels.value.filter(m => m.provider === 'DeepSeek'))
+const openrouterModels = computed(() => availableModels.value.filter(m => m.provider === 'OpenRouter'))
 </script>
 
 <template>
@@ -100,7 +139,6 @@ const handleRunAnalysis = () => {
               v-if="isAnalyzing"
               class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-zinc-950/95 backdrop-blur-md p-6 text-center space-y-5"
             >
-              <!-- Spinner pulse & radar -->
               <div class="relative h-16 w-16 flex items-center justify-center">
                 <div class="absolute inset-0 rounded-full border-4 border-emerald-500/20 border-t-emerald-400 animate-spin"></div>
                 <div class="absolute inset-2 rounded-full border-2 border-sky-500/20 border-b-sky-400 animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
@@ -118,7 +156,7 @@ const handleRunAnalysis = () => {
 
               <button
                 type="button"
-                class="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-500/40 bg-rose-950/40 px-5 py-2 text-xs font-bold text-rose-300 hover:bg-rose-900/60 hover:text-white transition shadow"
+                class="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-500/40 bg-rose-950/40 px-5 py-2 text-xs font-bold text-rose-300 hover:bg-rose-900/60 hover:text-white transition shadow cursor-pointer font-mono"
                 @click="emit('cancel')"
               >
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -153,20 +191,42 @@ const handleRunAnalysis = () => {
             </button>
           </div>
 
-          <!-- Moteur d'analyse LLM -->
-          <div class="flex items-center justify-between bg-zinc-900/60 p-3 rounded-xl border border-zinc-800 text-xs">
-            <span class="text-zinc-400 font-medium">Moteur d'analyse LLM :</span>
+          <!-- Moteur d'analyse LLM (Dropdown groupé par Provider) -->
+          <div class="flex items-center justify-between bg-zinc-900/60 p-3 rounded-xl border border-zinc-800 text-xs font-mono">
+            <span class="text-zinc-400 font-medium">Modèle d'analyse LLM :</span>
+
+            <div v-if="isLoadingModels" class="text-zinc-500 text-xs">
+              Chargement...
+            </div>
+
+            <div v-else-if="availableModels.length === 0" class="text-rose-400 text-xs font-semibold">
+              Aucun modèle approuvé. Ajoutez un modèle dans les Paramètres (⚙️).
+            </div>
+
             <select
+              v-else
               v-model="selectedModel"
-              class="rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none cursor-pointer font-mono font-semibold"
+              class="rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none cursor-pointer font-mono font-semibold max-w-[280px] truncate"
             >
-              <option
-                v-for="m in AVAILABLE_AI_MODELS"
-                :key="m.id"
-                :value="m.id"
-              >
-                {{ m.name }} ({{ m.provider }})
-              </option>
+              <optgroup v-if="deepseekModels.length" label="DeepSeek">
+                <option
+                  v-for="m in deepseekModels"
+                  :key="m.id"
+                  :value="m.id"
+                >
+                  {{ m.id }}
+                </option>
+              </optgroup>
+
+              <optgroup v-if="openrouterModels.length" label="OpenRouter AI">
+                <option
+                  v-for="m in openrouterModels"
+                  :key="m.id"
+                  :value="m.id"
+                >
+                  {{ m.id }}
+                </option>
+              </optgroup>
             </select>
           </div>
 
@@ -180,7 +240,7 @@ const handleRunAnalysis = () => {
               </div>
               <button
                 type="button"
-                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition shadow"
+                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition shadow font-mono"
                 @click="copyPrompt"
               >
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -203,8 +263,8 @@ const handleRunAnalysis = () => {
               </div>
               <button
                 type="button"
-                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-xs font-bold text-white hover:bg-sky-500 transition shadow disabled:opacity-50"
-                :disabled="!rawReportInput.trim() || isAnalyzing"
+                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-xs font-bold text-white hover:bg-sky-500 transition shadow disabled:opacity-50 font-mono"
+                :disabled="!rawReportInput.trim() || !selectedModel || isAnalyzing"
                 @click="handleRunAnalysis"
               >
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
