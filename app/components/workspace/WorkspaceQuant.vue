@@ -81,6 +81,8 @@ const saveQuantStateToDb = (price?: number) => {
 const chartRef = ref<HTMLDivElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
 
+const toast = useToast()
+
 const fetchHistory = async (forceRefresh = false) => {
   if (forceRefresh) {
     isRefreshing.value = true
@@ -108,8 +110,13 @@ const fetchHistory = async (forceRefresh = false) => {
     // Restore saved preset or default to MAX_R2
     const targetPreset = activePreset.value || (props.initialPreset as any) || 'MAX_R2'
     setPreset(targetPreset, false)
+    if (forceRefresh) {
+      toast.success('Historique des cours mis à jour avec succès.')
+    }
   } catch (err: any) {
-    errorMessage.value = err?.data?.statusMessage || err?.message || 'Impossible de charger l\'historique'
+    const msg = err?.data?.statusMessage || err?.message || 'Impossible de charger l\'historique.'
+    errorMessage.value = msg
+    toast.error(msg)
   } finally {
     isLoading.value = false
     isRefreshing.value = false

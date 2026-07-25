@@ -2,11 +2,11 @@
 import type { Stock, StockStatus, StockApiResponse, QualitativeData } from '~/types/database.types'
 import { computeValuation, type ValuationInputs } from '~/utils/valuation'
 
+const toast = useToast()
+
 const searchTicker = ref('')
 const targetStatusForAdd = ref<StockStatus>('watchlist')
 const isLoading = ref(false)
-const errorMessage = ref<string | null>(null)
-const successMessage = ref<string | null>(null)
 
 const stocks = ref<Stock[]>([])
 const isFetchingStocks = ref(true)
@@ -22,6 +22,7 @@ const fetchStocks = async () => {
     stocks.value = data || []
   } catch (err: any) {
     console.error('Erreur chargement stocks SQLite:', err)
+    toast.error('Impossible de charger les actions depuis la base de données.')
   } finally {
     isFetchingStocks.value = false
   }
@@ -36,8 +37,6 @@ const analyzeAndAddStock = async () => {
   if (!ticker) return
 
   isLoading.value = true
-  errorMessage.value = null
-  successMessage.value = null
 
   try {
     const stockData = await $fetch<StockApiResponse>(`/api/stock/${encodeURIComponent(ticker)}`)
@@ -88,12 +87,12 @@ const analyzeAndAddStock = async () => {
     })
 
     const statusLabel = targetStatusForAdd.value === 'portfolio' ? 'Portefeuille' : 'Watchlist'
-    successMessage.value = `${saved.ticker} (${saved.name}) ajouté avec succès au ${statusLabel}.`
+    toast.success(`${saved.ticker} (${saved.name || saved.ticker}) ajouté avec succès au ${statusLabel}.`)
     searchTicker.value = ''
-    setTimeout(() => { successMessage.value = null }, 3500)
     await fetchStocks()
   } catch (err: any) {
-    errorMessage.value = err.data?.statusMessage || err.message || 'Impossible d\'ajouter ce ticker.'
+    const msg = err.data?.statusMessage || err.message || 'Impossible d\'ajouter ce ticker.'
+    toast.error(msg)
   } finally {
     isLoading.value = false
   }
@@ -111,8 +110,12 @@ const toggleStockStatus = async (stock: Stock) => {
     if (idx !== -1) {
       stocks.value[idx] = { ...stocks.value[idx], status: updated.status }
     }
+
+    const label = newStatus === 'portfolio' ? 'Portefeuille' : 'Watchlist'
+    toast.info(`Statut de ${stock.ticker} passé en ${label}.`)
   } catch (err: any) {
     console.error('Erreur bascule de statut:', err)
+    toast.error(`Impossible de modifier le statut de ${stock.ticker}.`)
   }
 }
 
@@ -121,8 +124,10 @@ const deleteStock = async (id: string, ticker: string) => {
   try {
     await $fetch(`/api/stocks/${id}`, { method: 'DELETE' })
     stocks.value = stocks.value.filter(s => s.id !== id)
+    toast.success(`Action ${ticker} supprimée de votre liste.`)
   } catch (err: any) {
     console.error('Erreur suppression:', err)
+    toast.error(`Échec de la suppression de ${ticker}.`)
   }
 }
 
@@ -302,14 +307,6 @@ const rawWatchlistCount = computed(() => stocks.value.filter(s => s.status !== '
           </button>
         </div>
       </form>
-
-      <!-- Feedback Messages -->
-      <div v-if="errorMessage" class="rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-300">
-        {{ errorMessage }}
-      </div>
-      <div v-if="successMessage" class="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-3 text-xs text-emerald-300">
-        {{ successMessage }}
-      </div>
     </div>
 
     <!-- State Loading -->

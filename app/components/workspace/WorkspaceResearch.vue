@@ -53,6 +53,8 @@ onUnmounted(() => {
 
 const promptText = computed(() => generateDeepResearchPrompt(props.ticker, props.stockName))
 
+const toast = useToast()
+
 const cancelAnalysis = () => {
   if (currentAbortController) {
     currentAbortController.abort()
@@ -60,7 +62,7 @@ const cancelAnalysis = () => {
   }
   isAnalyzing.value = false
   if (elapsedTimer) clearInterval(elapsedTimer)
-  errorMessage.value = 'Analyse annulée par l\'utilisateur.'
+  toast.info('Analyse annulée par l\'utilisateur.')
 }
 
 import { getApiHeaders } from '~/utils/apiHeaders'
@@ -71,8 +73,6 @@ const handleRunAnalysis = async (payload: { rawReport: string; modelId?: string 
 
   if (!rawReport?.trim()) return
   isAnalyzing.value = true
-  errorMessage.value = null
-  successMessage.value = null
   elapsedSeconds.value = 0
 
   elapsedTimer = setInterval(() => {
@@ -93,19 +93,18 @@ const handleRunAnalysis = async (payload: { rawReport: string; modelId?: string 
     })
     data.value = result
     isAiModalOpen.value = false
-    successMessage.value = 'Analyse qualitative institutionnelle complétée avec succès.'
-    setTimeout(() => { successMessage.value = null }, 5000)
+    toast.success('Analyse qualitative institutionnelle complétée avec succès !')
   } catch (err: any) {
     if (err.name === 'AbortError' || err.message?.includes('aborted') || err.message?.includes('cancel')) {
-      errorMessage.value = 'Analyse annulée.'
+      toast.info('Analyse annulée.')
     } else {
       console.error('Erreur analyse qualitative:', err)
-      errorMessage.value =
-        err?.data?.statusMessage ||
+      const msg = err?.data?.statusMessage ||
         err?.response?._data?.statusMessage ||
         err?.data?.message ||
         err?.message ||
         'Erreur lors de l\'analyse du rapport.'
+      toast.error(msg)
     }
   } finally {
     isAnalyzing.value = false
@@ -167,14 +166,6 @@ const formatTakeawayHtml = (text: string) => {
           <span>Annuler l'analyse</span>
         </button>
       </div>
-    </div>
-
-    <!-- Messages & Alerts -->
-    <div v-if="successMessage" class="rounded-xl border border-emerald-500/40 bg-emerald-950/60 p-4 text-xs font-mono font-semibold text-emerald-300">
-      {{ successMessage }}
-    </div>
-    <div v-if="errorMessage" class="rounded-xl border border-rose-500/40 bg-rose-950/60 p-4 text-xs font-mono font-semibold text-rose-300">
-      {{ errorMessage }}
     </div>
 
     <!-- Header Block: Score Global + Actions -->

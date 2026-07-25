@@ -72,14 +72,13 @@ Consigne stricte de recherche quantitative :
 Fournis un rapport complet et structuré en français avec toutes les données chiffrées et leurs justifications.`
 })
 
-import { getApiHeaders } from '~/utils/apiHeaders'
+const toast = useToast()
 
 const handleAnalyzeQuant = async (payload: { rawReport: string; modelId?: string } | string, modelArg?: string) => {
   const rawReport = typeof payload === 'string' ? payload : payload.rawReport
   const model = typeof payload === 'string' ? modelArg : payload.modelId
 
   isAnalyzingQuant.value = true
-  quantAiErrorMessage.value = null
   try {
     const res = await $fetch<QuantitativeAIResult>(`/api/stock/${encodeURIComponent(tickerParam.value)}/quantitative`, {
       method: 'POST',
@@ -90,9 +89,11 @@ const handleAnalyzeQuant = async (payload: { rawReport: string; modelId?: string
 
     injectAICopilotProjections()
     saveHypotheses(true)
+    toast.success('Analyse quanti IA générée avec succès.')
   } catch (err: any) {
     console.error('Erreur analyse quanti AI:', err)
-    quantAiErrorMessage.value = err?.data?.statusMessage || err?.response?._data?.statusMessage || err?.message || 'Erreur lors de l\'analyse par l\'IA.'
+    const msg = err?.data?.statusMessage || err?.response?._data?.statusMessage || err?.message || 'Erreur lors de l\'analyse par l\'IA.'
+    toast.error(msg)
   } finally {
     isAnalyzingQuant.value = false
   }
@@ -127,8 +128,7 @@ const injectAICopilotProjections = () => {
 
   isAiModalOpen.value = false
   isAuditDrawerOpen.value = false
-  successMessage.value = 'Hypothèses de l\'IA extraites et injectées avec succès dans le DCF 5Y !'
-  setTimeout(() => { successMessage.value = null }, 4000)
+  toast.success('Hypothèses IA injectées avec succès dans le modèle DCF.')
 }
 
 const injectYahooBaselineProjections = async () => {
@@ -160,10 +160,10 @@ const injectYahooBaselineProjections = async () => {
     riskSpread.value = freshApi.default_risk_spread ?? 0.20
 
     isAuditDrawerOpen.value = false
-    successMessage.value = 'Hypothèses de base Yahoo Finance / Consensus injectées avec succès !'
-    setTimeout(() => { successMessage.value = null }, 4000)
+    toast.success('Hypothèses de base Yahoo Finance injectées avec succès.')
   } catch (err: any) {
     console.error('Erreur injection hypothèses Yahoo:', err)
+    toast.error('Impossible de charger les hypothèses de base Yahoo Finance.')
   }
 }
 
@@ -323,11 +323,11 @@ const saveHypotheses = async (quiet = false) => {
     })
     stock.value = { ...stock.value, ...updated }
     if (!quiet) {
-      successMessage.value = 'Hypothèses de valorisation sauvegardées.'
-      setTimeout(() => { successMessage.value = null }, 4000)
+      toast.success('Hypothèses de valorisation sauvegardées avec succès.')
     }
   } catch (err: any) {
     console.error('Erreur sauvegarde hypothèses:', err)
+    toast.error('Échec de la sauvegarde des hypothèses DCF.')
   } finally {
     if (!quiet) isSaving.value = false
   }

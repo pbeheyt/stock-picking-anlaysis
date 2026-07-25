@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SettingsModal from '~/components/ui/SettingsModal.vue'
+import ToastContainer from '~/components/ui/ToastContainer.vue'
 
 const route = useRoute()
 const isSettingsOpen = ref(false)
@@ -37,7 +38,6 @@ const currentStockTicker = computed(() => {
           </template>
         </div>
 
-
         <!-- Droite: Actions Globales & Settings -->
         <div class="flex items-center gap-2">
           <slot name="header-actions" />
@@ -45,7 +45,7 @@ const currentStockTicker = computed(() => {
           <!-- Bouton Engrenage Settings -->
           <button
             type="button"
-            class="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white transition shadow-sm"
+            class="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white transition shadow-sm cursor-pointer"
             title="Paramètres API"
             @click="isSettingsOpen = true"
           >
@@ -65,5 +65,8 @@ const currentStockTicker = computed(() => {
 
     <!-- Global Settings Modal -->
     <SettingsModal :is-open="isSettingsOpen" @close="isSettingsOpen = false" />
+
+    <!-- Global Toast Container -->
+    <ToastContainer />
   </div>
 </template>

@@ -77,6 +77,8 @@ watch(() => props.isOpen, (open) => {
   }
 })
 
+const toast = useToast()
+
 // Validation de Clé Étape 1
 const validateKey = async (provider: 'DeepSeek' | 'OpenRouter') => {
   const keyToTest = provider === 'DeepSeek' ? deepseekApiKey.value.trim() : openrouterApiKey.value.trim()
@@ -107,10 +109,12 @@ const validateKey = async (provider: 'DeepSeek' | 'OpenRouter') => {
         localStorage.setItem('deepseek_api_key', keyToTest)
         deepseekActive.value = true
         deepseekSuccess.value = 'Clé DeepSeek validée & enregistrée !'
+        toast.success('Clé API DeepSeek validée & enregistrée avec succès.')
       } else {
         localStorage.setItem('openrouter_api_key', keyToTest)
         openrouterActive.value = true
         openrouterSuccess.value = 'Clé OpenRouter validée & enregistrée !'
+        toast.success('Clé API OpenRouter validée & enregistrée avec succès.')
       }
     }
   } catch (err: any) {
@@ -120,6 +124,7 @@ const validateKey = async (provider: 'DeepSeek' | 'OpenRouter') => {
     } else {
       openrouterError.value = msg
     }
+    toast.error(msg)
   } finally {
     if (provider === 'DeepSeek') isTestingDeepseek.value = false
     else isTestingOpenrouter.value = false
@@ -134,12 +139,14 @@ const clearKey = (provider: 'DeepSeek' | 'OpenRouter') => {
       localStorage.removeItem('deepseek_api_key')
       deepseekSuccess.value = null
       deepseekError.value = null
+      toast.info('Clé API DeepSeek supprimée.')
     } else {
       openrouterApiKey.value = ''
       openrouterActive.value = false
       localStorage.removeItem('openrouter_api_key')
       openrouterSuccess.value = null
       openrouterError.value = null
+      toast.info('Clé API OpenRouter supprimée.')
     }
   }
 }
@@ -149,6 +156,7 @@ const handleAddModel = async () => {
   const modelIdClean = newModelId.value.trim()
   if (!modelIdClean) {
     modelAddError.value = 'Veuillez saisir l\'ID exact d\'un modèle.'
+    toast.error('Veuillez saisir l\'ID exact d\'un modèle.')
     return
   }
 
@@ -170,10 +178,13 @@ const handleAddModel = async () => {
       modelAddSuccess.value = `Modèle '${modelIdClean}' testé, approuvé et enregistré en BDD !`
       newModelId.value = ''
       approvedModels.value = await fetchApprovedModels()
+      toast.success(`Modèle '${modelIdClean}' validé et enregistré en BDD !`)
     }
   } catch (err: any) {
     console.error('Erreur ajout modèle:', err)
-    modelAddError.value = err?.data?.statusMessage || err?.message || `Échec du test pour le modèle '${modelIdClean}'.`
+    const msg = err?.data?.statusMessage || err?.message || `Échec du test pour le modèle '${modelIdClean}'.`
+    modelAddError.value = msg
+    toast.error(msg)
   } finally {
     isAddingModel.value = false
   }
@@ -184,6 +195,7 @@ const handleRemoveModel = async (modelId: string) => {
   const ok = await deleteApprovedModel(modelId)
   if (ok) {
     approvedModels.value = await fetchApprovedModels()
+    toast.info(`Modèle '${modelId}' retiré de la liste.`)
   }
 }
 </script>
