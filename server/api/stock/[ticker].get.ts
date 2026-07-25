@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     let summary: any = null
     try {
       summary = await yahooFinance.quoteSummary(ticker, {
-        modules: ['earningsTrend', 'financialData', 'summaryDetail', 'defaultKeyStatistics'],
+        modules: ['earningsTrend', 'financialData', 'summaryDetail', 'defaultKeyStatistics', 'summaryProfile'],
       })
     } catch (err: any) {
       console.warn(`[YahooFinance] QuoteSummary fetch failed for ${ticker}:`, err?.message || err)
@@ -52,7 +52,17 @@ export default defineEventHandler(async (event) => {
     const financialData = summary?.financialData || {}
     const summaryDetail = summary?.summaryDetail || {}
     const keyStats = summary?.defaultKeyStatistics || {}
+    const summaryProfile = summary?.summaryProfile || {}
     const earningsTrend = summary?.earningsTrend?.trend || []
+
+    const website = summaryProfile.website || null
+    let domain: string | null = null
+    if (website) {
+      try {
+        const parsedUrl = new URL(website.startsWith('http') ? website : `https://${website}`)
+        domain = parsedUrl.hostname.replace(/^www\./, '')
+      } catch {}
+    }
 
     const revenueTTM = financialData.totalRevenue ?? null
     const sharesOutstanding = keyStats.sharesOutstanding ?? quote.sharesOutstanding ?? null
@@ -145,6 +155,8 @@ export default defineEventHandler(async (event) => {
       analyst_target_median_potential: targetMedianPotential,
       analyst_growth_estimate: (earningsTrend.find((t: any) => t.period === '+1y')?.revenueEstimate?.growth) ?? financialData.revenueGrowth,
       analyst_count: analystCount,
+      website,
+      domain,
       audit_data: auditData,
     }
   } catch (error: any) {

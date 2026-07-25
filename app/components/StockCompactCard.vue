@@ -78,9 +78,7 @@ const navigateToWorkspace = () => {
   >
     <!-- Section 1 : Info Stock (Ticker + Nom + Cours P0) -->
     <div class="flex items-center gap-3.5 min-w-0 md:w-1/3">
-      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 font-mono font-bold text-white text-xs tracking-wider group-hover:border-emerald-500/40 group-hover:text-emerald-400 transition shadow-inner">
-        {{ stock.ticker }}
-      </div>
+      <CompanyLogo :ticker="stock.ticker" :domain="(stock as any).domain" size="md" />
       <div class="min-w-0 flex-1">
         <h3 class="font-bold text-white text-sm tracking-tight truncate group-hover:text-emerald-300 transition">
           {{ stock.name || stock.ticker }}

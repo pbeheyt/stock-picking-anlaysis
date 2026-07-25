@@ -577,9 +577,7 @@ const parsedAuditData = computed<AuditData | null>(() => {
         <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <!-- Left: Stock Meta -->
           <div class="flex items-center gap-5">
-            <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 font-mono font-black text-xl text-emerald-400 shadow-inner">
-              {{ stock.ticker }}
-            </div>
+            <CompanyLogo :ticker="stock.ticker" :domain="(stock as any).domain" size="lg" />
             <div>
               <div class="flex items-center gap-3 flex-wrap">
                 <h1 class="text-xl font-bold tracking-tight text-white">
