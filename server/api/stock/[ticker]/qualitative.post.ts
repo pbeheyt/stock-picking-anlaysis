@@ -84,7 +84,7 @@ FORMAT JSON EXCLUSIF ATTENDU :
       response_format: { type: 'json_object' },
       deepseekApiKey,
       openrouterApiKey,
-      ticker: tickerParam.toUpperCase(),
+      ticker,
       callType: 'qualitative_research',
       messages: [
         { role: 'system', content: rubricSystemPrompt },
