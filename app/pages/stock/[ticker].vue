@@ -19,6 +19,7 @@ import PnLModelGrid from '~/components/workspace/PnLModelGrid.vue'
 import type { QuantitativeAIResult } from '~/server/api/stock/[ticker]/quantitative.post'
 
 const route = useRoute()
+const router = useRouter()
 const tickerParam = computed(() => String(route.params.ticker || '').toUpperCase())
 
 const isLoading = ref(true)
@@ -28,6 +29,32 @@ const successMessage = ref<string | null>(null)
 
 const stock = ref<Stock | null>(null)
 const activeTab = ref<'dcf' | 'quant' | 'research'>('dcf')
+
+const switchTab = (tab: 'dcf' | 'quant' | 'research') => {
+  activeTab.value = tab
+  if (import.meta.client) {
+    localStorage.setItem('last_active_stock_tab', tab)
+  }
+  router.replace({ query: { ...route.query, tab } })
+}
+
+const syncActiveTabFromUrlOrStorage = () => {
+  const queryTab = route.query.tab as string
+  if (['dcf', 'quant', 'research'].includes(queryTab)) {
+    activeTab.value = queryTab as any
+  } else if (import.meta.client) {
+    const savedTab = localStorage.getItem('last_active_stock_tab')
+    if (savedTab && ['dcf', 'quant', 'research'].includes(savedTab)) {
+      activeTab.value = savedTab as any
+    }
+  }
+}
+
+watch(() => route.query.tab, (newTab) => {
+  if (newTab && ['dcf', 'quant', 'research'].includes(String(newTab))) {
+    activeTab.value = String(newTab) as any
+  }
+})
 
 // Modal & Drawer States
 const isAiModalOpen = ref(false)
@@ -284,6 +311,7 @@ const initFormValues = (s: Stock) => {
 }
 
 onMounted(() => {
+  syncActiveTabFromUrlOrStorage()
   loadStockData()
 })
 
@@ -629,7 +657,7 @@ const parsedAuditData = computed<AuditData | null>(() => {
             :class="activeTab === 'dcf' 
               ? 'border-emerald-500 text-emerald-400' 
               : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'"
-            @click="activeTab = 'dcf'"
+            @click="switchTab('dcf')"
           >
             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -643,7 +671,7 @@ const parsedAuditData = computed<AuditData | null>(() => {
             :class="activeTab === 'quant' 
               ? 'border-emerald-500 text-emerald-400' 
               : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'"
-            @click="activeTab = 'quant'"
+            @click="switchTab('quant')"
           >
             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
@@ -657,7 +685,7 @@ const parsedAuditData = computed<AuditData | null>(() => {
             :class="activeTab === 'research' 
               ? 'border-emerald-500 text-emerald-400' 
               : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'"
-            @click="activeTab = 'research'"
+            @click="switchTab('research')"
           >
             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />

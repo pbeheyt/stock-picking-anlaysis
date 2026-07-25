@@ -67,14 +67,19 @@ const tierBadgeClass = computed(() => {
 })
 
 const navigateToWorkspace = () => {
-  navigateTo(`/stock/${props.stock.ticker}`)
+const navigateToTab = (tab?: 'dcf' | 'quant' | 'research') => {
+  if (tab) {
+    navigateTo(`/stock/${props.stock.ticker}?tab=${tab}`)
+  } else {
+    navigateTo(`/stock/${props.stock.ticker}`)
+  }
 }
 </script>
 
 <template>
   <div
     class="group relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4 rounded-xl border border-zinc-800/70 bg-zinc-900/40 p-4 sm:px-5 shadow-sm backdrop-blur transition-all duration-150 hover:border-zinc-700 hover:bg-zinc-900/80 cursor-pointer select-none"
-    @click="navigateToWorkspace"
+    @click="navigateToTab()"
   >
     <!-- Section 1 : Info Stock (Ticker + Nom + Cours P0) -->
     <div class="flex items-center gap-3.5 min-w-0 md:w-1/3">
@@ -92,9 +97,13 @@ const navigateToWorkspace = () => {
     <!-- Section 2 : Grille d'Indicateurs (DCF, Régression, Qualité IA) -->
     <div class="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto">
       <!-- Indicateur 1: Fair Value DCF -->
-      <div class="flex flex-col gap-1 pr-4 border-r border-zinc-800/80">
-        <span class="text-[10px] uppercase font-mono tracking-wider text-zinc-500 font-semibold flex items-center gap-1">
-          DCF Fair Value
+      <div
+        class="flex flex-col gap-1 pr-4 border-r border-zinc-800/80 hover:bg-zinc-800/40 p-1.5 rounded-lg transition cursor-pointer group/dcf"
+        title="Ouvrir le Modèle DCF & Thèse Quantitative"
+        @click.stop="navigateToTab('dcf')"
+      >
+        <span class="text-[10px] uppercase font-mono tracking-wider text-zinc-500 font-semibold flex items-center gap-1 group-hover/dcf:text-emerald-400 transition">
+          DCF Fair Value ↗
         </span>
         <div class="flex items-center gap-2">
           <span class="text-xs font-bold text-white font-mono">{{ formatCurrency(fairValue, stock.currency) }}</span>
@@ -108,9 +117,14 @@ const navigateToWorkspace = () => {
       </div>
 
       <!-- Indicateur 2: Prix Régression (si disponible) -->
-      <div v-if="stock.regression_fair_price" class="flex flex-col gap-1 pr-4 border-r border-zinc-800/80">
-        <span class="text-[10px] uppercase font-mono tracking-wider text-zinc-500 font-semibold flex items-center gap-1">
-          Régression
+      <div
+        v-if="stock.regression_fair_price"
+        class="flex flex-col gap-1 pr-4 border-r border-zinc-800/80 hover:bg-zinc-800/40 p-1.5 rounded-lg transition cursor-pointer group/quant"
+        title="Ouvrir le Canal de Régression Quantitatif"
+        @click.stop="navigateToTab('quant')"
+      >
+        <span class="text-[10px] uppercase font-mono tracking-wider text-zinc-500 font-semibold flex items-center gap-1 group-hover/quant:text-sky-400 transition">
+          Régression ↗
         </span>
         <div class="flex items-center gap-2">
           <span class="text-xs font-bold text-white font-mono">{{ formatCurrency(stock.regression_fair_price, stock.currency) }}</span>
@@ -125,9 +139,14 @@ const navigateToWorkspace = () => {
       </div>
 
       <!-- Indicateur 3: Score Qualitatif IA (si disponible) -->
-      <div v-if="parsedQualitative" class="flex flex-col gap-1">
-        <span class="text-[10px] uppercase font-mono tracking-wider text-zinc-500 font-semibold flex items-center gap-1">
-          Qualité IA
+      <div
+        v-if="parsedQualitative"
+        class="flex flex-col gap-1 hover:bg-zinc-800/40 p-1.5 rounded-lg transition cursor-pointer group/research"
+        title="Ouvrir l'Analyse Deep Research Quali"
+        @click.stop="navigateToTab('research')"
+      >
+        <span class="text-[10px] uppercase font-mono tracking-wider text-zinc-500 font-semibold flex items-center gap-1 group-hover/research:text-emerald-400 transition">
+          Qualité IA ↗
         </span>
         <div class="flex items-center gap-2">
           <span class="text-xs font-bold text-emerald-400 font-mono">{{ parsedQualitative.quality_score }}/100</span>
