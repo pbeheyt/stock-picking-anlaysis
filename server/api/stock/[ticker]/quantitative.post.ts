@@ -76,6 +76,8 @@ FORMAT JSON EXCLUSIF ATTENDU :
       response_format: { type: 'json_object' },
       deepseekApiKey,
       openrouterApiKey,
+      ticker: tickerParam.toUpperCase(),
+      callType: 'quantitative_copilot',
       messages: [
         { role: 'system', content: quantSystemPrompt },
         { role: 'user', content: body.raw_report },

@@ -125,6 +125,21 @@ export function getDb(): Database.Database {
         name TEXT NOT NULL,
         tested_at TEXT NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS ai_usage_logs (
+        id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        ticker TEXT,
+        call_type TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        model TEXT NOT NULL,
+        prompt_tokens INTEGER DEFAULT 0,
+        completion_tokens INTEGER DEFAULT 0,
+        total_tokens INTEGER DEFAULT 0,
+        cost_usd REAL DEFAULT 0.0,
+        status TEXT NOT NULL,
+        error_message TEXT
+      );
     `)
 
     // Migrations de colonnes

@@ -33,6 +33,7 @@ export default defineEventHandler(async (event) => {
       response_format: { type: 'json_object' },
       deepseekApiKey,
       openrouterApiKey,
+      callType: 'model_test',
     })
 
     let parsed: any

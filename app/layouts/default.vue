@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import SettingsModal from '~/components/ui/SettingsModal.vue'
+import AIUsageModal from '~/components/ui/AIUsageModal.vue'
 import ToastContainer from '~/components/ui/ToastContainer.vue'
 
 const route = useRoute()
 const isSettingsOpen = ref(false)
+const isAiUsageOpen = ref(false)
 
 const currentStockTicker = computed(() => {
   if (route.name === 'stock-ticker' || route.params.ticker) {
@@ -42,6 +44,19 @@ const currentStockTicker = computed(() => {
         <div class="flex items-center gap-2">
           <slot name="header-actions" />
 
+          <!-- Bouton Consommation IA -->
+          <button
+            type="button"
+            class="flex h-8 items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-2.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-white transition shadow-sm cursor-pointer font-mono"
+            title="Historique des coûts et jetons API IA"
+            @click="isAiUsageOpen = true"
+          >
+            <svg class="h-3.5 w-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 12v-2m0 0c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="hidden sm:inline text-[11px]">Coûts IA</span>
+          </button>
+
           <!-- Bouton Engrenage Settings -->
           <button
             type="button"
@@ -65,6 +80,9 @@ const currentStockTicker = computed(() => {
 
     <!-- Global Settings Modal -->
     <SettingsModal :is-open="isSettingsOpen" @close="isSettingsOpen = false" />
+
+    <!-- Global AI Usage Modal -->
+    <AIUsageModal :is-open="isAiUsageOpen" @close="isAiUsageOpen = false" />
 
     <!-- Global Toast Container -->
     <ToastContainer />
