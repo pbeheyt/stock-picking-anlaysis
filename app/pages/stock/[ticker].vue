@@ -252,20 +252,6 @@ const loadStockData = async () => {
           audit_data: apiData.audit_data,
         },
       })
-    } else {
-      try {
-        const freshApi = await $fetch<any>(`/api/stock/${encodeURIComponent(tickerParam.value)}`)
-        found.growth_source = freshApi.growth_source
-        found.margin_source = freshApi.margin_source
-        found.pe_source = freshApi.pe_source
-        if (freshApi.audit_data && !found.audit_data) {
-          found.audit_data = freshApi.audit_data
-        }
-      } catch {
-        toast.error('Connexion Yahoo Finance interrompue. Les données locales sauvegardées sont conservées.')
-      }
-    }
-
     stock.value = found
     if (found.quanti_ai_data) {
       try {
