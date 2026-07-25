@@ -46,6 +46,81 @@ const selectSearchResult = (result: StockSearchResult) => {
 
 const stocks = ref<Stock[]>([])
 const isFetchingStocks = ref(true)
+const isSyncing = ref(false)
+
+const lastGlobalSyncTime = computed(() => {
+  if (!stocks.value.length) return null
+  let maxTime = 0
+  for (const s of stocks.value) {
+    if (s.fetched_at) {
+      const t = new Date(s.fetched_at).getTime()
+      if (t > maxTime) maxTime = t
+    }
+  }
+  return maxTime > 0 ? new Date(maxTime) : null
+})
+
+const formattedLastSync = computed(() => {
+  if (!lastGlobalSyncTime.value) return 'Non synchronisé'
+  const now = new Date().getTime()
+  const diffMs = now - lastGlobalSyncTime.value.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+
+  if (diffMin < 1) return "À l'instant"
+  if (diffMin < 60) return `Il y a ${diffMin} min`
+  const diffHours = Math.floor(diffMin / 60)
+  if (diffHours < 24) return `Il y a ${diffHours}h`
+  return lastGlobalSyncTime.value.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+})
+
+const isMarketOpen = (): boolean => {
+  const now = new Date()
+  const day = now.getUTCDay() // 0 = Sun, 6 = Sat
+  if (day === 0 || day === 6) return false
+  const hour = now.getUTCHour()
+  return hour >= 8 && hour <= 22
+}
+
+const isDataStale = (fetchedAtStr?: string | null): boolean => {
+  if (!fetchedAtStr) return true
+  const fetchedTime = new Date(fetchedAtStr).getTime()
+  if (isNaN(fetchedTime)) return true
+  const diffMin = (Date.now() - fetchedTime) / 60000
+
+  if (isMarketOpen()) {
+    return diffMin > 15
+  }
+  return diffMin > 720
+}
+
+const syncStocks = async (force = false) => {
+  if (isSyncing.value || !stocks.value.length) return
+
+  if (!force) {
+    const hasStaleStock = stocks.value.some(s => isDataStale(s.fetched_at))
+    if (!hasStaleStock) return
+  }
+
+  isSyncing.value = true
+  try {
+    const res = await $fetch<{ count: number; synced_at: string; stocks: Stock[] }>('/api/stocks/sync', {
+      method: 'POST',
+      body: { forceAll: force },
+    })
+    if (res.stocks) {
+      stocks.value = res.stocks
+    }
+    if (force) {
+      toast.success(`Cours boursiers synchronisés (${res.count} actions à jour).`)
+    }
+  } catch (err: any) {
+    if (force) {
+      toast.error('Échec de la synchronisation des cours depuis Yahoo Finance.')
+    }
+  } finally {
+    isSyncing.value = false
+  }
+}
 
 // Filtering & Sorting State
 const valuationFilter = ref<'all' | 'undervalued' | 'fair' | 'overvalued'>('all')
@@ -64,8 +139,9 @@ const fetchStocks = async () => {
   }
 }
 
-onMounted(() => {
-  fetchStocks()
+onMounted(async () => {
+  await fetchStocks()
+  syncStocks(false)
 })
 
 const analyzeAndAddStock = async () => {
@@ -252,10 +328,31 @@ const rawWatchlistCount = computed(() => stocks.value.filter(s => s.status !== '
     <!-- Header de Page épuré -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
       <div>
-        <h1 class="text-xl font-bold tracking-tight text-white font-mono">
-          DASHBOARD ANALYSTE
-        </h1>
-        <p class="text-xs text-zinc-400 mt-0.5">
+        <div class="flex items-center gap-3">
+          <h1 class="text-xl font-bold tracking-tight text-white font-mono">
+            DASHBOARD ANALYSTE
+          </h1>
+          <button
+            type="button"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-zinc-800 bg-zinc-900/80 text-[11px] font-mono text-zinc-400 hover:text-white hover:border-zinc-700 transition cursor-pointer"
+            :disabled="isSyncing || !stocks.length"
+            title="Rafraîchir tous les cours en 1 clic"
+            @click="syncStocks(true)"
+          >
+            <svg
+              class="h-3.5 w-3.5 text-emerald-400"
+              :class="{ 'animate-spin': isSyncing }"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>Synchro : <strong class="text-zinc-200">{{ formattedLastSync }}</strong></span>
+          </button>
+        </div>
+        <p class="text-xs text-zinc-400 mt-1">
           Suivi quantitatif, modèles DCF et cotations financières
         </p>
       </div>
