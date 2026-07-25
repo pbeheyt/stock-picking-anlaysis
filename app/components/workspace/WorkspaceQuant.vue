@@ -973,19 +973,21 @@ const getGaugeArc = (valRatio: number) => {
           </div>
 
           <div class="flex items-center gap-2 text-xs">
-            <AppDatePicker
+            <input
               v-model="startDateInput"
+              type="date"
               :min="rawHistory[0]?.date"
               :max="endDateInput"
-              placeholder="Début"
-            />
+              class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none transition"
+            >
             <span class="text-gray-500 font-bold text-sm">-</span>
-            <AppDatePicker
+            <input
               v-model="endDateInput"
+              type="date"
               :min="startDateInput"
               :max="rawHistory[rawHistory.length - 1]?.date"
-              placeholder="Fin"
-            />
+              class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none transition"
+            >
           </div>
 
           <div class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs text-white font-mono font-bold shadow-inner">
