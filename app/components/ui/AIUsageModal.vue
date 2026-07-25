@@ -12,8 +12,12 @@ const emit = defineEmits<{
 const isLoading = ref(false)
 const usageData = ref<AiUsageResponse | null>(null)
 
+type PeriodFilter = 'today' | '7d' | '30d' | 'all' | 'custom'
+
 const currentPage = ref(1)
-const searchTickerFilter = ref('')
+const periodFilter = ref<PeriodFilter>('all')
+const customStartDate = ref('')
+const customEndDate = ref('')
 
 const fetchUsageLogs = async () => {
   if (!props.isOpen) return
@@ -22,9 +26,12 @@ const fetchUsageLogs = async () => {
     const params = new URLSearchParams({
       page: String(currentPage.value),
       pageSize: '20',
+      period: periodFilter.value,
     })
-    if (searchTickerFilter.value.trim()) {
-      params.append('ticker', searchTickerFilter.value.trim())
+
+    if (periodFilter.value === 'custom') {
+      if (customStartDate.value) params.append('startDate', customStartDate.value)
+      if (customEndDate.value) params.append('endDate', customEndDate.value)
     }
 
     const res = await $fetch<AiUsageResponse>(`/api/ai/usage?${params.toString()}`)
@@ -35,6 +42,19 @@ const fetchUsageLogs = async () => {
     isLoading.value = false
   }
 }
+
+const setPeriod = (p: PeriodFilter) => {
+  periodFilter.value = p
+  currentPage.value = 1
+  fetchUsageLogs()
+}
+
+watch([customStartDate, customEndDate], () => {
+  if (periodFilter.value === 'custom') {
+    currentPage.value = 1
+    fetchUsageLogs()
+  }
+})
 
 watch(() => props.isOpen, (open) => {
   if (open) {
@@ -150,31 +170,77 @@ const formatActionName = (typeStr: string) => {
             </div>
           </div>
 
-          <!-- Filter & Search Toolbar -->
-          <div class="flex items-center justify-between gap-3 shrink-0">
-            <div class="flex items-center gap-2 flex-1 max-w-xs">
-              <input
-                v-model="searchTickerFilter"
-                type="text"
-                placeholder="Filtrer par Ticker (ex: AAPL, NVDA)..."
-                class="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
-                @keyup.enter="handleSearch"
-              >
+          <!-- Filter & Period Toolbar -->
+          <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <!-- Preset Buttons -->
+            <div class="flex items-center gap-1 rounded-xl bg-zinc-900 border border-zinc-800 p-1 text-xs font-mono">
               <button
                 type="button"
-                class="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white transition cursor-pointer"
-                @click="handleSearch"
+                class="px-2.5 py-1 rounded-lg transition font-semibold cursor-pointer"
+                :class="periodFilter === 'today' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-200'"
+                @click="setPeriod('today')"
               >
-                Filtrer
+                Aujourd'hui
               </button>
+
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-lg transition font-semibold cursor-pointer"
+                :class="periodFilter === '7d' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-200'"
+                @click="setPeriod('7d')"
+              >
+                7 jours
+              </button>
+
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-lg transition font-semibold cursor-pointer"
+                :class="periodFilter === '30d' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-200'"
+                @click="setPeriod('30d')"
+              >
+                30 jours
+              </button>
+
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-lg transition font-semibold cursor-pointer"
+                :class="periodFilter === 'all' ? 'bg-zinc-800 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'"
+                @click="setPeriod('all')"
+              >
+                Tout
+              </button>
+
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-lg transition font-semibold cursor-pointer"
+                :class="periodFilter === 'custom' ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : 'text-zinc-400 hover:text-zinc-200'"
+                @click="setPeriod('custom')"
+              >
+                Personnalisé
+              </button>
+            </div>
+
+            <!-- Inputs Custom Date -->
+            <div v-if="periodFilter === 'custom'" class="flex items-center gap-2 text-xs font-mono">
+              <input
+                v-model="customStartDate"
+                type="date"
+                class="rounded-lg bg-zinc-900 border border-zinc-800 px-2.5 py-1 text-xs text-white focus:border-sky-500 focus:outline-none"
+              >
+              <span class="text-zinc-600 font-bold">-</span>
+              <input
+                v-model="customEndDate"
+                type="date"
+                class="rounded-lg bg-zinc-900 border border-zinc-800 px-2.5 py-1 text-xs text-white focus:border-sky-500 focus:outline-none"
+              >
             </div>
 
             <button
               type="button"
-              class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition cursor-pointer"
+              class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition cursor-pointer font-mono ml-auto"
               @click="fetchUsageLogs"
             >
-              <svg class="h-3.5 w-3.5" :class="{ 'animate-spin': isLoading }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <svg class="h-3.5 w-3.5 text-emerald-400" :class="{ 'animate-spin': isLoading }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               <span>Actualiser</span>

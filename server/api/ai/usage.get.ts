@@ -36,7 +36,9 @@ export default defineEventHandler(async (event) => {
   const pageSize = Math.max(1, Math.min(100, parseInt(String(query.pageSize || '20'), 10)))
   const offset = (page - 1) * pageSize
 
-  const tickerFilter = query.ticker ? String(query.ticker).trim().toUpperCase() : null
+  const period = query.period ? String(query.period).trim() : 'all'
+  const startDate = query.startDate ? String(query.startDate).trim() : null
+  const endDate = query.endDate ? String(query.endDate).trim() : null
   const providerFilter = query.provider ? String(query.provider).trim() : null
   const modelFilter = query.model ? String(query.model).trim() : null
 
@@ -46,10 +48,34 @@ export default defineEventHandler(async (event) => {
   const conditions: string[] = []
   const params: any[] = []
 
-  if (tickerFilter) {
-    conditions.push('UPPER(ticker) LIKE ?')
-    params.push(`%${tickerFilter}%`)
+  if (period === 'today') {
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    conditions.push('created_at >= ?')
+    params.push(todayStart.toISOString())
+  } else if (period === '7d') {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    conditions.push('created_at >= ?')
+    params.push(weekAgo.toISOString())
+  } else if (period === '30d') {
+    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    conditions.push('created_at >= ?')
+    params.push(monthAgo.toISOString())
+  } else if (period === 'custom') {
+    if (startDate) {
+      const s = new Date(startDate)
+      s.setHours(0, 0, 0, 0)
+      conditions.push('created_at >= ?')
+      params.push(s.toISOString())
+    }
+    if (endDate) {
+      const e = new Date(endDate)
+      e.setHours(23, 59, 59, 999)
+      conditions.push('created_at <= ?')
+      params.push(e.toISOString())
+    }
   }
+
   if (providerFilter) {
     conditions.push('provider = ?')
     params.push(providerFilter)
