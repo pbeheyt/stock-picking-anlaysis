@@ -275,11 +275,6 @@ const openrouterModels = computed(() => availableModels.value.filter(m => m.prov
               </button>
             </div>
           </div>
-
-          <!-- Message d'erreur -->
-          <div v-if="errorMessage" class="rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs font-mono text-rose-300">
-            {{ errorMessage }}
-          </div>
         </div>
       </div>
     </Transition>

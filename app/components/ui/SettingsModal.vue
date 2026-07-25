@@ -190,8 +190,17 @@ const handleAddModel = async () => {
   }
 }
 
-// Étape 3 : Supprimer un modèle de la BDD
-const handleRemoveModel = async (modelId: string) => {
+const modelToDelete = ref<string | null>(null)
+
+const handleRemoveModel = (modelId: string) => {
+  modelToDelete.value = modelId
+}
+
+const confirmRemoveModel = async () => {
+  if (!modelToDelete.value) return
+  const modelId = modelToDelete.value
+  modelToDelete.value = null
+
   const ok = await deleteApprovedModel(modelId)
   if (ok) {
     approvedModels.value = await fetchApprovedModels()
@@ -307,8 +316,6 @@ const handleRemoveModel = async (modelId: string) => {
                     </svg>
                   </button>
                 </div>
-                <div v-if="deepseekError" class="text-[11px] text-rose-400 font-mono pt-1">{{ deepseekError }}</div>
-                <div v-if="deepseekSuccess" class="text-[11px] text-emerald-400 font-mono pt-1">{{ deepseekSuccess }}</div>
               </div>
 
               <!-- OpenRouter Key Input -->
@@ -370,8 +377,6 @@ const handleRemoveModel = async (modelId: string) => {
                     </svg>
                   </button>
                 </div>
-                <div v-if="openrouterError" class="text-[11px] text-rose-400 font-mono pt-1">{{ openrouterError }}</div>
-                <div v-if="openrouterSuccess" class="text-[11px] text-emerald-400 font-mono pt-1">{{ openrouterSuccess }}</div>
               </div>
             </div>
           </div>
@@ -414,17 +419,6 @@ const handleRemoveModel = async (modelId: string) => {
                   </svg>
                   <span>{{ isAddingModel ? 'Test...' : 'Ajouter' }}</span>
                 </button>
-              </div>
-
-              <!-- Erreur ou Succès du test en coulisse -->
-              <div v-if="modelAddError" class="rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-300 font-mono">
-                {{ modelAddError }}
-              </div>
-              <div v-if="modelAddSuccess" class="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-3 text-xs text-emerald-300 font-mono flex items-center gap-2">
-                <svg class="h-4 w-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>{{ modelAddSuccess }}</span>
               </div>
             </div>
           </div>
@@ -487,5 +481,17 @@ const handleRemoveModel = async (modelId: string) => {
         </div>
       </div>
     </Transition>
+
+    <!-- Confirm Remove Model Modal -->
+    <ConfirmModal
+      :is-open="Boolean(modelToDelete)"
+      title="Retirer le modèle"
+      :message="`Voulez-vous vraiment retirer le modèle '${modelToDelete}' de la liste des modèles approuvés en BDD ?`"
+      confirm-text="Retirer"
+      cancel-text="Annuler"
+      :is-danger="true"
+      @confirm="confirmRemoveModel"
+      @cancel="modelToDelete = null"
+    />
   </Teleport>
 </template>

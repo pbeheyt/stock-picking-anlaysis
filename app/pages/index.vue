@@ -119,8 +119,17 @@ const toggleStockStatus = async (stock: Stock) => {
   }
 }
 
-const deleteStock = async (id: string, ticker: string) => {
-  if (!confirm(`Supprimer ${ticker} de votre base locale ?`)) return
+const stockToDelete = ref<{ id: string; ticker: string } | null>(null)
+
+const deleteStock = (id: string, ticker: string) => {
+  stockToDelete.value = { id, ticker }
+}
+
+const confirmDeleteStock = async () => {
+  if (!stockToDelete.value) return
+  const { id, ticker } = stockToDelete.value
+  stockToDelete.value = null
+
   try {
     await $fetch(`/api/stocks/${id}`, { method: 'DELETE' })
     stocks.value = stocks.value.filter(s => s.id !== id)
@@ -372,5 +381,17 @@ const rawWatchlistCount = computed(() => stocks.value.filter(s => s.status !== '
         </div>
       </section>
     </div>
+
+    <!-- Confirm Delete Modal -->
+    <ConfirmModal
+      :is-open="Boolean(stockToDelete)"
+      title="Supprimer l'action"
+      :message="`Voulez-vous vraiment supprimer l'action ${stockToDelete?.ticker} de votre base locale ?`"
+      confirm-text="Supprimer"
+      cancel-text="Annuler"
+      :is-danger="true"
+      @confirm="confirmDeleteStock"
+      @cancel="stockToDelete = null"
+    />
   </div>
 </template>
