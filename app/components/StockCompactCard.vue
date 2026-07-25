@@ -66,7 +66,6 @@ const tierBadgeClass = computed(() => {
   return 'bg-rose-500/10 text-rose-400 border-rose-500/30'
 })
 
-const navigateToWorkspace = () => {
 const navigateToTab = (tab?: 'dcf' | 'quant' | 'research') => {
   if (tab) {
     navigateTo(`/stock/${props.stock.ticker}?tab=${tab}`)
