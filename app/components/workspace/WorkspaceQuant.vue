@@ -962,7 +962,7 @@ const getGaugeArc = (valRatio: number) => {
                 <svg class="h-3.5 w-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span>Max R² (Min 3 ans)</span>
+                <span>Max R²</span>
               </button>
 
               <InfoTooltip text="Recherche automatiquement la période historique d'au moins 36 mois (3 ans) offrant le coefficient de détermination (R²) le plus élevé. Les durées de moins de 3 ans sont exclues pour éliminer le bruit de court terme et les faux canaux de momentum." />
