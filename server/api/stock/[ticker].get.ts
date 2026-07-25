@@ -19,22 +19,38 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const ticker = tickerParam.trim().toUpperCase()
+  let targetTicker = tickerParam.trim().toUpperCase()
 
   try {
     let quote: any = null
     try {
-      quote = await yahooFinance.quote(ticker)
+      quote = await yahooFinance.quote(targetTicker)
     } catch (err: any) {
-      console.warn(`[YahooFinance] Quote fetch failed for ${ticker}:`, err?.message || err)
+      console.warn(`[YahooFinance] Direct quote fetch failed for ${targetTicker}:`, err?.message || err)
+    }
+
+    // Auto-Résolution si le ticker direct échoue (ex: recherche "vinci" -> résout "DG.PA")
+    if (!quote || (!quote.shortName && !quote.longName && !quote.regularMarketPrice)) {
+      try {
+        const searchRes = await yahooFinance.search(tickerParam.trim())
+        const topMatch = searchRes?.quotes?.find((q: any) => q.symbol && (q.quoteType === 'EQUITY' || q.quoteType === 'ETF' || !q.quoteType))
+        if (topMatch?.symbol) {
+          targetTicker = topMatch.symbol.toUpperCase()
+          quote = await yahooFinance.quote(targetTicker)
+        }
+      } catch (err: any) {
+        console.warn(`[YahooFinance Search Resolution] Failed for '${tickerParam}':`, err?.message || err)
+      }
     }
 
     if (!quote || (!quote.shortName && !quote.longName && !quote.regularMarketPrice)) {
       throw createError({
         statusCode: 404,
-        statusMessage: `Ticker '${ticker}' non trouvé ou données indisponibles`,
+        statusMessage: `Impossible de trouver l'action ou le ticker correspondant à '${tickerParam}'`,
       })
     }
+
+    const ticker = targetTicker
 
     let summary: any = null
     try {

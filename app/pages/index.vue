@@ -1,12 +1,48 @@
 <script setup lang="ts">
 import type { Stock, StockStatus, StockApiResponse, QualitativeData } from '~/types/database.types'
 import { computeValuation, type ValuationInputs } from '~/utils/valuation'
+import type { StockSearchResult } from '~/server/api/stock/search.get'
 
 const toast = useToast()
 
 const searchTicker = ref('')
 const targetStatusForAdd = ref<StockStatus>('watchlist')
 const isLoading = ref(false)
+
+const searchResults = ref<StockSearchResult[]>([])
+const isSearchingSuggestions = ref(false)
+const showSuggestions = ref(false)
+let searchDebounceTimer: NodeJS.Timeout | null = null
+
+const handleSearchInput = () => {
+  const query = searchTicker.value.trim()
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+
+  if (query.length < 2) {
+    searchResults.value = []
+    showSuggestions.value = false
+    return
+  }
+
+  searchDebounceTimer = setTimeout(async () => {
+    isSearchingSuggestions.value = true
+    try {
+      const results = await $fetch<StockSearchResult[]>(`/api/stock/search?q=${encodeURIComponent(query)}`)
+      searchResults.value = results || []
+      showSuggestions.value = searchResults.value.length > 0
+    } catch {
+      searchResults.value = []
+    } finally {
+      isSearchingSuggestions.value = false
+    }
+  }, 250)
+}
+
+const selectSearchResult = (result: StockSearchResult) => {
+  searchTicker.value = result.ticker
+  showSuggestions.value = false
+  analyzeAndAddStock()
+}
 
 const stocks = ref<Stock[]>([])
 const isFetchingStocks = ref(true)
@@ -275,10 +311,42 @@ const rawWatchlistCount = computed(() => stocks.value.filter(s => s.status !== '
           <input
             v-model="searchTicker"
             type="text"
-            placeholder="Rechercher ou ajouter un ticker (ex: NVDA, AAPL, TTE.PA)..."
+            placeholder="Rechercher par nom ou ticker (ex: vinci, total, NVDA, AAPL, TTE.PA)..."
             class="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5 text-xs text-white placeholder-zinc-500 font-mono shadow-sm transition focus:border-emerald-500/80 focus:outline-none focus:ring-1 focus:ring-emerald-500/80"
             :disabled="isLoading"
+            @input="handleSearchInput"
+            @focus="handleSearchInput"
+            @keydown.escape="showSuggestions = false"
           >
+
+          <!-- Dropdown d'autocomplétion Yahoo Finance -->
+          <div
+            v-if="showSuggestions && searchResults.length"
+            class="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border border-zinc-800 bg-zinc-950/95 shadow-2xl backdrop-blur-md overflow-hidden font-mono"
+          >
+            <div class="p-1 space-y-0.5 max-h-64 overflow-y-auto">
+              <div
+                v-for="item in searchResults"
+                :key="item.ticker"
+                class="flex items-center justify-between p-2.5 rounded-lg hover:bg-zinc-900/80 transition cursor-pointer text-xs group"
+                @mousedown.prevent="selectSearchResult(item)"
+              >
+                <div class="flex items-center gap-3 min-w-0">
+                  <CompanyLogo :ticker="item.ticker" size="sm" />
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="font-black text-emerald-400 text-xs group-hover:text-emerald-300 transition">{{ item.ticker }}</span>
+                      <span class="text-zinc-400 text-[11px] font-sans truncate max-w-[200px] sm:max-w-[280px]">{{ item.name }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <span class="text-[10px] text-zinc-500 font-mono px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 shrink-0">
+                  {{ item.exchange || 'EQUITY' }}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="flex items-center gap-1.5">
