@@ -234,7 +234,9 @@ const loadStockData = async () => {
         if (freshApi.audit_data && !found.audit_data) {
           found.audit_data = freshApi.audit_data
         }
-      } catch {}
+      } catch {
+        toast.error('Connexion Yahoo Finance interrompue. Les données locales sauvegardées sont conservées.')
+      }
     }
 
     stock.value = found
@@ -248,7 +250,12 @@ const loadStockData = async () => {
 
     initFormValues(found)
   } catch (err: any) {
-    errorMessage.value = err.data?.statusMessage || err.message || `Impossible de charger ${tickerParam.value}`
+    if (!stock.value) {
+      const msg = err.data?.statusMessage || err.message || `Impossible de charger les données pour ${tickerParam.value}`
+      errorMessage.value = `Erreur : ${msg}`
+    } else {
+      toast.error(`Impossible de rafraîchir ${tickerParam.value}. Les données affichées ont été conservées.`)
+    }
   } finally {
     isLoading.value = false
   }

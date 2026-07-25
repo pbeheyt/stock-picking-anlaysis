@@ -114,9 +114,12 @@ const fetchHistory = async (forceRefresh = false) => {
       toast.success('Historique des cours mis à jour avec succès.')
     }
   } catch (err: any) {
-    const msg = err?.data?.statusMessage || err?.message || 'Impossible de charger l\'historique.'
-    errorMessage.value = msg
-    toast.error(msg)
+    if (!rawHistory.value.length) {
+      errorMessage.value = 'Échec du chargement initial de l\'historique des cours.'
+      toast.error('Impossible de charger l\'historique des cours. Veuillez vérifier la connexion Yahoo Finance.')
+    } else {
+      toast.error('Échec du rafraîchissement des cours en direct. L\'historique local a été conservé.')
+    }
   } finally {
     isLoading.value = false
     isRefreshing.value = false
