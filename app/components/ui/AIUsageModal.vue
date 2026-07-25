@@ -170,74 +170,76 @@ const formatActionName = (typeStr: string) => {
             </div>
           </div>
 
-          <!-- Filter & Period Toolbar -->
-          <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
-            <!-- Preset Buttons -->
-            <div class="flex items-center gap-1 rounded-xl bg-zinc-900 border border-zinc-800 p-1 text-xs font-mono">
-              <button
-                type="button"
-                class="px-2.5 py-1 rounded-lg transition font-semibold cursor-pointer"
-                :class="periodFilter === 'today' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-200'"
-                @click="setPeriod('today')"
-              >
-                Aujourd'hui
-              </button>
+          <!-- Filter & Period Toolbar (Hauteur fixe h-9 stricte pour 0px de décalage) -->
+          <div class="h-9 flex items-center justify-between gap-3 shrink-0">
+            <div class="flex items-center gap-2">
+              <!-- Preset Buttons -->
+              <div class="flex items-center gap-1 rounded-xl bg-zinc-900 border border-zinc-800 p-1 text-xs font-mono h-8">
+                <button
+                  type="button"
+                  class="px-2.5 py-0.5 rounded-lg transition font-semibold cursor-pointer h-6 flex items-center"
+                  :class="periodFilter === 'today' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-200'"
+                  @click="setPeriod('today')"
+                >
+                  Aujourd'hui
+                </button>
 
-              <button
-                type="button"
-                class="px-2.5 py-1 rounded-lg transition font-semibold cursor-pointer"
-                :class="periodFilter === '7d' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-200'"
-                @click="setPeriod('7d')"
-              >
-                7 jours
-              </button>
+                <button
+                  type="button"
+                  class="px-2.5 py-0.5 rounded-lg transition font-semibold cursor-pointer h-6 flex items-center"
+                  :class="periodFilter === '7d' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-200'"
+                  @click="setPeriod('7d')"
+                >
+                  7 jours
+                </button>
 
-              <button
-                type="button"
-                class="px-2.5 py-1 rounded-lg transition font-semibold cursor-pointer"
-                :class="periodFilter === '30d' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-200'"
-                @click="setPeriod('30d')"
-              >
-                30 jours
-              </button>
+                <button
+                  type="button"
+                  class="px-2.5 py-0.5 rounded-lg transition font-semibold cursor-pointer h-6 flex items-center"
+                  :class="periodFilter === '30d' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-200'"
+                  @click="setPeriod('30d')"
+                >
+                  30 jours
+                </button>
 
-              <button
-                type="button"
-                class="px-2.5 py-1 rounded-lg transition font-semibold cursor-pointer"
-                :class="periodFilter === 'all' ? 'bg-zinc-800 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'"
-                @click="setPeriod('all')"
-              >
-                Tout
-              </button>
+                <button
+                  type="button"
+                  class="px-2.5 py-0.5 rounded-lg transition font-semibold cursor-pointer h-6 flex items-center"
+                  :class="periodFilter === 'all' ? 'bg-zinc-800 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'"
+                  @click="setPeriod('all')"
+                >
+                  Tout
+                </button>
 
-              <button
-                type="button"
-                class="px-2.5 py-1 rounded-lg transition font-semibold cursor-pointer"
-                :class="periodFilter === 'custom' ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : 'text-zinc-400 hover:text-zinc-200'"
-                @click="setPeriod('custom')"
-              >
-                Personnalisé
-              </button>
-            </div>
+                <button
+                  type="button"
+                  class="px-2.5 py-0.5 rounded-lg transition font-semibold cursor-pointer h-6 flex items-center"
+                  :class="periodFilter === 'custom' ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : 'text-zinc-400 hover:text-zinc-200'"
+                  @click="setPeriod('custom')"
+                >
+                  Personnalisé
+                </button>
+              </div>
 
-            <!-- Inputs Custom Date -->
-            <div v-if="periodFilter === 'custom'" class="flex items-center gap-2 text-xs font-mono">
-              <input
-                v-model="customStartDate"
-                type="date"
-                class="rounded-lg bg-zinc-900 border border-zinc-800 px-2.5 py-1 text-xs text-white focus:border-sky-500 focus:outline-none"
-              >
-              <span class="text-zinc-600 font-bold">-</span>
-              <input
-                v-model="customEndDate"
-                type="date"
-                class="rounded-lg bg-zinc-900 border border-zinc-800 px-2.5 py-1 text-xs text-white focus:border-sky-500 focus:outline-none"
-              >
+              <!-- Inputs Custom Date (v-show pour éviter les retours à la ligne / saut de layout) -->
+              <div v-show="periodFilter === 'custom'" class="flex items-center gap-1.5 text-xs font-mono h-8">
+                <input
+                  v-model="customStartDate"
+                  type="date"
+                  class="h-8 rounded-lg bg-zinc-900 border border-zinc-800 px-2 py-0.5 text-xs text-white focus:border-sky-500 focus:outline-none"
+                >
+                <span class="text-zinc-600 font-bold">-</span>
+                <input
+                  v-model="customEndDate"
+                  type="date"
+                  class="h-8 rounded-lg bg-zinc-900 border border-zinc-800 px-2 py-0.5 text-xs text-white focus:border-sky-500 focus:outline-none"
+                >
+              </div>
             </div>
 
             <button
               type="button"
-              class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition cursor-pointer font-mono ml-auto"
+              class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition cursor-pointer font-mono h-8 shrink-0"
               @click="fetchUsageLogs"
             >
               <svg class="h-3.5 w-3.5 text-emerald-400" :class="{ 'animate-spin': isLoading }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
