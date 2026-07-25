@@ -132,7 +132,7 @@ const setPreset = (preset: '1Y' | '3Y' | '5Y' | '10Y' | 'ALL' | 'MAX_R2' | 'CUST
   if (!rawHistory.value.length) return
 
   if (preset === 'MAX_R2') {
-    const { minIndex: bestStart, maxIndex: bestEnd } = findMaxR2Period(rawHistory.value, 104)
+    const { minIndex: bestStart, maxIndex: bestEnd } = findMaxR2Period(rawHistory.value, 156)
     minIndex.value = bestStart
     maxIndex.value = bestEnd
     if (save) saveQuantStateToDb(quantResult.value?.theoreticalPrice)
@@ -950,18 +950,23 @@ const getGaugeArc = (valRatio: number) => {
 
             <div class="h-4 w-px bg-gray-800 mx-1" />
 
-            <button
-              type="button"
-              class="rounded-md px-2.5 py-1 text-xs font-bold transition flex items-center gap-1"
-              :class="activePreset === 'MAX_R2'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                : 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10'"
-              title="Trouver automatiquement la fenêtre (min 2 ans) offrant le meilleur R²"
-              @click="setPreset('MAX_R2')"
-            >
-              <span>✨</span>
-              <span>Max R²</span>
-            </button>
+            <div class="flex items-center gap-1.5">
+              <button
+                type="button"
+                class="rounded-md px-2.5 py-1 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer font-mono"
+                :class="activePreset === 'MAX_R2'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-inner'
+                  : 'text-amber-400/90 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20'"
+                @click="setPreset('MAX_R2')"
+              >
+                <svg class="h-3.5 w-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>Max R² (Min 3 ans)</span>
+              </button>
+
+              <InfoTooltip text="Recherche automatiquement la période historique d'au moins 36 mois (3 ans) offrant le coefficient de détermination (R²) le plus élevé. Les durées de moins de 3 ans sont exclues pour éliminer le bruit de court terme et les faux canaux de momentum." />
+            </div>
           </div>
 
           <div class="flex items-center gap-2 text-xs">

@@ -371,7 +371,7 @@ export function calculateQuantAnalysis(
 
 export function findMaxR2Period(
   history: HistoryPoint[],
-  minWeeks: number = 104
+  minWeeks: number = 156
 ): { minIndex: number; maxIndex: number; maxR2: number } {
   const validHistory = history.filter(p => p.close > 0 && !isNaN(p.close))
   const N = validHistory.length
