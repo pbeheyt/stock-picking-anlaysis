@@ -76,7 +76,13 @@ const analyzeAndAddStock = async () => {
 
   try {
     const stockData = await $fetch<StockApiResponse>(`/api/stock/${encodeURIComponent(ticker)}`)
-    const existing = stocks.value.find(s => s.ticker === stockData.ticker)
+    const existing = stocks.value.find(s => s.ticker.toUpperCase() === stockData.ticker.toUpperCase())
+
+    if (existing) {
+      const statusLabel = existing.status === 'portfolio' ? 'Portefeuille' : 'Watchlist'
+      toast.error(`L'action ${existing.ticker} (${existing.name}) est déjà présente dans votre base (${statusLabel}).`)
+      return
+    }
 
     const saved = await $fetch<Stock>('/api/stocks', {
       method: 'POST',
