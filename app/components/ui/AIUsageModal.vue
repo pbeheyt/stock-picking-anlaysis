@@ -249,8 +249,8 @@ const formatActionName = (typeStr: string) => {
             </button>
           </div>
 
-          <!-- Logs Table Container (Hauteur fixe h-[250px] pour 5 lignes sans saut de layout) -->
-          <div class="h-[250px] flex flex-col justify-between overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-900/30 shrink-0">
+          <!-- Logs Table Container (Hauteur fixe h-[218px] calée au millimètre sur 5 lignes) -->
+          <div class="h-[218px] flex flex-col justify-between overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-900/30 shrink-0">
             <div v-if="isLoading && !usageData" class="flex-1 flex items-center justify-center text-xs text-zinc-500 font-sans">
               Chargement de l'historique...
             </div>
