@@ -7,6 +7,14 @@ export default defineNuxtConfig({
     compatibilityVersion: 4,
   },
 
+  app: {
+    head: {
+      htmlAttrs: {
+        lang: 'fr',
+      },
+    },
+  },
+
   devtools: { enabled: true },
 
   components: [
