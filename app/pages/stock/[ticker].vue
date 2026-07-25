@@ -612,8 +612,6 @@ const parsedAuditData = computed<AuditData | null>(() => {
               </div>
             </div>
           </div>
-
-          </div>
         </div>
       </div>
 
