@@ -3,6 +3,7 @@ import type { Stock, GrowthMode, MarginMode, AuditData, StockStatus } from '~/ty
 import {
   computeScenarios,
   computeReverseDCF,
+  FINANCIAL_DEFAULTS,
   type ValuationInputs,
   type ScenarioResults,
   type ReverseDCFResult,
@@ -284,25 +285,25 @@ const loadStockData = async () => {
 }
 
 const initFormValues = (s: Stock) => {
-  growthMode.value = s.growth_mode || 'cagr'
-  growth.value = s.projected_growth ?? 0.10
-  growthY1.value = s.growth_y1 ?? 0.10
-  growthY2.value = s.growth_y2 ?? 0.10
-  growthY3.value = s.growth_y3 ?? 0.10
-  growthY4.value = s.growth_y4 ?? 0.10
-  growthY5.value = s.growth_y5 ?? 0.10
+  growthMode.value = s.growth_mode || FINANCIAL_DEFAULTS.GROWTH_MODE
+  growth.value = s.projected_growth ?? FINANCIAL_DEFAULTS.GROWTH_RATE
+  growthY1.value = s.growth_y1 ?? FINANCIAL_DEFAULTS.GROWTH_RATE
+  growthY2.value = s.growth_y2 ?? FINANCIAL_DEFAULTS.GROWTH_RATE
+  growthY3.value = s.growth_y3 ?? FINANCIAL_DEFAULTS.GROWTH_RATE
+  growthY4.value = s.growth_y4 ?? FINANCIAL_DEFAULTS.GROWTH_RATE
+  growthY5.value = s.growth_y5 ?? FINANCIAL_DEFAULTS.GROWTH_RATE
 
-  marginMode.value = s.margin_mode || 'constant'
-  margin.value = s.projected_margin ?? 0.20
-  marginY1.value = s.margin_y1 ?? s.projected_margin ?? 0.20
-  marginY2.value = s.margin_y2 ?? s.projected_margin ?? 0.20
-  marginY3.value = s.margin_y3 ?? s.projected_margin ?? 0.20
-  marginY4.value = s.margin_y4 ?? s.projected_margin ?? 0.20
-  marginY5.value = s.margin_y5 ?? s.projected_margin ?? 0.20
+  marginMode.value = s.margin_mode || FINANCIAL_DEFAULTS.MARGIN_MODE
+  margin.value = s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
+  marginY1.value = s.margin_y1 ?? s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
+  marginY2.value = s.margin_y2 ?? s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
+  marginY3.value = s.margin_y3 ?? s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
+  marginY4.value = s.margin_y4 ?? s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
+  marginY5.value = s.margin_y5 ?? s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
 
-  targetMultiple.value = s.target_multiple ?? 20.0
-  discountRate.value = s.discount_rate ?? 0.10
-  riskSpread.value = s.risk_spread ?? 0.20
+  targetMultiple.value = s.target_multiple ?? FINANCIAL_DEFAULTS.TARGET_MULTIPLE
+  discountRate.value = s.discount_rate ?? FINANCIAL_DEFAULTS.DISCOUNT_RATE
+  riskSpread.value = s.risk_spread ?? FINANCIAL_DEFAULTS.RISK_SPREAD
 }
 
 onMounted(() => {

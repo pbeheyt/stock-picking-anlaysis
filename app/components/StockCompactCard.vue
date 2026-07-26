@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Stock, QualitativeData } from '~/types/database.types'
-import { computeValuation, type ValuationInputs } from '~/utils/valuation'
+import { computeValuation, FINANCIAL_DEFAULTS, type ValuationInputs } from '~/utils/valuation'
 import { formatCurrency, formatPercent } from '~/utils/format'
 
 const props = defineProps<{
@@ -16,18 +16,18 @@ const valuationInputs = computed<ValuationInputs>(() => ({
   currentPrice: props.stock.current_price ?? 0,
   revenueTTM: props.stock.revenue_ttm ?? 0,
   sharesOutstanding: props.stock.shares_outstanding ?? 0,
-  growthMode: props.stock.growth_mode || 'cagr',
-  growth: props.stock.projected_growth ?? 0.10,
-  growthY1: props.stock.growth_y1 ?? 0.10,
-  growthY2: props.stock.growth_y2 ?? 0.10,
-  growthY3: props.stock.growth_y3 ?? 0.10,
-  growthY4: props.stock.growth_y4 ?? 0.10,
-  growthY5: props.stock.growth_y5 ?? 0.10,
-  marginType: 'net_income',
-  margin: props.stock.projected_margin ?? 0.20,
-  targetMultiple: props.stock.target_multiple ?? 20.0,
-  discountRate: props.stock.discount_rate ?? 0.10,
-  riskSpread: props.stock.risk_spread ?? 0.20,
+  growthMode: props.stock.growth_mode || FINANCIAL_DEFAULTS.GROWTH_MODE,
+  growth: props.stock.projected_growth ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+  growthY1: props.stock.growth_y1 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+  growthY2: props.stock.growth_y2 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+  growthY3: props.stock.growth_y3 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+  growthY4: props.stock.growth_y4 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+  growthY5: props.stock.growth_y5 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+  marginType: FINANCIAL_DEFAULTS.MARGIN_TYPE,
+  margin: props.stock.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+  targetMultiple: props.stock.target_multiple ?? FINANCIAL_DEFAULTS.TARGET_MULTIPLE,
+  discountRate: props.stock.discount_rate ?? FINANCIAL_DEFAULTS.DISCOUNT_RATE,
+  riskSpread: props.stock.risk_spread ?? FINANCIAL_DEFAULTS.RISK_SPREAD,
 }))
 
 const valuation = computed(() => computeValuation(valuationInputs.value))

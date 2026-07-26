@@ -2,6 +2,20 @@ export type GrowthMode = 'cagr' | 'explicit'
 export type MarginMode = 'constant' | 'explicit'
 export type MarginType = 'net_income' | 'fcf'
 
+export const FINANCIAL_DEFAULTS = {
+  BETA: 1.0,
+  GROWTH_RATE: 0.10,
+  MARGIN_NET: 0.15,
+  PROJECTED_MARGIN: 0.20,
+  TARGET_MULTIPLE: 20.0,
+  DISCOUNT_RATE: 0.10,
+  RISK_SPREAD: 0.20,
+  CURRENCY: 'USD',
+  MARGIN_TYPE: 'net_income' as const,
+  GROWTH_MODE: 'cagr' as const,
+  MARGIN_MODE: 'constant' as const,
+} as const
+
 export interface ValuationInputs {
   currentPrice: number
   revenueTTM: number

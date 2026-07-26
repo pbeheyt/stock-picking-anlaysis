@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Stock, StockStatus, StockApiResponse, QualitativeData } from '~/types/database.types'
-import { computeValuation, type ValuationInputs } from '~/utils/valuation'
+import { computeValuation, FINANCIAL_DEFAULTS, type ValuationInputs } from '~/utils/valuation'
 import type { StockSearchResult } from '~/server/api/stock/search.get'
 
 const toast = useToast()
@@ -268,18 +268,18 @@ const getStockMetrics = (stock: Stock) => {
     currentPrice: stock.current_price ?? 0,
     revenueTTM: stock.revenue_ttm ?? 0,
     sharesOutstanding: stock.shares_outstanding ?? 0,
-    growthMode: stock.growth_mode || 'cagr',
-    growth: stock.projected_growth ?? 0.10,
-    growthY1: stock.growth_y1 ?? 0.10,
-    growthY2: stock.growth_y2 ?? 0.10,
-    growthY3: stock.growth_y3 ?? 0.10,
-    growthY4: stock.growth_y4 ?? 0.10,
-    growthY5: stock.growth_y5 ?? 0.10,
-    marginType: 'net_income',
-    margin: stock.projected_margin ?? 0.20,
-    targetMultiple: stock.target_multiple ?? 20.0,
-    discountRate: stock.discount_rate ?? 0.10,
-    riskSpread: stock.risk_spread ?? 0.20,
+    growthMode: stock.growth_mode || FINANCIAL_DEFAULTS.GROWTH_MODE,
+    growth: stock.projected_growth ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    growthY1: stock.growth_y1 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    growthY2: stock.growth_y2 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    growthY3: stock.growth_y3 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    growthY4: stock.growth_y4 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    growthY5: stock.growth_y5 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    marginType: FINANCIAL_DEFAULTS.MARGIN_TYPE,
+    margin: stock.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    targetMultiple: stock.target_multiple ?? FINANCIAL_DEFAULTS.TARGET_MULTIPLE,
+    discountRate: stock.discount_rate ?? FINANCIAL_DEFAULTS.DISCOUNT_RATE,
+    riskSpread: stock.risk_spread ?? FINANCIAL_DEFAULTS.RISK_SPREAD,
   }
   const val = computeValuation(inputs)
   let qualityScore = 0
@@ -299,22 +299,30 @@ const getStockMetrics = (stock: Stock) => {
   return { mos: val.marginOfSafety, valStatus, qualityScore }
 }
 
+const stockMetricsMap = computed(() => {
+  const map = new Map<string, ReturnType<typeof getStockMetrics>>()
+  for (const stock of stocks.value) {
+    map.set(stock.id, getStockMetrics(stock))
+  }
+  return map
+})
+
 const filterAndSortStocks = (list: Stock[]) => {
   return list
     .filter(stock => {
       if (valuationFilter.value === 'all') return true
-      const { valStatus } = getStockMetrics(stock)
-      return valStatus === valuationFilter.value
+      const metrics = stockMetricsMap.value.get(stock.id)
+      return metrics?.valStatus === valuationFilter.value
     })
     .sort((a, b) => {
-      const metricsA = getStockMetrics(a)
-      const metricsB = getStockMetrics(b)
+      const metricsA = stockMetricsMap.value.get(a.id)
+      const metricsB = stockMetricsMap.value.get(b.id)
 
       if (sortBy.value === 'mos_desc') {
-        return metricsB.mos - metricsA.mos
+        return (metricsB?.mos ?? 0) - (metricsA?.mos ?? 0)
       }
       if (sortBy.value === 'quality_desc') {
-        return metricsB.qualityScore - metricsA.qualityScore
+        return (metricsB?.qualityScore ?? 0) - (metricsA?.qualityScore ?? 0)
       }
       return a.ticker.localeCompare(b.ticker)
     })

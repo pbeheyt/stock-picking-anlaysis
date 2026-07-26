@@ -1,4 +1,5 @@
 import YahooFinance from 'yahoo-finance2'
+import { FINANCIAL_DEFAULTS } from '../../../app/utils/valuation'
 import {
   clamp,
   computeGrowthCascade,
@@ -82,10 +83,10 @@ export default defineEventHandler(async (event) => {
 
     const revenueTTM = financialData.totalRevenue ?? null
     const sharesOutstanding = keyStats.sharesOutstanding ?? quote.sharesOutstanding ?? null
-    const currency = quote.currency || summaryDetail.currency || 'USD'
+    const currency = quote.currency || summaryDetail.currency || FINANCIAL_DEFAULTS.CURRENCY
 
-    const rawBeta = summaryDetail.beta ?? keyStats.beta ?? 1.0
-    const beta = typeof rawBeta === 'number' && isFinite(rawBeta) && rawBeta > 0 ? parseFloat(rawBeta.toFixed(2)) : 1.0
+    const rawBeta = summaryDetail.beta ?? keyStats.beta ?? FINANCIAL_DEFAULTS.BETA
+    const beta = typeof rawBeta === 'number' && isFinite(rawBeta) && rawBeta > 0 ? parseFloat(rawBeta.toFixed(2)) : FINANCIAL_DEFAULTS.BETA
     const defaultRiskSpread = parseFloat(clamp(0.10 + 0.05 * beta, 0.10, 0.25).toFixed(2))
 
     // Raw control metrics

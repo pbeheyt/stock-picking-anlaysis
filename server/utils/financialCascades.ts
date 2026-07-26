@@ -1,4 +1,5 @@
 import type { AuditCategory } from '~/types/database.types'
+import { FINANCIAL_DEFAULTS } from '../../app/utils/valuation'
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
@@ -44,10 +45,10 @@ export function computeGrowthCascade(
   const validNTM = typeof ntmRevenueGrowth === 'number' && isFinite(ntmRevenueGrowth) && ntmRevenueGrowth !== 0 ? ntmRevenueGrowth : null
   const validTTM = typeof ttmRevenueGrowth === 'number' && isFinite(ttmRevenueGrowth) && ttmRevenueGrowth !== 0 ? ttmRevenueGrowth : null
 
-  let selectedGrowth = 0.10
-  let growthSource = 'Fallback Modèle Standard (10%)'
+  let selectedGrowth = FINANCIAL_DEFAULTS.GROWTH_RATE
+  let growthSource = `Fallback Modèle Standard (${(FINANCIAL_DEFAULTS.GROWTH_RATE * 100).toFixed(0)}%)`
   let growthMode: 'cagr' | 'explicit' = 'cagr'
-  let g1 = 0.10, g2 = 0.10, g3 = 0.10, g4 = 0.10, g5 = 0.10
+  let g1 = FINANCIAL_DEFAULTS.GROWTH_RATE, g2 = FINANCIAL_DEFAULTS.GROWTH_RATE, g3 = FINANCIAL_DEFAULTS.GROWTH_RATE, g4 = FINANCIAL_DEFAULTS.GROWTH_RATE, g5 = FINANCIAL_DEFAULTS.GROWTH_RATE
 
   const candidates: AuditCategory['candidates'] = []
 
@@ -57,7 +58,7 @@ export function computeGrowthCascade(
     candidates.push(
       { name: 'Consensus CA (+1Y NTM)', value: parseFloat(validNTM.toFixed(4)), status: 'selected', note: 'Consensus Analystes CA (+1Y NTM)' },
       { name: 'Historique CA TTM Réalisé', value: validTTM !== null ? parseFloat(validTTM.toFixed(4)) : null, status: 'ignored', note: 'Non requis' },
-      { name: 'Fallback Standard (10%)', value: 0.10, status: 'ignored', note: 'Non requis' }
+      { name: `Fallback Standard (${(FINANCIAL_DEFAULTS.GROWTH_RATE * 100).toFixed(0)}%)`, value: FINANCIAL_DEFAULTS.GROWTH_RATE, status: 'ignored', note: 'Non requis' }
     )
   } else if (validTTM !== null) {
     selectedGrowth = clamp(validTTM, -0.5, 0.8)
@@ -65,15 +66,15 @@ export function computeGrowthCascade(
     candidates.push(
       { name: 'Consensus CA (+1Y NTM)', value: null, status: 'rejected', note: 'Non disponible' },
       { name: 'Historique CA TTM Réalisé', value: parseFloat(validTTM.toFixed(4)), status: 'selected', note: 'Historique CA TTM Réalisé' },
-      { name: 'Fallback Standard (10%)', value: 0.10, status: 'ignored', note: 'Non requis' }
+      { name: `Fallback Standard (${(FINANCIAL_DEFAULTS.GROWTH_RATE * 100).toFixed(0)}%)`, value: FINANCIAL_DEFAULTS.GROWTH_RATE, status: 'ignored', note: 'Non requis' }
     )
   } else {
-    selectedGrowth = 0.10
-    growthSource = 'Fallback Modèle Standard (10%)'
+    selectedGrowth = FINANCIAL_DEFAULTS.GROWTH_RATE
+    growthSource = `Fallback Modèle Standard (${(FINANCIAL_DEFAULTS.GROWTH_RATE * 100).toFixed(0)}%)`
     candidates.push(
       { name: 'Consensus CA (+1Y NTM)', value: null, status: 'rejected', note: 'Non disponible' },
       { name: 'Historique CA TTM Réalisé', value: null, status: 'rejected', note: 'Non disponible' },
-      { name: 'Fallback Standard (10%)', value: 0.10, status: 'fallback', note: '⚠️ Valeur par défaut : 10.0%' }
+      { name: `Fallback Standard (${(FINANCIAL_DEFAULTS.GROWTH_RATE * 100).toFixed(0)}%)`, value: FINANCIAL_DEFAULTS.GROWTH_RATE, status: 'fallback', note: `⚠️ Valeur par défaut : ${(FINANCIAL_DEFAULTS.GROWTH_RATE * 100).toFixed(1)}%` }
     )
   }
 
@@ -103,8 +104,8 @@ export function computeGrowthCascade(
 }
 
 export function computeMarginCascade(marginNetRaw: number | null): CascadeMarginResult {
-  let selectedMargin = 0.15
-  let marginSource = 'Fallback Modèle Standard (15%)'
+  let selectedMargin = FINANCIAL_DEFAULTS.MARGIN_NET
+  let marginSource = `Fallback Modèle Standard (${(FINANCIAL_DEFAULTS.MARGIN_NET * 100).toFixed(0)}%)`
   const candidates: AuditCategory['candidates'] = []
 
   if (typeof marginNetRaw === 'number' && isFinite(marginNetRaw) && marginNetRaw > 0) {
@@ -112,14 +113,14 @@ export function computeMarginCascade(marginNetRaw: number | null): CascadeMargin
     marginSource = 'Marge Nette TTM Réelle'
     candidates.push(
       { name: 'Marge Nette TTM Réelle', value: parseFloat(marginNetRaw.toFixed(4)), status: 'selected', note: 'Marge Nette TTM Réelle' },
-      { name: 'Fallback Standard (15%)', value: 0.15, status: 'ignored', note: 'Non requis' }
+      { name: `Fallback Standard (${(FINANCIAL_DEFAULTS.MARGIN_NET * 100).toFixed(0)}%)`, value: FINANCIAL_DEFAULTS.MARGIN_NET, status: 'ignored', note: 'Non requis' }
     )
   } else {
-    selectedMargin = 0.15
-    marginSource = 'Fallback Modèle Standard (15%)'
+    selectedMargin = FINANCIAL_DEFAULTS.MARGIN_NET
+    marginSource = `Fallback Modèle Standard (${(FINANCIAL_DEFAULTS.MARGIN_NET * 100).toFixed(0)}%)`
     candidates.push(
       { name: 'Marge Nette TTM Réelle', value: marginNetRaw !== null ? parseFloat(marginNetRaw.toFixed(4)) : null, status: 'rejected', note: 'Rejeté : Non disponible ou négatif' },
-      { name: 'Fallback Standard (15%)', value: 0.15, status: 'fallback', note: '⚠️ Boîte déficitaire : Marge par défaut à 15.0%' }
+      { name: `Fallback Standard (${(FINANCIAL_DEFAULTS.MARGIN_NET * 100).toFixed(0)}%)`, value: FINANCIAL_DEFAULTS.MARGIN_NET, status: 'fallback', note: `⚠️ Boîte déficitaire : Marge par défaut à ${(FINANCIAL_DEFAULTS.MARGIN_NET * 100).toFixed(1)}%` }
     )
   }
 
@@ -127,8 +128,8 @@ export function computeMarginCascade(marginNetRaw: number | null): CascadeMargin
 }
 
 export function computePECascade(peForwardRaw: number | null, peTrailingRaw: number | null): CascadePEResult {
-  let selectedPE = 20.0
-  let peSource = 'Multiple par Défaut (20.0x)'
+  let selectedPE = FINANCIAL_DEFAULTS.TARGET_MULTIPLE
+  let peSource = `Multiple par Défaut (${FINANCIAL_DEFAULTS.TARGET_MULTIPLE.toFixed(1)}x)`
   const candidates: AuditCategory['candidates'] = []
 
   if (typeof peForwardRaw === 'number' && isFinite(peForwardRaw) && peForwardRaw > 0) {
@@ -137,7 +138,7 @@ export function computePECascade(peForwardRaw: number | null, peTrailingRaw: num
     candidates.push(
       { name: 'Forward P/E', value: parseFloat(peForwardRaw.toFixed(2)), status: 'selected', note: 'Consensus Forward P/E' },
       { name: 'Trailing P/E', value: peTrailingRaw !== null ? parseFloat(peTrailingRaw.toFixed(2)) : null, status: 'ignored', note: 'Non requis' },
-      { name: 'Multiple par Défaut (20.0x)', value: 20.0, status: 'ignored', note: 'Non requis' }
+      { name: `Multiple par Défaut (${FINANCIAL_DEFAULTS.TARGET_MULTIPLE.toFixed(1)}x)`, value: FINANCIAL_DEFAULTS.TARGET_MULTIPLE, status: 'ignored', note: 'Non requis' }
     )
   } else if (typeof peTrailingRaw === 'number' && isFinite(peTrailingRaw) && peTrailingRaw > 0) {
     selectedPE = clamp(peTrailingRaw, 5, 120)
@@ -145,15 +146,15 @@ export function computePECascade(peForwardRaw: number | null, peTrailingRaw: num
     candidates.push(
       { name: 'Forward P/E', value: null, status: 'rejected', note: 'Non disponible' },
       { name: 'Trailing P/E', value: parseFloat(peTrailingRaw.toFixed(2)), status: 'selected', note: 'P/E Trailing TTM' },
-      { name: 'Multiple par Défaut (20.0x)', value: 20.0, status: 'ignored', note: 'Non requis' }
+      { name: `Multiple par Défaut (${FINANCIAL_DEFAULTS.TARGET_MULTIPLE.toFixed(1)}x)`, value: FINANCIAL_DEFAULTS.TARGET_MULTIPLE, status: 'ignored', note: 'Non requis' }
     )
   } else {
-    selectedPE = 20.0
-    peSource = 'Multiple par Défaut (20.0x)'
+    selectedPE = FINANCIAL_DEFAULTS.TARGET_MULTIPLE
+    peSource = `Multiple par Défaut (${FINANCIAL_DEFAULTS.TARGET_MULTIPLE.toFixed(1)}x)`
     candidates.push(
       { name: 'Forward P/E', value: null, status: 'rejected', note: 'Non disponible' },
       { name: 'Trailing P/E', value: peTrailingRaw !== null ? parseFloat(peTrailingRaw.toFixed(2)) : null, status: 'rejected', note: 'Rejeté : Bénéfice Négatif ou non disponible' },
-      { name: 'Multiple par Défaut (20.0x)', value: 20.0, status: 'fallback', note: '⚠️ Boîte non rentable / P/E absent : Multiple par défaut à 20.0x' }
+      { name: `Multiple par Défaut (${FINANCIAL_DEFAULTS.TARGET_MULTIPLE.toFixed(1)}x)`, value: FINANCIAL_DEFAULTS.TARGET_MULTIPLE, status: 'fallback', note: `⚠️ Boîte non rentable / P/E absent : Multiple par défaut à ${FINANCIAL_DEFAULTS.TARGET_MULTIPLE.toFixed(1)}x` }
     )
   }
 
