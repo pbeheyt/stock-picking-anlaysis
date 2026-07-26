@@ -1,5 +1,6 @@
-import { getDb } from '../../../utils/db'
+import { StockRepository } from '../../../repository/stockRepository'
 import { aiComplete, parseAiJson } from '../../../utils/ai'
+import { computeQualityScore, type BrickKey } from '~/utils/qualitative'
 
 export default defineEventHandler(async (event) => {
   const ticker = getRouterParam(event, 'ticker')?.toUpperCase()
@@ -13,8 +14,7 @@ export default defineEventHandler(async (event) => {
 
   const targetAiModel = body.model || 'deepseek-v4-flash'
 
-  const db = getDb()
-  const stock = db.prepare('SELECT * FROM stocks WHERE ticker = ?').get(ticker) as any
+  const stock = await StockRepository.getByTicker(ticker)
   if (!stock) throw createError({ statusCode: 404, statusMessage: 'Stock non trouvé' })
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -105,15 +105,11 @@ FORMAT JSON EXCLUSIF ATTENDU :
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  Calcul du Score Global /100 et Attribution du Tier
+  //  Calcul du Score Global /100 et Attribution du Tier via computeQualityScore
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const brickKeys = ['moat', 'growth', 'financials', 'management'] as const
-  const WEIGHTS = { moat: 0.30, growth: 0.25, financials: 0.25, management: 0.20 }
-
-  const evaluations: Record<string, { score: number; justification: string; summary: string; key_takeaways: string[]; takeaways: string[] }> = {}
-
-  let totalScore = 0
+  const brickKeys: BrickKey[] = ['moat', 'growth', 'financials', 'management']
+  const evaluations: Record<string, any> = {}
 
   for (const key of brickKeys) {
     const bData = extractedData[key] || {}
@@ -129,21 +125,12 @@ FORMAT JSON EXCLUSIF ATTENDU :
       key_takeaways,
       takeaways: key_takeaways,
     }
-
-    totalScore += score * WEIGHTS[key]
   }
 
-  const qualityScore = Math.round(totalScore * 10)
-
-  let tier: 'S' | 'A' | 'B' | 'C' | 'F'
-  if (qualityScore >= 90) tier = 'S'
-  else if (qualityScore >= 75) tier = 'A'
-  else if (qualityScore >= 55) tier = 'B'
-  else if (qualityScore >= 40) tier = 'C'
-  else tier = 'F'
+  const { score: qualityScore, tier } = computeQualityScore(evaluations as any)
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  Persistance SQLite
+  //  Persistance SQLite via StockRepository
   // ═══════════════════════════════════════════════════════════════════════════
 
   const qualitativeData = {
@@ -154,8 +141,7 @@ FORMAT JSON EXCLUSIF ATTENDU :
     tier,
   }
 
-  db.prepare('UPDATE stocks SET qualitative_data = ?, updated_at = ? WHERE id = ?')
-    .run(JSON.stringify(qualitativeData), new Date().toISOString(), stock.id)
+  await StockRepository.updateQualitativeData(stock.id, qualitativeData)
 
   return qualitativeData
 })

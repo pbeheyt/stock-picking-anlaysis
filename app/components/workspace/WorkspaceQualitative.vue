@@ -33,7 +33,7 @@ const fetchQualitativeData = async () => {
   isLoading.value = true
   errorMessage.value = null
   try {
-    const res = await $fetch<QualitativeData | null>(`/api/stock/${encodeURIComponent(props.ticker)}/qualitative`)
+    const res = await $fetch<QualitativeData | null>(`/api/stocks/${encodeURIComponent(props.ticker)}/qualitative`)
     data.value = res
   } catch (err: any) {
     console.error('Erreur chargement qualitative_data:', err)
@@ -82,7 +82,7 @@ const handleRunAnalysis = async (payload: { rawReport: string; modelId?: string 
   currentAbortController = new AbortController()
 
   try {
-    const result = await $fetch<QualitativeData>(`/api/stock/${encodeURIComponent(props.ticker)}/qualitative`, {
+    const result = await $fetch<QualitativeData>(`/api/stocks/${encodeURIComponent(props.ticker)}/qualitative`, {
       method: 'POST',
       headers: getApiHeaders(),
       body: {

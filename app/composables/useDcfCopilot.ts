@@ -65,7 +65,7 @@ Fournis un rapport complet et structuré en français avec toutes les données c
 
   const injectYahooBaselineProjections = async () => {
     try {
-      const freshApi = await $fetch<any>(`/api/stock/${encodeURIComponent(tickerParam.value)}`)
+      const freshApi = await $fetch<any>(`/api/stocks/${encodeURIComponent(tickerParam.value)}`)
       if (!freshApi) return
 
       workspace.growthMode.value = freshApi.growth_mode || 'cagr'
@@ -105,7 +105,7 @@ Fournis un rapport complet et structuré en français avec toutes les données c
 
     isAnalyzingQuant.value = true
     try {
-      const res = await $fetch<QuantitativeAIResult>(`/api/stock/${encodeURIComponent(tickerParam.value)}/quantitative`, {
+      const res = await $fetch<QuantitativeAIResult>(`/api/stocks/${encodeURIComponent(tickerParam.value)}/quantitative`, {
         method: 'POST',
         headers: getApiHeaders(),
         body: { raw_report: rawReport, model },

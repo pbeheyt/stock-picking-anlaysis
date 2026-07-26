@@ -127,4 +127,50 @@ export class StockRepository {
     const result = db.prepare('DELETE FROM stocks WHERE id = ?').run(id)
     return result.changes > 0
   }
+
+  static async updateQualitativeData(id: string, qualitativeData: any): Promise<void> {
+    const db = getDb()
+    const now = new Date().toISOString()
+    const payloadStr = typeof qualitativeData === 'string' ? qualitativeData : JSON.stringify(qualitativeData)
+    db.prepare('UPDATE stocks SET qualitative_data = ?, updated_at = ? WHERE id = ?').run(payloadStr, now, id)
+  }
+
+  static async updateQuantiAiData(id: string, quantiAiData: any): Promise<void> {
+    const db = getDb()
+    const now = new Date().toISOString()
+    const payloadStr = typeof quantiAiData === 'string' ? quantiAiData : JSON.stringify(quantiAiData)
+    db.prepare('UPDATE stocks SET quanti_ai_data = ?, updated_at = ? WHERE id = ?').run(payloadStr, now, id)
+  }
+
+  static async batchUpdateQuotes(quotesArray: any[]): Promise<number> {
+    const db = getDb()
+    const now = new Date().toISOString()
+    const updateStmt = db.prepare(`
+      UPDATE stocks 
+      SET 
+        current_price = ?,
+        pe_trailing_raw = ?,
+        pe_forward_raw = ?,
+        fetched_at = ?,
+        updated_at = ?
+      WHERE UPPER(ticker) = ?
+    `)
+
+    let count = 0
+    const transaction = db.transaction(() => {
+      for (const q of quotesArray) {
+        if (!q || !q.symbol || q.regularMarketPrice === undefined) continue
+        const ticker = String(q.symbol).toUpperCase()
+        const price = q.regularMarketPrice ?? null
+        const peTrailing = q.trailingPE ?? null
+        const peForward = q.forwardPE ?? null
+
+        updateStmt.run(price, peTrailing, peForward, now, now, ticker)
+        count++
+      }
+    })
+
+    transaction()
+    return count
+  }
 }

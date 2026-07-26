@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Stock, StockStatus, StockApiResponse, QualitativeData } from '~/types/database.types'
 import { computeValuation, createValuationInputsFromStock, type ValuationInputs } from '~/utils/valuation'
-import type { StockSearchResult } from '~/server/api/stock/search.get'
+import type { StockSearchResult } from '~/server/api/stocks/search.get'
 
 const toast = useToast()
 
@@ -27,7 +27,7 @@ const handleSearchInput = () => {
   searchDebounceTimer = setTimeout(async () => {
     isSearchingSuggestions.value = true
     try {
-      const results = await $fetch<StockSearchResult[]>(`/api/stock/search?q=${encodeURIComponent(query)}`)
+      const results = await $fetch<StockSearchResult[]>(`/api/stocks/search?q=${encodeURIComponent(query)}`)
       searchResults.value = results || []
       showSuggestions.value = searchResults.value.length > 0
     } catch {
@@ -155,7 +155,7 @@ const analyzeAndAddStock = async () => {
   isLoading.value = true
 
   try {
-    const stockData = await $fetch<StockApiResponse>(`/api/stock/${encodeURIComponent(ticker)}`)
+    const stockData = await $fetch<StockApiResponse>(`/api/stocks/${encodeURIComponent(ticker)}`)
     const existing = stocks.value.find(s => s.ticker.toUpperCase() === stockData.ticker.toUpperCase())
 
     if (existing) {

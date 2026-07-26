@@ -1,4 +1,4 @@
-import { getDb } from '../../../utils/db'
+import { StockRepository } from '../../../repository/stockRepository'
 import { aiComplete, parseAiJson } from '../../../utils/ai'
 import type { QuantitativeAIResult } from '~/types/ai.types'
 export type { QuantitativeAIResult }
@@ -15,8 +15,7 @@ export default defineEventHandler(async (event) => {
 
   const targetAiModel = body.model || 'deepseek-v4-flash'
 
-  const db = getDb()
-  const stock = db.prepare('SELECT * FROM stocks WHERE ticker = ?').get(ticker) as any
+  const stock = await StockRepository.getByTicker(ticker)
   if (!stock) throw createError({ statusCode: 404, statusMessage: 'Stock non trouvé' })
 
   const quantSystemPrompt = `Tu es un analyste financier Senior d'Equity Research (Wall Street).
@@ -107,8 +106,7 @@ FORMAT JSON EXCLUSIF ATTENDU :
   }
 
   try {
-    db.prepare('UPDATE stocks SET quanti_ai_data = ?, updated_at = ? WHERE id = ?')
-      .run(JSON.stringify(quantitativeResult), new Date().toISOString(), stock.id)
+    await StockRepository.updateQuantiAiData(stock.id, quantitativeResult)
   } catch (err) {
     console.warn('Persistance quanti_ai_data optionnelle:', err)
   }

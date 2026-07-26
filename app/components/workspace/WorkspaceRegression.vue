@@ -91,7 +91,7 @@ const fetchHistory = async (forceRefresh = false) => {
   }
   errorMessage.value = null
   try {
-    const url = `/api/stock/${encodeURIComponent(props.ticker)}/history${forceRefresh ? '?refresh=true' : ''}`
+    const url = `/api/stocks/${encodeURIComponent(props.ticker)}/history${forceRefresh ? '?refresh=true' : ''}`
     const res = await $fetch<{
       ticker: string
       currency: string

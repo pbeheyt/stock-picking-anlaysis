@@ -90,7 +90,7 @@ export function useStockWorkspace(tickerParam: Ref<string>) {
       let found = allStocks.find(s => s.ticker === tickerParam.value)
 
       if (!found) {
-        const apiData = await $fetch<any>(`/api/stock/${encodeURIComponent(tickerParam.value)}`)
+        const apiData = await $fetch<any>(`/api/stocks/${encodeURIComponent(tickerParam.value)}`)
         found = {
           id: `temp-${apiData.ticker}`,
           ticker: apiData.ticker,
