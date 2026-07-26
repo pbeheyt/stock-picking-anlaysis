@@ -209,3 +209,54 @@ export function computeReverseDCF(inputs: ValuationInputs): ReverseDCFResult {
     }
   }
 }
+
+export interface YearProjection {
+  year: number
+  growth: number
+  revenue: number
+  margin: number
+  earnings: number
+}
+
+export function build5YearProjections(
+  baseRev: number,
+  growthMode: GrowthMode,
+  growth: number,
+  growthRates: [number, number, number, number, number],
+  marginMode: MarginMode,
+  margin: number,
+  margins: [number, number, number, number, number]
+): YearProjection[] {
+  if (!baseRev || baseRev <= 0) return []
+
+  const activeMargins = marginMode === 'explicit'
+    ? margins
+    : [margin, margin, margin, margin, margin]
+
+  if (growthMode === 'cagr') {
+    return [1, 2, 3, 4, 5].map((year, idx) => {
+      const rev = baseRev * Math.pow(1 + growth, year)
+      const m = activeMargins[idx]
+      return {
+        year,
+        growth,
+        revenue: rev,
+        margin: m,
+        earnings: rev * m,
+      }
+    })
+  } else {
+    let current = baseRev
+    return growthRates.map((r, idx) => {
+      current = current * (1 + r)
+      const m = activeMargins[idx]
+      return {
+        year: idx + 1,
+        growth: r,
+        revenue: current,
+        margin: m,
+        earnings: current * m,
+      }
+    })
+  }
+}

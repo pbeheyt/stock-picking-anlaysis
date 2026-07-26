@@ -1,5 +1,5 @@
 import type { AuditCategory } from '~/types/database.types'
-import { FINANCIAL_DEFAULTS } from '../../app/utils/valuation'
+import { FINANCIAL_DEFAULTS } from '~/utils/valuation'
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))

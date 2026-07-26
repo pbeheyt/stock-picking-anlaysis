@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import Database from 'better-sqlite3'
+import { safeJsonParse } from '~/utils/format'
 
 let _db: Database.Database | null = null
 
@@ -160,10 +161,8 @@ export function parseStockRecord(row: any): any {
   const parsed = { ...row }
   const jsonFields = ['audit_data', 'qualitative_data', 'quanti_ai_data']
   for (const field of jsonFields) {
-    if (parsed[field] && typeof parsed[field] === 'string') {
-      try {
-        parsed[field] = JSON.parse(parsed[field])
-      } catch {}
+    if (parsed[field] !== undefined) {
+      parsed[field] = safeJsonParse(parsed[field], null)
     }
   }
   return parsed

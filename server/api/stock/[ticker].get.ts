@@ -1,5 +1,5 @@
 import YahooFinance from 'yahoo-finance2'
-import { FINANCIAL_DEFAULTS } from '../../../app/utils/valuation'
+import { FINANCIAL_DEFAULTS } from '~/utils/valuation'
 import {
   clamp,
   computeGrowthCascade,

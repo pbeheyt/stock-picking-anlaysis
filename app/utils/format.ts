@@ -81,3 +81,13 @@ export function formatDurationYearsDecimal(startDateStr: string, endDateStr: str
   const formatted = years.toFixed(1).replace('.', ',')
   return `${formatted} ${years >= 2 ? 'ans' : 'an'}`
 }
+
+export function safeJsonParse<T>(data: unknown, fallback: T): T {
+  if (data === null || data === undefined) return fallback
+  if (typeof data !== 'string') return data as T
+  try {
+    return JSON.parse(data) as T
+  } catch {
+    return fallback
+  }
+}

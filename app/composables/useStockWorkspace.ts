@@ -2,6 +2,7 @@ import type { Stock, GrowthMode, MarginMode, AuditData, StockStatus } from '~/ty
 import {
   computeScenarios,
   computeReverseDCF,
+  build5YearProjections,
   FINANCIAL_DEFAULTS,
   type ValuationInputs,
   type ScenarioResults,
@@ -248,41 +249,15 @@ export function useStockWorkspace(tickerParam: Ref<string>) {
 
   // Projections P&L 5 ans
   const revenueProjections = computed(() => {
-    const baseRev = stock.value?.revenue_ttm ?? 0
-    if (!baseRev) return []
-
-    const margins = marginMode.value === 'explicit'
-      ? [marginY1.value, marginY2.value, marginY3.value, marginY4.value, marginY5.value]
-      : [margin.value, margin.value, margin.value, margin.value, margin.value]
-
-    if (growthMode.value === 'cagr') {
-      const g = growth.value
-      return [1, 2, 3, 4, 5].map((year, idx) => {
-        const rev = baseRev * Math.pow(1 + g, year)
-        const m = margins[idx]
-        return {
-          year,
-          growth: g,
-          revenue: rev,
-          margin: m,
-          earnings: rev * m,
-        }
-      })
-    } else {
-      const rates = [growthY1.value, growthY2.value, growthY3.value, growthY4.value, growthY5.value]
-      let current = baseRev
-      return rates.map((r, idx) => {
-        current = current * (1 + r)
-        const m = margins[idx]
-        return {
-          year: idx + 1,
-          growth: r,
-          revenue: current,
-          margin: m,
-          earnings: current * m,
-        }
-      })
-    }
+    return build5YearProjections(
+      stock.value?.revenue_ttm ?? 0,
+      growthMode.value,
+      growth.value,
+      [growthY1.value, growthY2.value, growthY3.value, growthY4.value, growthY5.value],
+      marginMode.value,
+      margin.value,
+      [marginY1.value, marginY2.value, marginY3.value, marginY4.value, marginY5.value]
+    )
   })
 
   // Handlers d'édition
@@ -371,10 +346,7 @@ export function useStockWorkspace(tickerParam: Ref<string>) {
 
   const parsedAuditData = computed<AuditData | null>(() => {
     if (!stock.value?.audit_data) return null
-    if (typeof stock.value.audit_data === 'string') {
-      try { return JSON.parse(stock.value.audit_data) } catch { return null }
-    }
-    return stock.value.audit_data as AuditData
+    return safeJsonParse<AuditData | null>(stock.value.audit_data, null)
   })
 
   return {

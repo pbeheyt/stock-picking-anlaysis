@@ -284,12 +284,8 @@ const getStockMetrics = (stock: Stock) => {
   const val = computeValuation(inputs)
   let qualityScore = 0
   if (stock.qualitative_data) {
-    try {
-      const qData = typeof stock.qualitative_data === 'string' ? JSON.parse(stock.qualitative_data) : stock.qualitative_data
-      qualityScore = qData.quality_score || 0
-    } catch {
-      qualityScore = 0
-    }
+    const qData = safeJsonParse<QualitativeData | null>(stock.qualitative_data, null)
+    qualityScore = qData?.quality_score || 0
   }
 
   let valStatus: 'undervalued' | 'fair' | 'overvalued' = 'fair'

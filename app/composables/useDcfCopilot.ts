@@ -28,11 +28,7 @@ Fournis un rapport complet et structuré en français avec toutes les données c
   // Synchronise les données existantes du stock si disponibles
   watch(() => workspace.stock.value, (newStock) => {
     if (newStock?.quanti_ai_data && !quantAiResult.value) {
-      try {
-        quantAiResult.value = typeof newStock.quanti_ai_data === 'string'
-          ? JSON.parse(newStock.quanti_ai_data)
-          : newStock.quanti_ai_data
-      } catch {}
+      quantAiResult.value = safeJsonParse(newStock.quanti_ai_data, null)
     }
   }, { immediate: true })
 
