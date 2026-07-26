@@ -1,3 +1,5 @@
+import type { Stock } from '~/types/database.types'
+
 export type GrowthMode = 'cagr' | 'explicit'
 export type MarginMode = 'constant' | 'explicit'
 export type MarginType = 'net_income' | 'fcf'
@@ -15,6 +17,33 @@ export const FINANCIAL_DEFAULTS = {
   GROWTH_MODE: 'cagr' as const,
   MARGIN_MODE: 'constant' as const,
 } as const
+
+export function createValuationInputsFromStock(stock: Partial<Stock>): ValuationInputs {
+  return {
+    currentPrice: stock.current_price ?? 0,
+    revenueTTM: stock.revenue_ttm ?? 0,
+    sharesOutstanding: stock.shares_outstanding ?? 0,
+    growthMode: stock.growth_mode || FINANCIAL_DEFAULTS.GROWTH_MODE,
+    growth: stock.projected_growth ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    growthY1: stock.growth_y1 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    growthY2: stock.growth_y2 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    growthY3: stock.growth_y3 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    growthY4: stock.growth_y4 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    growthY5: stock.growth_y5 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    marginType: FINANCIAL_DEFAULTS.MARGIN_TYPE,
+    marginMode: stock.margin_mode || FINANCIAL_DEFAULTS.MARGIN_MODE,
+    margin: stock.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    marginY1: stock.margin_y1 ?? stock.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    marginY2: stock.margin_y2 ?? stock.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    marginY3: stock.margin_y3 ?? stock.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    marginY4: stock.margin_y4 ?? stock.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    marginY5: stock.margin_y5 ?? stock.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    targetMultiple: stock.target_multiple ?? FINANCIAL_DEFAULTS.TARGET_MULTIPLE,
+    discountRate: stock.discount_rate ?? FINANCIAL_DEFAULTS.DISCOUNT_RATE,
+    riskSpread: stock.risk_spread ?? FINANCIAL_DEFAULTS.RISK_SPREAD,
+  }
+}
+
 
 export interface ValuationInputs {
   currentPrice: number

@@ -1,6 +1,6 @@
-import { getDb } from '../../utils/db'
+import { StockRepository } from '../../repository/stockRepository'
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) {
     throw createError({
@@ -9,10 +9,8 @@ export default defineEventHandler((event) => {
     })
   }
 
-  const db = getDb()
-  const result = db.prepare('DELETE FROM stocks WHERE id = ?').run(id)
-
-  if (result.changes === 0) {
+  const deleted = await StockRepository.delete(id)
+  if (!deleted) {
     throw createError({
       statusCode: 404,
       statusMessage: 'Stock non trouvé',

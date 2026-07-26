@@ -1,4 +1,4 @@
-import type { QuantitativeAIResult } from '~/server/api/stock/[ticker]/quantitative.post'
+import type { QuantitativeAIResult } from '~/types/ai.types'
 
 export type StockStatus = 'portfolio' | 'watchlist'
 export type GrowthMode = 'cagr' | 'explicit'

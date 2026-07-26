@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Stock, StockStatus, StockApiResponse, QualitativeData } from '~/types/database.types'
-import { computeValuation, FINANCIAL_DEFAULTS, type ValuationInputs } from '~/utils/valuation'
+import { computeValuation, createValuationInputsFromStock, type ValuationInputs } from '~/utils/valuation'
 import type { StockSearchResult } from '~/server/api/stock/search.get'
 
 const toast = useToast()
@@ -264,23 +264,7 @@ const confirmDeleteStock = async () => {
 
 // Compute valuation metadata for sorting and filtering
 const getStockMetrics = (stock: Stock) => {
-  const inputs: ValuationInputs = {
-    currentPrice: stock.current_price ?? 0,
-    revenueTTM: stock.revenue_ttm ?? 0,
-    sharesOutstanding: stock.shares_outstanding ?? 0,
-    growthMode: stock.growth_mode || FINANCIAL_DEFAULTS.GROWTH_MODE,
-    growth: stock.projected_growth ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
-    growthY1: stock.growth_y1 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
-    growthY2: stock.growth_y2 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
-    growthY3: stock.growth_y3 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
-    growthY4: stock.growth_y4 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
-    growthY5: stock.growth_y5 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
-    marginType: FINANCIAL_DEFAULTS.MARGIN_TYPE,
-    margin: stock.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
-    targetMultiple: stock.target_multiple ?? FINANCIAL_DEFAULTS.TARGET_MULTIPLE,
-    discountRate: stock.discount_rate ?? FINANCIAL_DEFAULTS.DISCOUNT_RATE,
-    riskSpread: stock.risk_spread ?? FINANCIAL_DEFAULTS.RISK_SPREAD,
-  }
+  const inputs = createValuationInputsFromStock(stock)
   const val = computeValuation(inputs)
   let qualityScore = 0
   if (stock.qualitative_data) {

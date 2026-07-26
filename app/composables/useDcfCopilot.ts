@@ -1,4 +1,4 @@
-import type { QuantitativeAIResult } from '~/server/api/stock/[ticker]/quantitative.post'
+import type { QuantitativeAIResult } from '~/types/ai.types'
 import type { useStockWorkspace } from './useStockWorkspace'
 
 export function useDcfCopilot(

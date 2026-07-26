@@ -21,19 +21,35 @@ export function useStockWorkspace(tickerParam: Ref<string>) {
   // Local Editable Hypotheses
   const growthMode = ref<GrowthMode>(FINANCIAL_DEFAULTS.GROWTH_MODE)
   const growth = ref<number>(FINANCIAL_DEFAULTS.GROWTH_RATE)
-  const growthY1 = ref<number>(FINANCIAL_DEFAULTS.GROWTH_RATE)
-  const growthY2 = ref<number>(FINANCIAL_DEFAULTS.GROWTH_RATE)
-  const growthY3 = ref<number>(FINANCIAL_DEFAULTS.GROWTH_RATE)
-  const growthY4 = ref<number>(FINANCIAL_DEFAULTS.GROWTH_RATE)
-  const growthY5 = ref<number>(FINANCIAL_DEFAULTS.GROWTH_RATE)
+  const growthYears = ref<number[]>([
+    FINANCIAL_DEFAULTS.GROWTH_RATE,
+    FINANCIAL_DEFAULTS.GROWTH_RATE,
+    FINANCIAL_DEFAULTS.GROWTH_RATE,
+    FINANCIAL_DEFAULTS.GROWTH_RATE,
+    FINANCIAL_DEFAULTS.GROWTH_RATE,
+  ])
 
   const marginMode = ref<MarginMode>(FINANCIAL_DEFAULTS.MARGIN_MODE)
   const margin = ref<number>(FINANCIAL_DEFAULTS.PROJECTED_MARGIN)
-  const marginY1 = ref<number>(FINANCIAL_DEFAULTS.PROJECTED_MARGIN)
-  const marginY2 = ref<number>(FINANCIAL_DEFAULTS.PROJECTED_MARGIN)
-  const marginY3 = ref<number>(FINANCIAL_DEFAULTS.PROJECTED_MARGIN)
-  const marginY4 = ref<number>(FINANCIAL_DEFAULTS.PROJECTED_MARGIN)
-  const marginY5 = ref<number>(FINANCIAL_DEFAULTS.PROJECTED_MARGIN)
+  const marginYears = ref<number[]>([
+    FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+    FINANCIAL_DEFAULTS.PROJECTED_MARGIN,
+  ])
+
+  const growthY1 = computed({ get: () => growthYears.value[0], set: v => { growthYears.value[0] = v } })
+  const growthY2 = computed({ get: () => growthYears.value[1], set: v => { growthYears.value[1] = v } })
+  const growthY3 = computed({ get: () => growthYears.value[2], set: v => { growthYears.value[2] = v } })
+  const growthY4 = computed({ get: () => growthYears.value[3], set: v => { growthYears.value[3] = v } })
+  const growthY5 = computed({ get: () => growthYears.value[4], set: v => { growthYears.value[4] = v } })
+
+  const marginY1 = computed({ get: () => marginYears.value[0], set: v => { marginYears.value[0] = v } })
+  const marginY2 = computed({ get: () => marginYears.value[1], set: v => { marginYears.value[1] = v } })
+  const marginY3 = computed({ get: () => marginYears.value[2], set: v => { marginYears.value[2] = v } })
+  const marginY4 = computed({ get: () => marginYears.value[3], set: v => { marginYears.value[3] = v } })
+  const marginY5 = computed({ get: () => marginYears.value[4], set: v => { marginYears.value[4] = v } })
 
   const targetMultiple = ref<number>(FINANCIAL_DEFAULTS.TARGET_MULTIPLE)
   const discountRate = ref<number>(FINANCIAL_DEFAULTS.DISCOUNT_RATE)
@@ -42,19 +58,24 @@ export function useStockWorkspace(tickerParam: Ref<string>) {
   const initFormValues = (s: Stock) => {
     growthMode.value = s.growth_mode || FINANCIAL_DEFAULTS.GROWTH_MODE
     growth.value = s.projected_growth ?? FINANCIAL_DEFAULTS.GROWTH_RATE
-    growthY1.value = s.growth_y1 ?? FINANCIAL_DEFAULTS.GROWTH_RATE
-    growthY2.value = s.growth_y2 ?? FINANCIAL_DEFAULTS.GROWTH_RATE
-    growthY3.value = s.growth_y3 ?? FINANCIAL_DEFAULTS.GROWTH_RATE
-    growthY4.value = s.growth_y4 ?? FINANCIAL_DEFAULTS.GROWTH_RATE
-    growthY5.value = s.growth_y5 ?? FINANCIAL_DEFAULTS.GROWTH_RATE
+    growthYears.value = [
+      s.growth_y1 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+      s.growth_y2 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+      s.growth_y3 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+      s.growth_y4 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+      s.growth_y5 ?? FINANCIAL_DEFAULTS.GROWTH_RATE,
+    ]
 
     marginMode.value = s.margin_mode || FINANCIAL_DEFAULTS.MARGIN_MODE
     margin.value = s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
-    marginY1.value = s.margin_y1 ?? s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
-    marginY2.value = s.margin_y2 ?? s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
-    marginY3.value = s.margin_y3 ?? s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
-    marginY4.value = s.margin_y4 ?? s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
-    marginY5.value = s.margin_y5 ?? s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
+    const defMargin = s.projected_margin ?? FINANCIAL_DEFAULTS.PROJECTED_MARGIN
+    marginYears.value = [
+      s.margin_y1 ?? defMargin,
+      s.margin_y2 ?? defMargin,
+      s.margin_y3 ?? defMargin,
+      s.margin_y4 ?? defMargin,
+      s.margin_y5 ?? defMargin,
+    ]
 
     targetMultiple.value = s.target_multiple ?? FINANCIAL_DEFAULTS.TARGET_MULTIPLE
     discountRate.value = s.discount_rate ?? FINANCIAL_DEFAULTS.DISCOUNT_RATE

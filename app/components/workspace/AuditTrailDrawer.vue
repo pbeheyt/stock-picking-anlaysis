@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AuditData } from '~/types/database.types'
-import type { QuantitativeAIResult } from '~/server/api/stock/[ticker]/quantitative.post'
+import type { QuantitativeAIResult } from '~/types/ai.types'
 
 const props = defineProps<{
   isOpen: boolean

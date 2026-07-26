@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Stock, GrowthMode, MarginMode } from '~/types/database.types'
 import type { ScenarioResults } from '~/utils/valuation'
-import type { QuantitativeAIResult } from '~/server/api/stock/[ticker]/quantitative.post'
+import type { QuantitativeAIResult } from '~/types/ai.types'
 import { formatScaledCurrency, formatPercent } from '~/utils/format'
 
 export interface ProjectionItem {

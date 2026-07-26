@@ -1,21 +1,7 @@
 import { getDb } from '../../../utils/db'
 import { aiComplete, parseAiJson } from '../../../utils/ai'
-
-export interface QuantitativeAIResult {
-  growth_projections: number[] // 5 numbers in %, e.g. [15.0, 12.5, 10.0, 8.0, 6.0]
-  margin_projections: number[] // 5 numbers in %, e.g. [22.0, 23.0, 24.0, 25.0, 25.0]
-  target_multiple: number // P/E exit multiple, e.g. 25.0
-  discount_rate: number // WACC in %, e.g. 9.5
-  risk_spread: number // scenario spread in %, e.g. 15.0
-  justifications: {
-    growth: string
-    margin: string
-    multiple: string
-    wacc: string
-  }
-  raw_report?: string
-  analyzed_at?: string
-}
+import type { QuantitativeAIResult } from '~/types/ai.types'
+export type { QuantitativeAIResult }
 
 export default defineEventHandler(async (event) => {
   const ticker = getRouterParam(event, 'ticker')?.toUpperCase()

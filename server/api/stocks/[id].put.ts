@@ -1,4 +1,4 @@
-import { getDb, parseStockRecord } from '../../utils/db'
+import { StockRepository } from '../../repository/stockRepository'
 
 const ALLOWED_UPDATE_FIELDS = [
   'currency',
@@ -51,8 +51,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const db = getDb()
-  const existing = db.prepare('SELECT * FROM stocks WHERE id = ?').get(id) as Record<string, any> | undefined
+  const existing = await StockRepository.getById(id)
   if (!existing) {
     throw createError({
       statusCode: 404,
@@ -60,22 +59,12 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const now = new Date().toISOString()
-  const updates: string[] = ['updated_at = ?']
-  const params: any[] = [now]
-
+  const updatesMap: Record<string, any> = {}
   for (const field of ALLOWED_UPDATE_FIELDS) {
     if (field in body) {
-      updates.push(`${field} = ?`)
-      params.push(body[field])
+      updatesMap[field] = body[field]
     }
   }
 
-  if (updates.length > 1) {
-    params.push(id)
-    const sql = `UPDATE stocks SET ${updates.join(', ')} WHERE id = ?`
-    db.prepare(sql).run(...params)
-  }
-
-  return parseStockRecord(db.prepare('SELECT * FROM stocks WHERE id = ?').get(id))
+  return await StockRepository.updateFields(id, updatesMap)
 })
