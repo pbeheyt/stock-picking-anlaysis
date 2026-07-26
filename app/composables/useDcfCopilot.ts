@@ -1,7 +1,7 @@
 import type { QuantitativeAIResult } from '~/server/api/stock/[ticker]/quantitative.post'
 import type { useStockWorkspace } from './useStockWorkspace'
 
-export function useQuantCopilot(
+export function useDcfCopilot(
   tickerParam: Ref<string>,
   workspace: ReturnType<typeof useStockWorkspace>,
   onSuccess?: () => void

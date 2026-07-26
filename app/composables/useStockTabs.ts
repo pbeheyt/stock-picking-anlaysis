@@ -1,4 +1,4 @@
-export type StockTab = 'dcf' | 'quant' | 'research'
+export type StockTab = 'dcf' | 'regression' | 'qualitative'
 
 export function useStockTabs() {
   const route = useRoute()
@@ -15,18 +15,18 @@ export function useStockTabs() {
 
   const syncActiveTabFromUrlOrStorage = () => {
     const queryTab = route.query.tab as string
-    if (['dcf', 'quant', 'research'].includes(queryTab)) {
+    if (['dcf', 'regression', 'qualitative'].includes(queryTab)) {
       activeTab.value = queryTab as StockTab
     } else if (import.meta.client) {
       const savedTab = localStorage.getItem('last_active_stock_tab')
-      if (savedTab && ['dcf', 'quant', 'research'].includes(savedTab)) {
+      if (savedTab && ['dcf', 'regression', 'qualitative'].includes(savedTab)) {
         activeTab.value = savedTab as StockTab
       }
     }
   }
 
   watch(() => route.query.tab, (newTab) => {
-    if (newTab && ['dcf', 'quant', 'research'].includes(String(newTab))) {
+    if (newTab && ['dcf', 'regression', 'qualitative'].includes(String(newTab))) {
       activeTab.value = String(newTab) as StockTab
     }
   })

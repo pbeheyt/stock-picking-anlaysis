@@ -6,7 +6,7 @@ import {
   findMaxR2Period,
   type HistoryPoint,
   type QuantAnalysisResult,
-} from '~/utils/quant'
+} from '~/utils/regression'
 import {
   formatCurrency,
   formatCompactCurrency,
@@ -27,7 +27,7 @@ import {
   getVolatilityGaugeStroke,
   getZScoreGaugeStroke,
   getMaxDrawdownGaugeStroke,
-} from '~/utils/quantColor'
+} from '~/utils/regressionColor'
 
 const props = defineProps<{
   ticker: string

@@ -6,7 +6,7 @@ import {
   getTierConfig,
   generateDeepResearchPrompt,
 } from '~/utils/qualitative'
-import AIResearchModal from '~/components/workspace/AIResearchModal.vue'
+import AIWorkflowModal from '~/components/workspace/AIWorkflowModal.vue'
 
 const props = defineProps<{
   ticker: string
@@ -309,7 +309,7 @@ const formatTakeawayHtml = (text: string) => {
     </div>
 
     <!-- Modal Workflow IA Réutilisable -->
-    <AIResearchModal
+    <AIWorkflowModal
       :is-open="isAiModalOpen"
       :ticker="ticker"
       :stock-name="stockName"

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { formatCurrency, formatPercent } from '~/utils/format'
-import AIResearchModal from '~/components/workspace/AIResearchModal.vue'
+import AIWorkflowModal from '~/components/workspace/AIWorkflowModal.vue'
 import AuditTrailDrawer from '~/components/workspace/AuditTrailDrawer.vue'
 import DualTrackSpectrum from '~/components/workspace/DualTrackSpectrum.vue'
 import DCFScenarios from '~/components/workspace/DCFScenarios.vue'
 import PnLModelGrid from '~/components/workspace/PnLModelGrid.vue'
+import WorkspaceRegression from '~/components/workspace/WorkspaceRegression.vue'
+import WorkspaceQualitative from '~/components/workspace/WorkspaceQualitative.vue'
 
 const route = useRoute()
 const tickerParam = computed(() => String(route.params.ticker || '').toUpperCase())
@@ -17,7 +19,7 @@ const workspace = useStockWorkspace(tickerParam)
 const isAiModalOpen = ref(false)
 const isAuditDrawerOpen = ref(false)
 
-const copilot = useQuantCopilot(tickerParam, workspace, () => {
+const copilot = useDcfCopilot(tickerParam, workspace, () => {
   isAiModalOpen.value = false
   isAuditDrawerOpen.value = false
 })
@@ -97,42 +99,42 @@ onMounted(() => {
             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            <span>DCF & Thèse Quantitative</span>
+            <span>Valorisation DCF</span>
           </button>
 
           <button
             type="button"
             class="whitespace-nowrap pb-3.5 px-1 border-b-2 font-bold text-xs transition flex items-center gap-2 cursor-pointer"
-            :class="activeTab === 'quant' 
+            :class="activeTab === 'regression' 
               ? 'border-emerald-500 text-emerald-400' 
               : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'"
-            @click="switchTab('quant')"
+            @click="switchTab('regression')"
           >
             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
             </svg>
-            <span>Quant & Régression</span>
+            <span>Régression Linéaire</span>
           </button>
 
           <button
             type="button"
             class="whitespace-nowrap pb-3.5 px-1 border-b-2 font-bold text-xs transition flex items-center gap-2 cursor-pointer"
-            :class="activeTab === 'research' 
+            :class="activeTab === 'qualitative' 
               ? 'border-emerald-500 text-emerald-400' 
               : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'"
-            @click="switchTab('research')"
+            @click="switchTab('qualitative')"
           >
             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
-            <span>Deep Research Qualitative</span>
+            <span>Recherche Qualitative</span>
           </button>
         </nav>
       </div>
 
       <!-- Tab Content Area -->
       <div class="space-y-8">
-        <!-- TAB 1: DCF & THÈSE QUANTITATIVE -->
+        <!-- TAB 1: VALORISATION DCF -->
         <div v-if="activeTab === 'dcf'" class="space-y-8">
           
           <!-- Section 1 : PnL Model Grid Component -->
@@ -217,9 +219,9 @@ onMounted(() => {
           />
         </div>
 
-        <!-- TAB 2: QUANT & REGRESSION -->
-        <div v-else-if="activeTab === 'quant'" class="space-y-6">
-          <WorkspaceQuant
+        <!-- TAB 2: RÉGRESSION LINÉAIRE -->
+        <div v-else-if="activeTab === 'regression'" class="space-y-6">
+          <WorkspaceRegression
             :ticker="workspace.stock.value.ticker"
             :currency="workspace.stock.value.currency"
             :current-price="workspace.stock.value.current_price"
@@ -230,9 +232,9 @@ onMounted(() => {
           />
         </div>
 
-        <!-- TAB 3: DEEP RESEARCH QUALITATIVE -->
-        <div v-else-if="activeTab === 'research'">
-          <WorkspaceResearch
+        <!-- TAB 3: RECHERCHE QUALITATIVE -->
+        <div v-else-if="activeTab === 'qualitative'">
+          <WorkspaceQualitative
             :ticker="tickerParam"
             :stock-name="workspace.stock.value.name || workspace.stock.value.ticker"
             :stock-id="workspace.stock.value.id"
@@ -242,7 +244,7 @@ onMounted(() => {
     </div>
 
     <!-- Modal Workflow IA -->
-    <AIResearchModal
+    <AIWorkflowModal
       :is-open="isAiModalOpen"
       :ticker="tickerParam"
       :stock-name="workspace.stock.value?.name || tickerParam"
