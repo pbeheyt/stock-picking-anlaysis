@@ -144,6 +144,10 @@ onMounted(async () => {
   syncStocks(false)
 })
 
+onUnmounted(() => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+})
+
 const analyzeAndAddStock = async () => {
   const ticker = searchTicker.value.trim().toUpperCase()
   if (!ticker) return

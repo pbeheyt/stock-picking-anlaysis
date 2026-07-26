@@ -1,4 +1,4 @@
-import { getDb } from '../../utils/db'
+import { getDb, parseStockRecord } from '../../utils/db'
 
 const ALLOWED_UPDATE_FIELDS = [
   'currency',
@@ -77,5 +77,5 @@ export default defineEventHandler(async (event) => {
     db.prepare(sql).run(...params)
   }
 
-  return db.prepare('SELECT * FROM stocks WHERE id = ?').get(id)
+  return parseStockRecord(db.prepare('SELECT * FROM stocks WHERE id = ?').get(id))
 })

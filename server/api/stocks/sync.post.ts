@@ -1,5 +1,5 @@
 import YahooFinance from 'yahoo-finance2'
-import { getDb } from '../../utils/db'
+import { getDb, parseStockRecord } from '../../utils/db'
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 
@@ -67,16 +67,11 @@ export default defineEventHandler(async (event) => {
     transaction()
 
     const allUpdated = db.prepare('SELECT * FROM stocks').all()
-    allUpdated.forEach((row: any) => {
-      if (row.audit_data && typeof row.audit_data === 'string') {
-        try { row.audit_data = JSON.parse(row.audit_data) } catch {}
-      }
-    })
 
     return {
       count: updatedCount,
       synced_at: now,
-      stocks: allUpdated,
+      stocks: allUpdated.map(parseStockRecord),
     }
   } catch (err: any) {
     console.error('[Batch Sync Yahoo Finance] Erreur lors de la synchro groupée:', err?.message || err)

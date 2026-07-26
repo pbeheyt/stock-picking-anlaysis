@@ -7,8 +7,6 @@ export interface AIModelOption {
   tested_at?: string
 }
 
-export const DEFAULT_MODEL_ID = ''
-
 export async function fetchApprovedModels(): Promise<AIModelOption[]> {
   try {
     const models = await $fetch<AIModelOption[]>('/api/ai/models')

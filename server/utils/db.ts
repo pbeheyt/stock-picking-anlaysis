@@ -154,3 +154,18 @@ export function getDb(): Database.Database {
 
   return _db
 }
+
+export function parseStockRecord(row: any): any {
+  if (!row) return row
+  const parsed = { ...row }
+  const jsonFields = ['audit_data', 'qualitative_data', 'quanti_ai_data']
+  for (const field of jsonFields) {
+    if (parsed[field] && typeof parsed[field] === 'string') {
+      try {
+        parsed[field] = JSON.parse(parsed[field])
+      } catch {}
+    }
+  }
+  return parsed
+}
+

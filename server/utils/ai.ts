@@ -15,7 +15,7 @@ interface AiCompletionOptions {
   openrouterApiKey?: string
 }
 
-export function repairJson(jsonString: string): string {
+function repairJson(jsonString: string): string {
   let str = (jsonString || '').trim()
 
   if (str.includes('```')) {

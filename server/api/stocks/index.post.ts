@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { getDb } from '../../utils/db'
+import { getDb, parseStockRecord } from '../../utils/db'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -81,11 +81,8 @@ export default defineEventHandler(async (event) => {
 
     db.prepare(`UPDATE stocks SET ${setClause} WHERE ticker = ?`).run(...values)
 
-    const updatedRow = db.prepare('SELECT * FROM stocks WHERE ticker = ?').get(ticker) as any
-    if (updatedRow?.audit_data && typeof updatedRow.audit_data === 'string') {
-      try { updatedRow.audit_data = JSON.parse(updatedRow.audit_data) } catch {}
-    }
-    return updatedRow
+    const updatedRow = db.prepare('SELECT * FROM stocks WHERE ticker = ?').get(ticker)
+    return parseStockRecord(updatedRow)
   } else {
     const id = randomUUID()
     recordFields.id = id
@@ -98,10 +95,7 @@ export default defineEventHandler(async (event) => {
 
     db.prepare(`INSERT INTO stocks (${keys.join(', ')}) VALUES (${placeholders})`).run(...values)
 
-    const newRow = db.prepare('SELECT * FROM stocks WHERE id = ?').get(id) as any
-    if (newRow?.audit_data && typeof newRow.audit_data === 'string') {
-      try { newRow.audit_data = JSON.parse(newRow.audit_data) } catch {}
-    }
-    return newRow
+    const newRow = db.prepare('SELECT * FROM stocks WHERE id = ?').get(id)
+    return parseStockRecord(newRow)
   }
 })
